@@ -57,7 +57,7 @@
 ### スポットライト
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
-| PUT | /api/lessons/:id/spotlight | 先生 | `{user_id}` 指定／`{user_id:null}` 解除 → 全員に `spotlight:update` |
+| PUT | /api/lessons/:id/spotlight | 先生 | `{user_id}` 指定／`{user_id:null}` 解除 → 全員に `spotlight:update`。レスポンス `{user_id}`（v4.2 追記：レスポンス形が未記載だったため実装に合わせて明記） |
 
 ### 出席
 | メソッド | パス | ロール | 説明 |
