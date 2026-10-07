@@ -1,0 +1,146 @@
+/* 01 ログイン / 02 会員登録 / 03 プロフィール設定（docs/design/common/screens-01-03.css より） */
+.auth-app { container: app / inline-size; }
+.auth-app .form { display: flex; flex-direction: column; gap: var(--space-4); }
+.auth-app .field { display: flex; flex-direction: column; }
+.auth-app .field > label { font-size: 13px; }
+.auth-app .input { min-height: 44px; font-size: 15px; }
+.auth-app .input[aria-invalid="true"] { border-color: var(--color-accent-2); }
+.auth-app .field-error:empty { display: none; }
+.field-hint { margin-top: 5px; font-size: 12px; color: var(--color-neutral-700); }
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 52px; width: 100%; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  height: 32px; padding: 0 6px; font-size: 12px;
+  border: 0; border-radius: var(--radius-md);
+  background: transparent; color: var(--color-neutral-700); cursor: pointer;
+}
+.pw-toggle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); color: var(--color-text); }
+.auth-app .btn-lg { min-height: 48px; font-size: 16px; padding-inline: var(--space-4); }
+.auth-app .btn-block { margin-top: 0; }
+.avatar-xl { width: 120px; height: 120px; font-size: 44px; }
+.text-sub { color: var(--color-neutral-700); font-weight: 400; }
+.user-chip { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.user-chip .user-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.back-link { font-size: 13px; white-space: nowrap; }
+
+.auth {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8) var(--space-4) 96px;
+}
+.auth-panel {
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.auth-panel-wide { width: min(440px, 100%); }
+
+/* — アプリ名（飾りは最小限） — */
+.brand { text-align: center; }
+.brand-name { font-size: 28px; margin: 0 0 var(--space-1); }
+.brand-tagline { margin: 0; font-size: 13px; color: var(--color-neutral-700); }
+
+/* — 登録／ログインへの導線 — */
+.auth-switch { margin: 0; text-align: center; font-size: 13px; color: var(--color-neutral-700); }
+.auth-switch a { font-weight: var(--font-heading-weight); }
+
+/* — ロール選択（会員登録）：大きな2択カード — */
+.role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 132px;
+  padding: var(--space-4) var(--space-2);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.role-card:hover { border-color: var(--color-neutral-500); }
+.role-card:disabled { cursor: not-allowed; opacity: .7; }
+.role-card .role-icon { color: var(--color-neutral-700); display: inline-flex; }
+.role-card .role-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+  line-height: 1.2;
+}
+.role-card .role-desc { font-size: 12px; line-height: 1.45; color: var(--color-neutral-700); }
+/* 選択中：アクセント色の枠と塗り */
+.role-card[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-100);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.role-card[aria-pressed="true"] .role-icon { color: var(--color-accent); }
+.role-card[aria-pressed="true"] .role-title { color: var(--color-accent-800); }
+.role-card[aria-pressed="true"] .role-desc { color: var(--color-accent-800); opacity: .85; }
+.role-help { margin: var(--space-2) 0 0; font-size: 12px; color: var(--color-neutral-700); text-align: center; min-height: 18px; }
+
+@container app (max-width: 480px) {
+  .auth { padding: var(--space-6) var(--space-4) 96px; align-items: start; }
+  .brand-name { font-size: 24px; }
+  .role-card { min-height: 120px; padding: var(--space-3) var(--space-2); }
+  .role-card .role-title { font-size: 16px; }
+}
+
+/* ============================================================
+   03 プロフィール設定
+   ============================================================ */
+
+.me-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4) 96px;
+}
+.me-panel {
+  width: min(480px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.me-section { display: flex; flex-direction: column; }
+
+/* — アイコン（現在のプレビュー＋画像を選ぶ） — */
+.icon-row { display: flex; align-items: center; gap: var(--space-4); }
+.icon-actions { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.icon-actions .btn { align-self: flex-start; }
+.icon-actions .field-error { margin-top: 0; }
+
+/* — ロール（変更不可） — */
+.role-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.role-row .tag { font-size: 12px; padding: 4px 12px; }
+.role-note { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-neutral-700); }
+
+/* — 保存／ログアウト — */
+.me-actions { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.me-actions .btn-logout { font-size: 13px; color: var(--color-neutral-700); }
+.me-actions .btn-logout:hover { color: var(--color-accent-2-700); background: var(--color-accent-2-100); }
+
+
+
+@container app (max-width: 480px) {
+  .me-main { padding: var(--space-4) var(--space-4) 96px; }
+  .me-panel { gap: var(--space-6); }
+  .icon-row { flex-direction: column; align-items: center; text-align: center; }
+  .icon-actions { align-items: center; }
+  .icon-actions .btn { align-self: center; }
+  .app-header .header-title { font-size: 16px; }
+  .app-header .user-name { display: none; }
+  .back-link { padding: 0; width: 36px; height: 36px; }
+  .back-link .back-text { display: none; }
+}
