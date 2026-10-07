@@ -201,3 +201,5 @@
 | 手動修正（`PATCH attendance/:user_id`）で `present` にしたとき | `away_total_sec` を 0 にリセットし `away_since` を NULL にする（pending #4 → B） |
 | 欠課（`absent`）後の再接続 | `present` に戻さない（欠課からの復帰は先生の手動修正だけ） |
 | 一時退出（`away`）中の Socket 切断 | 状態を変えない（`present` のときだけ `away` にする） |
+| 挙手（body 無し投稿／`question:raise`） | `question:new`（body null）が全員に、`question:raised` が先生に、両方届く。先生画面は id で突き合わせる |
+| 待機画面への導線 | クラス詳細の `preparing` の授業に「入室して待つ」ボタン（デザイン未記載のため W5 が追加。モックへの反映は後日） |

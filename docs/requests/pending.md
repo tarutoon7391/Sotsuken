@@ -8,3 +8,7 @@
 | 4 | w2-live | 先生が absent→present に手動修正しても `away_total_sec` はそのまま。次に退出するとすぐ欠課になる | A) そのまま（累積は事実として残す）／B) 手動で present にしたら累積を 0 にリセット／C) PATCH に `away_total_sec` を含めて先生が指定 | **B（手動で present にしたら累積を 0 に）** トーンさん 15:50 → W2 に修正依頼 |
 | 5 | w4-learn | 挙手の取り下げイベントが無い（生徒は自分の表示を戻すだけで先生の一覧には残る） | A) MVP は無し（先生が回答済みにする）／B) `question:lower` を追加 | **A（MVP は無し）** トーンさん 16:00 |
 | 6 | w4-learn | 資料の追加・削除を知らせるイベントが無い（資料パネルに「更新」ボタンで対応） | A) MVP は更新ボタンのまま／B) `material:update` 等を追加 | **A（更新ボタンのまま）** トーンさん 16:00 |
+| 7 | w5-teach | 授業内の確認ボタン一覧 API が無く、授業結果の応答率を出せない（「—」表示） | A) MVP は「—」のまま／B) `GET /lessons/:id/attention` を追加（checks と応答数） | |
+| 8 | w5-teach | 自動確認間隔の現在値を取る API が無い（PATCH のみ） | A) MVP は画面側の値だけ／B) `GET /lessons/:id` に `attention_interval_min` を含める（メモリ値） | |
+| 9 | w5-teach | `understanding_reset_at` が `GET /lessons/:id` に無い（再読込時にリセット時刻が分からない） | A) 不要／B) LessonDetail に追加（W1 1行） | |
+| 10 | w5-teach | `GET /classes/:id/members` が先生専用なので、生徒向けクラス詳細でメンバー一覧を出せない | A) 生徒は非表示のまま／B) members を全員に開放（04 のロール変更） | |
