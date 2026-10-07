@@ -7,6 +7,7 @@ const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
 const { query, transaction } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { emitToLesson } = require('../sockets/io');
+const attendance = require('./attendance');
 
 /** LiveKit のルーム名（推測されにくいランダム文字列） */
 function generateRoomName() {
@@ -167,8 +168,8 @@ async function startLesson(lessonId, classId) {
     );
   });
 
-  // TODO(結合時)：待機中（接続済み）の生徒を present で記録する
-  //   W2 の services/attendance.js の markPresentOnStart(lessonId) を呼ぶ（docs/requests/w1-lesson-attendance-hooks.md）
+  // 待機中（Socket 接続済み）の生徒を present で記録する（W2・結合で接続）
+  await attendance.markPresentOnStart(lessonId);
   emitToLesson(lessonId, SERVER_EVENTS.LESSON_STARTED, {});
   return getLessonDetail(lessonId);
 }
@@ -185,9 +186,8 @@ async function endLesson(lessonId) {
       'UPDATE lessons SET status = ?, ended_at = UTC_TIMESTAMP() WHERE id = ?',
       [LESSON_STATUS.ENDED, lessonId]
     );
-    // TODO(結合時)：出席を出席／欠課の2値に確定する（docs/03「判定SQL」3.）
-    //   W2 の services/attendance.js の finalizeAttendance をこのトランザクション内で呼ぶ
-    //   （docs/requests/w1-lesson-attendance-hooks.md）
+    // 出席を出席／欠課の2値に確定する（docs/03「判定SQL」3。W2・結合で接続。同じトランザクション内）
+    await attendance.finalizeAttendance(lessonId, conn);
   });
 
   emitToLesson(lessonId, SERVER_EVENTS.LESSON_ENDED, {});

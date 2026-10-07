@@ -15,19 +15,6 @@ body {
 
 [hidden] { display: none !important; }
 button { font: inherit; }
-
-/* フェーズ0の仮表示（各ページの空コンポーネントが使う。実装したら消してよい） */
-.placeholder-page {
-  max-width: 640px;
-  margin: 48px auto;
-  padding: 0 16px;
-}
-.placeholder-page h1 {
-  font-size: 1.4rem;
-}
-.placeholder-page p {
-  opacity: 0.7;
-}
 .page-loading { padding: var(--space-6); color: var(--color-neutral-700); }
 
 /* ---- 画面の外枠・ヘッダー ---- */

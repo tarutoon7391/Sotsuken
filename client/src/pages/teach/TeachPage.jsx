@@ -27,7 +27,6 @@ import ChatPanel from '../../components/shared/ChatPanel.jsx';
 import QuestionBox from '../../components/shared/QuestionBox.jsx';
 import useToast from '../../components/shared/useToast.jsx';
 import { formatBytes, formatDuration } from '../../components/shared/format.js';
-// TODO(結合)：W3 の部品が入ったら '../../livekit' に差し替える（props は同じ）
 import {
   useLiveKitRoom,
   TeacherPublisher,
@@ -35,7 +34,7 @@ import {
   RoomAudio,
   putSpotlight,
   STATUS_LABELS,
-} from '../../components/shared/_stubs/livekit.jsx';
+} from '../../livekit';
 import {
   AttendancePanel,
   AttentionPanel,

@@ -120,14 +120,6 @@
 .teach-app .cell-foot.is-away { color: var(--color-neutral-400); }
 .teach-app .cell-foot.is-absent { color: var(--color-accent-2-300); }
 
-/* 仮の生徒グリッド（_stubs。結合で W3 の StudentGrid に置き換わる） */
-.teach-app .stub-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.teach-app .stub-tile { position: relative; aspect-ratio: 4 / 3; border-radius: var(--radius-lg); background: var(--color-neutral-900); color: var(--color-neutral-200); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px; }
-.teach-app .stub-tile.is-hand { outline: 3px solid var(--color-accent); outline-offset: -3px; }
-.teach-app .stub-tile.is-spot { outline: 3px solid var(--color-accent-600); outline-offset: -3px; }
-.teach-app .stub-name { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.teach-app .stub-spot { font-size: 11px; padding: 3px 8px; border: 0; border-radius: var(--radius-md); background: var(--color-accent); color: var(--color-bg); cursor: pointer; }
-
 /* 開始前 */
 .teach-app .before-band { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 13px; flex: none; }
 .teach-app .before-band .btn { margin-left: auto; }
