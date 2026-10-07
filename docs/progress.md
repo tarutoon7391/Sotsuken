@@ -7,7 +7,7 @@
 | w1-core | 14:54 | 15:32（f947ec7） | 38分 | w1-lesson-attendance-hooks.md | 8件（全件 04 §6 に追記） |
 | w2-live | 14:54 | 15:40（c30d9e2） | 46分 | （なし。依頼は報告文中） | 5件（3件採用、2件 pending） |
 | w3-livekit | 14:54 | 15:20（0ba6f6b） | 26分 | w3-components.md | 3件（1件裁定、2件 pending） |
-| w4-learn | 14:54 | | | | |
+| w4-learn | 14:54 | 15:48（220acb8） | 54分 | （結合依頼は報告文中） | 3件（1件採用、2件 pending） |
 | w5-teach | 14:54 | | | | |
 
 ## manager が受けたメッセージ（契約変更・ブロッカー）
@@ -36,3 +36,5 @@
 | 15:20 | w3-livekit | 完了報告（feat/w3-livekit 0ba6f6b）。契約の疑問3件 | (1) spotlight のレスポンス `{user_id}` → 04 の未記載を実装に合わせて追記（v4.2）。(2)(3) は仕様判断のため pending.md #1 #2 |
 | 15:32 | w1-core | 完了報告（feat/w1-core f947ec7、スモーク 49/49）。未記載仕様の決定 8件、依頼メモ w1-lesson-attendance-hooks.md | 決定はすべて未記載の補完として採用し docs/04 §6（v4.2 補足）に明記。finalizeAttendance(lessonId, conn) の形は W2 が既に export 済み（一致） |
 | 15:40 | w2-live | 完了報告（feat/w2-live-features c30d9e2、jest 9/9）。契約の疑問5件 | (2)(4)(5) は未記載の補完として採用し docs/04 §6 に追記。(1) interval_min の永続化と (3) 手動修正時の累積リセットは仕様判断のため pending #3 #4 |
+| 15:48 | w4-learn | 完了報告（feat/w4-learn 220acb8、vite build OK）。W2 への依頼2件、契約の疑問3件 | W2 への依頼2件（absent 再接続・away 中の切断）は W2 の実装で既に満たされていることをコードで確認。POST questions のレスポンスは Question として 04 §6 に明記。挙手取り下げ・資料更新イベントは pending #5 #6。結合時：parts.js の _stubs を ../../livekit に差し替え |
+| 15:50 | トーンさん | pending #3 → A、#4 → B | W2 に「手動で present にしたら away_total_sec=0・away_since=NULL」の修正を依頼 |

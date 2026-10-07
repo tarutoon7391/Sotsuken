@@ -197,3 +197,7 @@
 | Socket の ack | クライアント→サーバーの各イベントは任意で ack を受け取れる（成功 `{}`、失敗 `{error:{code,message}}`）。使わなくても動く |
 | 出席の複数タブ | 同じ生徒の接続が複数あるとき、最後の1本が切れたときだけ away |
 | 確認ボタンの自動発動（`interval_min`） | サーバーのメモリ保持（再起動で消える）。永続化は pending #3 |
+| `POST /lessons/:id/questions` のレスポンス | `Question`（投稿者本人には `user` を含む）。`question:new` も同時に届くので id で重複除去する |
+| 手動修正（`PATCH attendance/:user_id`）で `present` にしたとき | `away_total_sec` を 0 にリセットし `away_since` を NULL にする（pending #4 → B） |
+| 欠課（`absent`）後の再接続 | `present` に戻さない（欠課からの復帰は先生の手動修正だけ） |
+| 一時退出（`away`）中の Socket 切断 | 状態を変えない（`present` のときだけ `away` にする） |
