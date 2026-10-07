@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>先生画面（授業中） - （アプリ名）</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens-04-06.css">
+<link rel="stylesheet" href="teach.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ヘッダー：クラス・授業タイトル ／ 配信状態＋経過時間 ／ 自分 ／ 授業を終了 -->
+  <header class="app-header">
+    <div class="hdr-left">
+      <div class="hdr-kicker">2年A組 ・ 数学</div>
+      <div class="hdr-title">二次関数のグラフと平行移動</div>
+    </div>
+    <span class="hdr-spacer"></span>
+    <span class="status"><span class="dot" id="liveDot"></span><span id="liveLabel">配信中</span><span class="elapsed" id="elapsed">00:23:14</span></span>
+    <span class="person" id="me"></span>
+    <button type="button" class="btn btn-secondary btn-danger" id="btnEnd"><i data-icon="stop" data-size="16"></i>授業を終了</button>
+  </header>
+
+  <!-- 再接続中の帯 -->
+  <div class="reconnect-band" id="reconnectBand" hidden><span class="spinner"></span>再接続中… 配信と生徒の映像が一時的に止まっています</div>
+
+  <main class="teach" id="teach">
+
+    <!-- ===== 左：配信プレビュー／出席／確認／資料（脇役） ===== -->
+    <aside class="col col-left">
+
+      <!-- 配信プレビュー -->
+      <div class="panel">
+        <div class="panel-head"><h6 class="section-label">配信</h6><span class="right conn" id="conn"><span class="dot"></span>接続良好</span></div>
+        <div class="video-panel preview" id="preview">
+          <span class="video-label" id="previewLabel">配信中の画面</span>
+          <div class="video-center" id="previewBefore" hidden>
+            <p style="margin:0 0 10px">配信を開始してください</p>
+            <button type="button" class="btn btn-primary" id="btnStart"><i data-icon="broadcast" data-size="16"></i>配信開始</button>
+          </div>
+          <div class="video-center" id="previewLive"><i data-icon="monitor" data-size="36"></i><div class="tiny" id="previewSrc">画面共有</div></div>
+        </div>
+        <div class="preview-tools">
+          <div class="seg" role="radiogroup" aria-label="配信ソース">
+            <label class="seg-opt"><input type="radio" name="src" value="camera"><i data-icon="camera" data-size="14"></i>カメラ</label>
+            <label class="seg-opt"><input type="radio" name="src" value="screen" checked><i data-icon="monitor" data-size="14"></i>画面共有</label>
+          </div>
+          <button type="button" class="btn btn-secondary btn-icon mic-btn" id="btnMic" aria-label="マイク ON/OFF" title="マイク"><i data-icon="mic" data-size="18"></i></button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnStop" style="margin-left:auto"><i data-icon="stop" data-size="14"></i>配信停止</button>
+        </div>
+      </div>
+
+      <!-- 出席 -->
+      <div class="panel">
+        <div class="panel-head"><h6 class="section-label">出席</h6><a class="btn btn-ghost btn-sm right" href="../07_出席一覧/index.html">出席一覧を開く<i data-icon="arrow-right" data-size="14"></i></a></div>
+        <div class="att-row">
+          <div class="stat"><span class="stat-value" id="attPresent">27</span><span class="stat-sub">出席</span></div>
+          <div class="stat is-away"><span class="stat-value" id="attAway">2</span><span class="stat-sub">一時退出</span></div>
+          <div class="stat is-absent"><span class="stat-value" id="attAbsent">1</span><span class="stat-sub">欠課</span></div>
+        </div>
+      </div>
+
+      <!-- 確認 -->
+      <div class="panel">
+        <div class="panel-head"><h6 class="section-label">確認</h6></div>
+        <div id="checkIdle">
+          <button type="button" class="btn btn-primary btn-block" id="btnCheck" style="margin:0"><i data-icon="bell" data-size="16"></i>確認を送る</button>
+          <p class="tiny muted" style="margin:6px 0 0">全生徒の画面に「今、画面を見ていますか？」を出します</p>
+        </div>
+        <div id="checkRunning" hidden>
+          <div class="check-run">
+            <span class="countdown" id="checkSec">60</span>
+            <div class="stat"><span class="stat-value" id="checkResp">24<span class="muted" style="font-size:14px">/30</span></span><span class="stat-sub">応答</span></div>
+          </div>
+          <div class="check-track"><span id="checkBar" style="width:100%"></span></div>
+        </div>
+        <div id="checkDone" hidden>
+          <div class="small" style="margin-bottom:6px">確認が終わりました。<span class="strong accent-2-text" id="noRespCount">6</span> 人が未応答です</div>
+          <div class="noresp" id="noRespList"></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnCheckAgain" style="margin-top:8px"><i data-icon="bell" data-size="14"></i>もう一度送る</button>
+        </div>
+        <div class="check-auto">自動
+          <div class="seg" role="radiogroup" aria-label="自動発動の間隔">
+            <label class="seg-opt"><input type="radio" name="auto" value="0" checked>オフ</label>
+            <label class="seg-opt"><input type="radio" name="auto" value="5">5分</label>
+            <label class="seg-opt"><input type="radio" name="auto" value="10">10分</label>
+            <label class="seg-opt"><input type="radio" name="auto" value="15">15分</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 資料 -->
+      <div class="panel">
+        <div class="panel-head"><h6 class="section-label">資料</h6><button type="button" class="btn btn-ghost btn-sm right" id="btnUpload"><i data-icon="upload" data-size="14"></i>アップロード</button></div>
+        <div class="mat-list" id="matList"></div>
+      </div>
+    </aside>
+
+    <!-- ===== 中央：理解度パネル＋生徒カメラグリッド（主役） ===== -->
+    <section class="col col-center">
+
+      <!-- 理解度 -->
+      <div class="panel understand" id="understand">
+        <div class="panel-head">
+          <h6 class="section-label">理解度 <span class="count" id="uResp"></span></h6>
+          <span class="tag tag-accent-2" id="uAlert" hidden>「わからない」が多い</span>
+          <span class="right">
+            <span class="tiny muted" id="uSince">最終リセットから 4:12</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnReset"><i data-icon="reset" data-size="14"></i>リセット</button>
+          </span>
+        </div>
+        <div class="rows">
+          <span class="u-label u-got">わかった</span><div class="u-track u-got"><span id="barGot"></span></div><span class="u-count u-got" id="cntGot">0</span><span class="u-pct" id="pctGot">0%</span>
+          <span class="u-label u-lost">わからない</span><div class="u-track u-lost"><span id="barLost"></span></div><span class="u-count u-lost" id="cntLost">0</span><span class="u-pct" id="pctLost">0%</span>
+          <span class="u-label u-again">もう一度</span><div class="u-track u-again"><span id="barAgain"></span></div><span class="u-count u-again" id="cntAgain">0</span><span class="u-pct" id="pctAgain">0%</span>
+        </div>
+      </div>
+
+      <!-- スポットライト中 -->
+      <div class="spot-banner" id="spotBanner" hidden>
+        <i data-icon="star" data-size="16"></i><span><strong id="spotName">佐藤 みお</strong> をスポットライト中（全員の画面に表示されています）</span>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnUnspot">解除</button>
+      </div>
+
+      <!-- 生徒カメラグリッド -->
+      <div class="grid-head">
+        <h6 class="section-label" style="margin:0">生徒 <span class="count" id="tileCount"></span></h6>
+        <div class="legend">
+          <span><i class="sw sw-hand"></i>挙手中</span>
+          <span><i class="sw sw-lost"></i>わからない</span>
+          <span><i class="sw sw-away"></i>一時退出中</span>
+        </div>
+      </div>
+      <div class="grid-wrap"><div class="tiles" id="tiles"></div></div>
+    </section>
+
+    <!-- ===== 右：質問箱／チャット（生徒画面と同じ部品） ===== -->
+    <aside class="col col-right" id="colRight">
+      <div class="right-head">
+        <div class="tabs" role="tablist">
+          <button class="tab is-on" role="tab" data-rtab="qa">質問箱 <span class="badge" id="qaUnread" hidden>0</span></button>
+          <button class="tab" role="tab" data-rtab="chat">チャット <span class="badge" id="chatUnread">2</span></button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-icon" id="btnCollapse" aria-label="右カラムをたたむ" title="たたむ"><i data-icon="caret-right" data-size="16"></i></button>
+      </div>
+      <div class="rail">
+        <button type="button" class="rail-btn" id="btnExpand" aria-label="右カラムを開く" title="開く"><i data-icon="caret-left" data-size="16"></i></button>
+        <button type="button" class="rail-btn" data-rtab="qa" aria-label="質問箱"><i data-icon="question" data-size="20"></i><span class="badge" id="qaUnreadRail" hidden>0</span></button>
+        <button type="button" class="rail-btn" data-rtab="chat" aria-label="チャット"><i data-icon="chat" data-size="20"></i><span class="badge" id="chatUnreadRail">2</span></button>
+      </div>
+
+      <div class="right-body">
+        <!-- 質問箱：挙手中 ＋ 質問一覧 -->
+        <div class="pane" id="paneQa">
+          <div class="hands">
+            <h6 class="section-label" style="margin:0">挙手中 <span class="count" id="handCount"></span></h6>
+            <div class="chips" id="handChips"></div>
+          </div>
+          <div class="scroll" id="qaList"></div>
+        </div>
+        <!-- チャット -->
+        <div class="pane" id="paneChat" hidden>
+          <div class="scroll" id="chatList" style="gap:10px"></div>
+          <div class="chat-input">
+            <button type="button" class="btn btn-secondary btn-icon" aria-label="画像・PDFを添付" id="btnAttach"><i data-icon="paperclip" data-size="18"></i></button>
+            <input class="input" id="chatDraft" placeholder="メッセージ">
+            <button type="button" class="btn btn-primary" id="btnSend">送信</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- 授業終了の確認ダイアログ -->
+<div class="dialog-backdrop" id="dlgEnd" hidden>
+  <div class="dialog" role="dialog" aria-labelledby="dlgEndTitle">
+    <div class="dialog-title" id="dlgEndTitle">授業を終了しますか？</div>
+    <div class="dialog-body">配信が止まり、生徒は授業終了画面に移動します。出席と理解度の記録は「授業結果」から確認できます。</div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" data-close>キャンセル</button>
+      <button type="button" class="btn btn-primary" id="btnEndConfirm">終了する</button>
+    </div>
+  </div>
+</div>
+
+<script src="../common/screens-04-06.js"></script>
+<script src="teach.js"></script>
+</body>
+</html>

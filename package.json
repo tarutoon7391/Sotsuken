@@ -1,0 +1,30 @@
+{
+  "name": "sotsuken",
+  "version": "0.1.0",
+  "private": true,
+  "description": "卒業研究：学校のオンライン授業に特化した低遅延・双方向ライブ授業アプリ",
+  "main": "server/src/index.js",
+  "scripts": {
+    "prestart": "node server/src/db/migrate.js",
+    "start": "node server/src/index.js",
+    "dev": "node --watch server/src/index.js",
+    "migrate": "node server/src/db/migrate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-mysql-session": "^3.0.3",
+    "express-session": "^1.18.1",
+    "livekit-server-sdk": "^2.9.0",
+    "multer": "^2.0.2",
+    "mysql2": "^3.11.5",
+    "socket.io": "^4.8.1"
+  },
+  "overrides": {
+    "mysql2": "$mysql2"
+  }
+}

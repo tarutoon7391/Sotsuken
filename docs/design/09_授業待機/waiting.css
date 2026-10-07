@@ -1,0 +1,98 @@
+/* ==========================================================================
+   09_waiting.css — 授業待機（開始前・生徒用・PC＋スマホ）
+   ========================================================================== */
+
+/* PC：左に待機メッセージ、右にカメラ。縦方向は中央寄せ */
+.wait-grid {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
+  gap: var(--space-8); align-items: center;
+  max-width: 1100px; width: 100%; margin: 0 auto; padding-top: var(--space-4);
+}
+
+/* 待機メッセージ */
+.wait-msg { display: flex; flex-direction: column; align-items: flex-start; }
+.wait-title { font-size: 32px; margin: var(--space-3) 0 var(--space-2); }
+.wait-sub { font-size: 14px; color: var(--color-neutral-700); margin-bottom: var(--space-6); }
+
+/* 控えめなローディング：3つの点がゆっくり明滅する */
+@keyframes pulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+.wait-loader { display: inline-flex; gap: 6px; height: 10px; }
+.wait-loader span {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.wait-loader span:nth-child(2) { animation-delay: .2s; }
+.wait-loader span:nth-child(3) { animation-delay: .4s; }
+@media (prefers-reduced-motion: reduce) { .wait-loader span { animation: none; opacity: .7; } }
+
+.wait-info { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.wait-info > div { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: var(--space-3); }
+.wait-info dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.wait-info dd { margin: 0; font-size: 15px; }
+
+/* カメラ確認 */
+.cam { display: flex; flex-direction: column; }
+.cam-panel { aspect-ratio: 16 / 9; width: 100%; }
+
+/* ON のときのプレビュー（デモなので暗いグラデで代用） */
+.cam-live { width: 100%; height: 100%; position: absolute; inset: 0; display: grid; place-items: center; }
+.cam-fake {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 62%, var(--color-neutral-600) 0%, transparent 38%),
+    linear-gradient(180deg, var(--color-neutral-800), var(--color-neutral-900));
+}
+.cam-live-tag {
+  position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--color-neutral-200); background: rgba(0, 0, 0, .45);
+  padding: 4px 10px; border-radius: var(--radius-md);
+}
+
+/* 許可なし */
+.cam-denied { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--space-4); color: var(--color-neutral-300); max-width: 360px; }
+.cam-denied .ph { color: var(--color-accent-2-400); margin-bottom: 4px; }
+.cam-denied-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; color: var(--color-neutral-100); }
+.cam-denied-sub { font-size: 12px; line-height: 1.5; color: var(--color-neutral-400); }
+.cam-retry { margin-top: var(--space-2); color: var(--color-neutral-100); border-color: var(--color-neutral-600); }
+.cam-retry:hover { background: rgba(255, 255, 255, .08); }
+
+/* 開始された：全面オーバーレイ（一瞬表示） */
+@keyframes startedIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+.started {
+  position: fixed; inset: 0; z-index: 25; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+}
+.started-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); animation: startedIn .25s ease-out; }
+.started-check {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent); color: var(--color-bg); margin-bottom: var(--space-2);
+}
+.started-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 28px; }
+.started-sub { font-size: 14px; color: var(--color-neutral-700); }
+.dialog-backdrop { z-index: 20; }
+
+/* ---- スマホ（390px）：縦に積む ---- */
+body.is-mobile .wait-grid {
+  grid-template-columns: 1fr; gap: var(--space-6); align-items: start; align-content: start;
+  padding-top: var(--space-2); max-width: none;
+}
+/* スマホのヘッダー：ドット・アイコン・退出だけにして詰まりを防ぐ */
+body.is-mobile .app-header .status { font-size: 0; gap: 0; }
+body.is-mobile .app-header .person-name,
+body.is-mobile .app-header .person .tag { display: none; }
+body.is-mobile .app-header .avatar { width: 28px; height: 28px; font-size: 12px; }
+body.is-mobile #leaveBtn { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+body.is-mobile .wait-msg { order: 2; }
+body.is-mobile .cam { order: 1; }
+body.is-mobile .wait-title { font-size: 22px; }
+body.is-mobile .wait-sub { margin-bottom: var(--space-4); }
+body.is-mobile .wait-info > div { grid-template-columns: 52px 1fr; }
+body.is-mobile .video-tools { left: 8px; bottom: 8px; }
+body.is-mobile .video-note { display: none; }
+body.is-mobile .cam::after { content: "カメラONでも映像は先生にだけ届きます"; font-size: 10px; color: var(--color-neutral-600); text-align: right; padding-top: 4px; }
+body.is-mobile .video-avatar { width: 56px; height: 56px; font-size: 22px; margin-bottom: 6px; }
+body.is-mobile .cam-denied { padding: var(--space-2); }
+body.is-mobile .cam-denied-sub { display: none; }
+body.is-mobile .started, body.is-mobile .dialog-backdrop { position: absolute; }
+body.is-mobile .page { position: relative; }
+body.is-mobile #myStatus .status-text { display: none; }

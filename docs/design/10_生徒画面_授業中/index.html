@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 生徒画面（授業中）v2</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens.css">
+<link rel="stylesheet" href="student.css">
+</head>
+<body>
+
+<!-- 共通の SVG（Phosphor 由来） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cam" viewBox="0 0 256 256"><path d="M232 74.1v107.8a8 8 0 0 1-12.4 6.7L176 162.1V176a16 16 0 0 1-16 16H40a16 16 0 0 1-16-16V80a16 16 0 0 1 16-16h120a16 16 0 0 1 16 16v13.9l43.6-26.5A8 8 0 0 1 232 74.1z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 256 256"><path d="M188 48a27.8 27.8 0 0 0-12 2.7V44a28 28 0 0 0-54.6-8.6A28 28 0 0 0 80 60v52.3l-8.1-11.6a28 28 0 0 0-49.4 26.4l38.1 68.4A88 88 0 0 0 216 156v-80a28 28 0 0 0-28-28z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 256 256"><path d="M165.7 205.7a8 8 0 0 1-11.4 0l-72-72a8 8 0 0 1 0-11.4l72-72a8 8 0 0 1 11.4 11.4L99.3 128l66.4 66.3a8 8 0 0 1 0 11.4z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 256 256"><path d="M90.3 50.3a8 8 0 0 1 11.4 0l72 72a8 8 0 0 1 0 11.4l-72 72a8 8 0 0 1-11.4-11.4l66.4-66.3-66.4-66.3a8 8 0 0 1 0-11.4z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 256 256"><path d="M205.7 194.3a8 8 0 0 1-11.4 11.4L128 139.3l-66.3 66.4a8 8 0 0 1-11.4-11.4l66.4-66.3-66.4-66.3a8 8 0 0 1 11.4-11.4l66.3 66.4 66.3-66.4a8 8 0 0 1 11.4 11.4L139.3 128z"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 256 256"><path d="M209.7 122.3l-82.4 82.4a56 56 0 0 1-79.2-79.2l99.3-99.3a40 40 0 0 1 56.6 56.6l-99.3 99.3a24 24 0 0 1-33.9-33.9l82.4-82.4 11.3 11.3-82.4 82.4a8 8 0 0 0 11.3 11.3l99.3-99.3a24 24 0 0 0-33.9-33.9L59.4 136.8a40 40 0 0 0 56.6 56.6l82.4-82.4z"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 256 256"><path d="M213.7 82.3l-56-56A8 8 0 0 0 152 24H56a16 16 0 0 0-16 16v176a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16V88a8 8 0 0 0-2.3-5.7zM152 88V44l44 44z"/></symbol>
+</svg>
+
+<div class="lesson" id="lesson">
+
+  <!-- ================= PC ================= -->
+  <div class="layout-pc">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-class">2年A組 ・ 数学</div>
+        <div class="header-title">二次関数のグラフと平行移動</div>
+      </div>
+      <div class="status"><span class="status-dot"></span>出席中</div>
+      <!-- v2：生徒＝ピンク系アイコン＋tag-neutral に統一 -->
+      <div class="person">
+        <span class="avatar avatar-student">田</span>
+        <span class="person-name">田中 ひなた</span>
+        <span class="tag tag-neutral">生徒</span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-leave" data-action="openLeave">一時退出</button>
+    </header>
+
+    <main class="pc-main" data-main>
+
+      <!-- 映像 + リアクション -->
+      <section class="col col-video">
+        <div class="col-head"><h6>映像</h6></div>
+        <div class="video" data-video></div>
+        <div class="reactions">
+          <button type="button" class="react react-got"   data-react="got">わかった</button>
+          <button type="button" class="react react-lost"  data-react="lost">わからない</button>
+          <button type="button" class="react react-again" data-react="again">もう一度</button>
+          <button type="button" class="react-hand" data-hand>
+            <span class="hand-main"><svg><use href="#i-hand"/></svg><span data-hand-label>質問する</span></span>
+            <span class="hand-help" data-hand-help>先生に手を挙げる</span>
+          </button>
+        </div>
+        <div class="feedback" data-feedback></div>
+      </section>
+
+      <div class="gutter" data-drag="0"><span></span></div>
+
+      <!-- 資料 -->
+      <section class="col col-material">
+        <div class="col-head"><h6>資料</h6></div>
+        <div class="mat-list" data-mat-list></div>
+        <div class="pages">
+          <div class="pages-grid" data-pages></div>
+          <button type="button" class="pages-nav is-prev" data-action="prevPage" aria-label="前のページ"><svg><use href="#i-prev"/></svg></button>
+          <button type="button" class="pages-nav is-next" data-action="nextPage" aria-label="次のページ"><svg><use href="#i-next"/></svg></button>
+        </div>
+        <div class="pager">
+          <div class="cols">
+            <button type="button" data-cols="1">1</button>
+            <button type="button" data-cols="2">2</button>
+            <button type="button" data-cols="4">4</button>
+          </div>
+          <span class="pager-note">ページ同時表示</span>
+          <div class="pager-right">
+            <button type="button" class="btn btn-secondary btn-icon" data-action="prevPage" aria-label="前のページ">‹</button>
+            <span class="pager-range" data-range></span>
+            <button type="button" class="btn btn-secondary btn-icon" data-action="nextPage" aria-label="次のページ">›</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="gutter" data-drag="1"><span></span></div>
+
+      <!-- 質問箱 / チャット -->
+      <section class="col col-chat">
+        <div class="tabs">
+          <div class="tabs-inner">
+            <button type="button" class="tab" data-tab="qa">質問箱 <span class="badge" data-unread="qa"></span></button>
+            <button type="button" class="tab" data-tab="chat">チャット <span class="badge" data-unread="chat"></span></button>
+          </div>
+        </div>
+
+        <div class="list" data-panel="qa" data-qa-list></div>
+        <div class="compose" data-panel="qa">
+          <textarea class="input" placeholder="先生に質問する" data-qa-draft></textarea>
+          <div class="compose-row">
+            <label class="switch"><input type="checkbox" data-anon><span class="track"></span>匿名で投稿</label>
+            <button type="button" class="btn btn-primary" data-action="postQuestion">投稿</button>
+          </div>
+        </div>
+
+        <div class="list is-chat" data-panel="chat" data-chat-list></div>
+        <div class="chat-row" data-panel="chat">
+          <button type="button" class="btn btn-secondary btn-icon" data-action="attach" aria-label="画像・PDFを添付"><svg><use href="#i-clip"/></svg></button>
+          <input class="input" placeholder="メッセージ" data-chat-draft>
+          <button type="button" class="btn btn-primary" data-action="sendChat">送信</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ================= スマホ ================= -->
+  <div class="layout-mobile">
+    <header class="m-header">
+      <span class="status-dot" title="出席中"></span>
+      <div class="m-title">二次関数のグラフと平行移動</div>
+      <button type="button" class="btn btn-secondary btn-leave" data-action="openLeave">一時退出</button>
+    </header>
+
+    <div class="video m-video" data-video></div>
+    <div class="m-cam-note">カメラONでも映像は先生にだけ届きます</div>
+
+    <div class="m-tabs">
+      <button type="button" class="tab" data-mtab="material">資料</button>
+      <button type="button" class="tab" data-mtab="qa">質問箱 <span class="badge" data-unread="qa"></span></button>
+      <button type="button" class="tab" data-mtab="chat">チャット <span class="badge" data-unread="chat"></span></button>
+    </div>
+
+    <div class="m-body">
+      <div class="m-panel" data-mpanel="material">
+        <div class="m-chips" data-mat-chips></div>
+        <div class="m-pages" data-pages data-swipe></div>
+        <div class="m-pager">
+          <button type="button" class="btn btn-secondary btn-icon" data-action="prevPage" aria-label="前のページ">‹</button>
+          <span class="pager-range" data-range></span>
+          <button type="button" class="btn btn-secondary btn-icon" data-action="nextPage" aria-label="次のページ">›</button>
+        </div>
+      </div>
+
+      <div class="m-panel" data-mpanel="qa">
+        <div class="list" data-qa-list></div>
+        <div class="compose">
+          <textarea class="input" placeholder="先生に質問する" data-qa-draft></textarea>
+          <div class="compose-row">
+            <label class="switch"><input type="checkbox" data-anon><span class="track"></span>匿名で投稿</label>
+            <button type="button" class="btn btn-primary" data-action="postQuestion">投稿</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-panel" data-mpanel="chat">
+        <div class="list is-chat" data-chat-list></div>
+        <div class="chat-row">
+          <button type="button" class="btn btn-secondary btn-icon" data-action="attach" aria-label="画像・PDFを添付"><svg><use href="#i-clip"/></svg></button>
+          <input class="input" placeholder="メッセージ" data-chat-draft>
+          <button type="button" class="btn btn-primary" data-action="sendChat">送信</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下部固定：リアクション＋質問 -->
+    <div class="m-dock">
+      <div class="reactions">
+        <button type="button" class="react react-got"   data-react="got">わかった</button>
+        <button type="button" class="react react-lost"  data-react="lost">わからない</button>
+        <button type="button" class="react react-again" data-react="again">もう一度</button>
+      </div>
+      <button type="button" class="react-hand" data-hand>
+        <span class="hand-main"><svg><use href="#i-hand"/></svg><span data-hand-label>質問する</span></span>
+        <span class="hand-help" data-hand-help>先生に手を挙げる</span>
+      </button>
+      <div class="feedback" data-feedback></div>
+    </div>
+  </div>
+</div>
+
+<!-- ページ拡大 -->
+<div class="zoom" data-zoom hidden>
+  <div class="zoom-head">
+    <span class="zoom-name" data-zoom-name></span>
+    <span class="zoom-pos" data-zoom-pos></span>
+    <button type="button" class="zoom-close" data-action="closeZoom" aria-label="閉じる"><svg width="28" height="28"><use href="#i-close"/></svg></button>
+  </div>
+  <div class="zoom-body">
+    <div class="zoom-side"><button type="button" class="zoom-arrow" data-action="zoomPrev" aria-label="前のページ"><svg width="44" height="44"><use href="#i-prev"/></svg></button></div>
+    <div class="zoom-stage" data-stop><img alt="" data-zoom-img></div>
+    <div class="zoom-side"><button type="button" class="zoom-arrow" data-action="zoomNext" aria-label="次のページ"><svg width="44" height="44"><use href="#i-next"/></svg></button></div>
+  </div>
+</div>
+
+<!-- 一時退出 確認（→ 12 一時退出中 へ） -->
+<div class="dialog-backdrop" data-leave hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <div class="dialog-title">一時退出しますか？</div>
+    <div class="dialog-body">この授業での退出時間の合計が15分を超えると欠課扱いになります。</div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" data-action="closeLeave">キャンセル</button>
+      <button type="button" class="btn btn-primary" data-action="confirmLeave">退出する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 11 確認ポップアップ（先生からの「見ていますか？」） -->
+<div class="dialog-backdrop" data-check hidden style="background:rgba(45,43,43,.35)">
+  <div class="dialog elev-lg dialog-check" role="dialog" aria-modal="true">
+    <div class="check-kicker">先生からの確認</div>
+    <div class="dialog-title">今、画面を見ていますか？</div>
+    <div class="check-sec" data-check-sec>60</div>
+    <button type="button" class="btn btn-primary" data-action="ackCheck">確認</button>
+  </div>
+</div>
+
+<!-- デモ用 状態切替（生徒画面と同じ暗いバー） -->
+<div class="demo-bar" data-demo-bar>
+  <span class="demo-label">状態</span>
+  <button type="button" data-mode="normal">通常</button>
+  <button type="button" data-mode="spotlight">スポットライト</button>
+  <button type="button" data-mode="reconnect">再接続中</button>
+  <button type="button" data-action="startCheck">確認ポップアップ</button>
+  <span class="demo-sep"></span>
+  <button type="button" data-action="toggleMobile" data-mobile-btn>スマホ表示</button>
+</div>
+
+<script src="student.js"></script>
+</body>
+</html>

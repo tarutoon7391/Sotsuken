@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>クラス一覧 - （アプリ名）</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens-04-06.css">
+<link rel="stylesheet" href="class-list.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ヘッダー：アプリ名 ＋ 自分（押すとプロフィール設定へ） -->
+  <header class="app-header">
+    <a class="hdr-brand" href="../04_クラス一覧/index.html">（アプリ名）</a>
+    <span class="hdr-spacer"></span>
+    <a class="person" id="me" href="../03_プロフィール設定/index.html" title="プロフィール設定"></a>
+  </header>
+
+  <main class="app-main">
+    <div class="list-wrap">
+
+      <div class="list-head">
+        <div>
+          <h3>クラス一覧</h3>
+          <p class="sub" id="headSub">授業中のクラスがあれば、ここからすぐ入れます</p>
+        </div>
+        <!-- 先生：クラスを作成 ／ 生徒：参加コードで参加 -->
+        <button class="btn btn-primary" data-role="teacher" id="btnCreate"><i data-icon="plus"></i>クラスを作成</button>
+        <button class="btn btn-primary" data-role="student" id="btnJoin"><i data-icon="key"></i>参加コードで参加</button>
+      </div>
+
+      <!-- いま授業中のクラス（あるときだけ・先頭） -->
+      <section class="live-section" id="liveSection">
+        <h6 class="section-label"><span class="dot dot-live"></span>いま授業中</h6>
+        <div class="live-grid" id="liveGrid"></div>
+      </section>
+
+      <!-- すべてのクラス -->
+      <section id="allSection">
+        <h6 class="section-label">すべてのクラス <span class="count" id="allCount"></span></h6>
+        <div class="class-grid" id="classGrid"></div>
+      </section>
+
+      <!-- 0件 -->
+      <div class="empty" id="emptyTeacher" hidden>
+        <i data-icon="chalkboard" data-size="40"></i>
+        <h4>最初のクラスを作成しましょう</h4>
+        <p>クラスを作ると参加コードが発行されます。生徒にコードを伝えると、そのクラスに参加できます。</p>
+        <button class="btn btn-primary btn-lg" data-open="create"><i data-icon="plus"></i>クラスを作成</button>
+      </div>
+      <div class="empty" id="emptyStudent" hidden>
+        <i data-icon="graduation-cap" data-size="40"></i>
+        <h4>先生から参加コードをもらって参加しましょう</h4>
+        <p>参加コードは「K7Q-4MP」のような 6 文字です。先生に聞いてみてください。</p>
+        <button class="btn btn-primary btn-lg" data-open="join"><i data-icon="key"></i>参加コードで参加</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ダイアログ：クラスを作成（先生） POST /api/classes -->
+<div class="dialog-backdrop" id="dlgCreate" hidden>
+  <form class="dialog" role="dialog" aria-labelledby="dlgCreateTitle" id="formCreate">
+    <div class="dialog-title" id="dlgCreateTitle">クラスを作成</div>
+    <div class="field">
+      <label for="className">クラス名</label>
+      <input class="input" id="className" placeholder="例：2年A組・数学" autocomplete="off">
+      <div class="field-error" id="classNameError" hidden><i data-icon="warning" data-size="14"></i>クラス名を入力してください</div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" data-close>キャンセル</button>
+      <button type="submit" class="btn btn-primary" id="btnCreateSubmit">作成</button>
+    </div>
+  </form>
+</div>
+
+<!-- ダイアログ：作成完了（参加コードを大きく表示） -->
+<div class="dialog-backdrop" id="dlgCreated" hidden>
+  <div class="dialog" role="dialog" aria-labelledby="dlgCreatedTitle">
+    <h6 class="section-label" style="margin:0"><i data-icon="check-circle" data-size="14"></i>クラスを作成しました</h6>
+    <div class="dialog-title" id="dlgCreatedTitle" data-created-name>2年A組・数学</div>
+    <div class="dialog-body">生徒にこの参加コードを伝えてください。クラス詳細からいつでも確認できます。</div>
+    <div class="join-code">
+      <span class="join-code-value" id="createdCode">K7Q-4MP</span>
+      <button type="button" class="btn btn-secondary" data-copy="K7Q-4MP"><i data-icon="copy"></i>コピー</button>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-primary" data-close>閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ダイアログ：参加コードで参加（生徒） POST /api/classes/join -->
+<div class="dialog-backdrop" id="dlgJoin" hidden>
+  <form class="dialog" role="dialog" aria-labelledby="dlgJoinTitle" id="formJoin">
+    <div class="dialog-title" id="dlgJoinTitle">参加コードで参加</div>
+    <div class="dialog-body">先生からもらった参加コードを入力してください。</div>
+    <div class="field">
+      <label for="joinCode">参加コード</label>
+      <input class="input input-code" id="joinCode" placeholder="K7Q-4MP" maxlength="7" autocomplete="off" spellcheck="false">
+      <div class="field-error" id="joinError" hidden><i data-icon="warning" data-size="14"></i>参加コードが違います。先生に確認してください</div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" data-close>キャンセル</button>
+      <button type="submit" class="btn btn-primary" id="btnJoinSubmit">参加する</button>
+    </div>
+  </form>
+</div>
+
+<script src="../common/screens-04-06.js"></script>
+<script src="class-list.js"></script>
+</body>
+</html>

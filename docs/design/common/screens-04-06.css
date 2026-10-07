@@ -1,0 +1,149 @@
+/* ==========================================================================
+   screens-04-06.css — 04 クラス一覧 / 05 クラス詳細 / 06 先生画面（授業中）の共通部品
+   生徒画面（授業中）から引き継いだ見た目。色・余白・角丸は broadsheet-04-06.css（Broadsheet）の変数から取る。
+   ========================================================================== */
+
+html, body { height: 100%; }
+body { min-height: 100vh; }
+[hidden] { display: none !important; }
+button { font: inherit; }
+
+/* ---- 画面の外枠 ---- */
+.app { display: flex; flex-direction: column; min-height: 100vh; background: var(--color-bg); }
+.app-main { flex: 1; min-height: 0; padding: var(--space-2) var(--space-6) 96px; }
+
+/* ---- ヘッダー（生徒画面と同じ形） ---- */
+.app-header { display: flex; align-items: center; gap: var(--space-4); padding: 12px var(--space-6); flex: none; }
+.hdr-left { display: flex; flex-direction: column; min-width: 0; }
+.hdr-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); white-space: nowrap; }
+.hdr-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-brand { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; color: inherit; text-decoration: none; white-space: nowrap; }
+.hdr-spacer { margin-left: auto; }
+.hdr-back { display: inline-flex; align-items: center; gap: 6px; color: var(--color-neutral-700); text-decoration: none; font-size: 13px; white-space: nowrap; }
+.hdr-back:hover { color: var(--color-accent-700); }
+
+/* ---- 状態（ドット＋文字） ---- */
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--color-accent); }
+.dot-live { animation: pulse 1.6s ease-in-out infinite; }
+.dot-neutral { background: var(--color-neutral-500); }
+.dot-accent-2 { background: var(--color-accent-2); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
+
+/* ---- 名前セット：丸アイコン＋名前＋ロールバッジ ---- */
+.person { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.person-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+a.person:hover .person-name { color: var(--color-accent-700); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 14px;
+}
+.avatar-sm { width: 22px; height: 22px; font-size: 11px; }
+.avatar-md { width: 26px; height: 26px; font-size: 12px; }
+.avatar-lg { width: 44px; height: 44px; font-size: 18px; }
+.avatar-teacher { background: var(--color-accent-200); color: var(--color-accent-800); }
+.avatar-student { background: var(--color-accent-2-200); color: var(--color-accent-2-800); }
+.avatar-anon    { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+
+/* ---- 見出しラベル・補助テキスト ---- */
+.section-label { margin: 0 0 var(--space-2); color: var(--color-neutral-700); display: flex; align-items: center; gap: 8px; }
+.section-label .count { color: var(--color-neutral-500); letter-spacing: 0; text-transform: none; }
+.muted { color: var(--color-neutral-700); }
+.small { font-size: 12px; }
+.tiny { font-size: 11px; }
+.strong { font-weight: 600; font-family: var(--font-heading); }
+.accent-2-text { color: var(--color-accent-2-700); }
+
+/* ---- 未読・数バッジ（第2アクセント） ---- */
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--color-accent-2); color: #fff; font-size: 10px; font-weight: 600; line-height: 1; }
+
+/* ---- 「授業中」バッジ（ドット付き） ---- */
+.live-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .02em; padding: 3px 10px; border-radius: calc(var(--radius-md) * .75); background: var(--color-accent-100); color: var(--color-accent-800); white-space: nowrap; }
+.live-tag .dot { width: 6px; height: 6px; }
+
+/* ---- タブ（選択中は下線がアクセント） ---- */
+.tabs { display: flex; gap: 2px; min-height: 28px; }
+.tab { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--color-neutral-700); font-size: 14px; font-weight: 600; font-family: var(--font-heading); cursor: pointer; white-space: nowrap; }
+.tab:hover { color: var(--color-accent-700); }
+.tab.is-on { color: var(--color-accent-700); border-bottom-color: var(--color-accent); }
+.tabs-fill .tab { flex: 1; justify-content: center; padding: 10px 4px; }
+
+/* ---- 映像エリア（暗いパネル） ---- */
+.video-panel { position: relative; background: var(--color-neutral-900); border-radius: var(--radius-lg); overflow: hidden; display: grid; place-items: center; color: var(--color-neutral-200); }
+.video-panel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, var(--color-neutral-800) 0%, var(--color-neutral-900) 70%); }
+.video-panel > * { position: relative; }
+.video-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.45); color: var(--color-neutral-200); font-size: 12px; padding: 3px 9px; border-radius: var(--radius-md); }
+.video-center { text-align: center; font-size: 13px; color: var(--color-neutral-400); padding: 12px; }
+
+/* ---- 空状態 ---- */
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-6) 0; max-width: 460px; }
+.empty .ph { color: var(--color-neutral-500); }
+.empty h4 { margin: 0; font-size: 20px; }
+.empty p { margin: 0; color: var(--color-neutral-700); font-size: 14px; }
+
+/* ---- ボタンの大きさ違い ---- */
+.btn-lg { font-size: 16px; padding: 14px 28px; }
+.btn-sm { font-size: 12px; padding: 5px 10px; }
+.btn-danger { border-color: var(--color-accent-2-300); color: var(--color-accent-2-700); }
+.btn-danger:hover { background: var(--color-accent-2-100); }
+.btn-accent-2 { background: var(--color-accent-2); color: #fff; }
+.btn-accent-2:hover { background: var(--color-accent-2-600); }
+
+/* ---- フォームのエラー ---- */
+.field-error { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--color-accent-2-700); }
+.input.is-error { border-color: var(--color-accent-2); }
+
+/* ---- トースト ---- */
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--color-neutral-900); color: var(--color-surface); font-size: 13px; padding: 8px 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 40; animation: toastIn .2s ease-out; display: inline-flex; align-items: center; gap: 8px; }
+.toast .ph { color: var(--color-accent-400); }
+
+/* ---- くるくる ---- */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; animation: spin .8s linear infinite; }
+
+/* ---- 大きい数字 ---- */
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 32px; line-height: 1; letter-spacing: -.02em; }
+.stat-sub { font-size: 12px; color: var(--color-neutral-700); }
+
+/* ---- 参加コード（大きく表示） ---- */
+.join-code { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.join-code-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 34px; letter-spacing: .12em; line-height: 1; }
+
+/* ---- ダイアログ（Broadsheet の .dialog を使う） ---- */
+.dialog-backdrop { z-index: 20; }
+.dialog .field + .field { margin-top: var(--space-3); }
+
+/* ---- Phosphor duotone 風アイコン ---- */
+.ph { display: block; flex: none; }
+.ph .duo { opacity: .2; }
+
+/* ---- デモ用「状態」切替バー（生徒画面と同じ形） ---- */
+.state-bar {
+  position: fixed; bottom: 12px; left: 24px; z-index: 30; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 6px 8px; max-width: calc(100vw - 48px); background: var(--color-neutral-900); color: var(--color-surface);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); font-size: 12px;
+}
+.state-bar-label { color: var(--color-neutral-500); padding: 0 8px; }
+.state-bar button { font-size: 12px; padding: 5px 10px; border: 0; cursor: pointer; border-radius: var(--radius-md); background: transparent; color: var(--color-surface); white-space: nowrap; }
+.state-bar button:hover { background: var(--color-neutral-800); }
+.state-bar button.is-on { background: var(--color-neutral-700); }
+.state-bar-sep { width: 1px; height: 16px; background: var(--color-neutral-700); margin: 0 4px; }
+
+/* ---- スマホ表示（PC 上では 390px の枠に入れて確認する） ---- */
+body.is-mobile .app {
+  width: 390px; height: 844px; min-height: 0; margin: 24px auto 96px;
+  border: 1px solid var(--color-neutral-300); border-radius: 8px; overflow: hidden;
+}
+body.is-mobile .app-header { gap: 10px; padding: 10px 14px; }
+body.is-mobile .hdr-title { font-size: 15px; }
+body.is-mobile .app-main { padding: var(--space-2) 14px 24px; overflow-y: auto; }
+body.is-mobile .hdr-kicker { font-size: 10px; }
+@media (max-width: 480px) {
+  body.is-mobile .app { width: 100%; height: 100vh; margin: 0; border: 0; border-radius: 0; }
+  .state-bar { left: 12px; right: 12px; max-width: none; }
+}

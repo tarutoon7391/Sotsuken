@@ -1,0 +1,77 @@
+/* 12 一時退出中 — この画面だけのスタイル
+   共通部分（ヘッダー・中央1カラム・状態バー）は ../css/screens.css */
+
+.status-dot.is-absent { background: var(--color-accent-2); }
+
+.away {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+.away h6 { margin: 0; }
+.away-lesson { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; }
+.away-lesson.is-small { font-size: 14px; font-weight: 400; color: var(--color-neutral-700); margin-top: var(--space-1); }
+
+/* ---- 残り時間（いちばん大きく） ---- */
+.countdown {
+  display: flex; flex-direction: column; align-items: center;
+  margin: var(--space-6) 0 var(--space-2);
+  color: var(--color-accent);
+}
+.countdown-pre, .countdown-post { font-size: 16px; color: var(--color-neutral-700); }
+.countdown-time {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 96px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin: var(--space-1) 0;
+}
+.countdown-post { margin-top: 2px; }
+
+/* ---- 退出時間の合計（累積ベースの内訳） ---- */
+.away-total { width: 100%; max-width: 360px; margin: var(--space-2) 0 var(--space-4); }
+.away-total-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);
+  font-size: 14px; color: var(--color-neutral-700);
+}
+.away-total-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.away-total-num strong { color: var(--color-text, inherit); }
+.away-meter {
+  height: 6px; border-radius: 3px; margin: var(--space-1) 0;
+  background: color-mix(in srgb, var(--color-neutral-700) 18%, transparent);
+  overflow: hidden;
+}
+.away-meter span { display: block; height: 100%; width: 0; background: var(--color-accent); transition: width .4s linear; }
+body[data-state="low"] .away-meter span { background: var(--color-accent-2); }
+.away-total .hint { margin: 0; text-align: left; }
+
+/* 残り3分未満：第2アクセントに変えて、控えめに脈打つ */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .55; }
+}
+body[data-state="low"] .countdown { color: var(--color-accent-2); }
+body[data-state="low"] .countdown-time { animation: pulse 1.2s ease-in-out infinite; }
+.lead.is-warn { color: var(--color-accent-2-800); }
+
+/* ---- 戻るボタン（大きく・文字は少なく） ---- */
+.btn-return { min-height: 60px; font-size: 17px; }
+.btn-return .ph { width: 22px; height: 22px; fill: currentColor; }
+.btn-return .spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-bg) 40%, transparent);
+  border-top-color: var(--color-bg);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.actions .hint:empty { display: none; }
+
+/* ---- スマホ ---- */
+body.is-mobile .countdown-time { font-size: 76px; }
+body.is-mobile .countdown { margin-top: var(--space-4); }
+@media (max-width: 600px) {
+  .countdown-time { font-size: 76px; }
+  .countdown { margin-top: var(--space-4); }
+}

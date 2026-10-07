@@ -1,0 +1,106 @@
+/* class-detail.css — 05 クラス詳細 /classes/:id
+   PC：左に授業一覧・右にメンバー一覧の2カラム ／ スマホ：「授業」「メンバー」のタブ */
+
+.detail-wrap { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-8); align-items: start; margin-top: var(--space-3); }
+.detail-tabs { display: none; margin: 0 0 var(--space-3); }
+
+/* 参加コード（先生のみ） */
+.code-block { margin-bottom: var(--space-6); }
+.code-block .join-code-value { font-size: 30px; }
+.code-block .hint { margin: 6px 0 0; }
+
+/* 開催中の授業（いちばん上に大きく） */
+.live-hero { box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm); padding: var(--space-4); gap: var(--space-2); margin-bottom: var(--space-6); }
+.live-hero h4 { margin: 0; font-size: 22px; }
+.live-hero .live-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--color-neutral-700); }
+.live-hero .live-actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-1); flex-wrap: wrap; }
+
+/* 授業一覧 */
+.lessons-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+.lessons-head .section-label { margin: 0; }
+.lessons-head .btn { margin-left: auto; }
+.lesson-group { margin-bottom: var(--space-6); }
+.lesson-group .section-label { margin-bottom: 4px; }
+.lesson-row { display: flex; align-items: center; gap: var(--space-3); padding: 12px 0; }
+.lesson-row + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.lesson-row .lesson-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lesson-row .lesson-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; line-height: 1.3; }
+.lesson-row .lesson-when { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700); }
+.lesson-row .lesson-when .ph { color: var(--color-neutral-500); }
+.lesson-row.is-done .lesson-title { color: var(--color-neutral-700); }
+.lesson-row .lesson-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.lesson-row .why { font-size: 11px; color: var(--color-neutral-600); white-space: nowrap; }
+
+/* タグ（v4）：授業の行のタグ表示／タグで絞り込み／作成ダイアログのタグ選択 */
+.lesson-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.lesson-tags:empty { display: none; }
+.tag-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
+.tag-filter[hidden] { display: none; }
+.tag-filter-label { font-size: 12px; color: var(--color-neutral-700); margin-right: 2px; }
+.chip {
+  font: inherit; font-size: 13px; line-height: 1; cursor: pointer;
+  padding: 7px 12px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: transparent; color: var(--color-text);
+}
+.chip:hover { border-color: var(--color-accent); }
+.chip.is-on { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
+.chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.filter-empty { margin: 0 0 var(--space-4); }
+.tag-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-picker:empty { display: none; }
+.tag-add { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.tag-add .input { flex: 1; min-width: 0; }
+
+/* 授業の行のボタン（資料・編集）と、終了済み授業の資料一覧（v4.1） */
+.lesson-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.lesson-files {
+  margin: 0 0 12px; padding: 10px 14px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.lesson-files + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.file-item { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 28px; }
+.file-kind { font-size: 10px; letter-spacing: .08em; width: 32px; flex: none; color: var(--color-accent-2-700); }
+.file-kind.is-img { color: var(--color-accent-700); }
+.file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); }
+.file-name:hover { color: var(--color-accent); }
+.file-pages { font-size: 11px; color: var(--color-neutral-600); }
+.file-del {
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer; flex: none;
+  padding: 5px 8px; border-radius: var(--radius-md);
+  border: 1px solid transparent; background: transparent; color: var(--color-neutral-600);
+}
+.file-del:hover { color: var(--color-accent-2); border-color: color-mix(in srgb, var(--color-accent-2) 40%, transparent); }
+.file-del.is-armed { color: var(--color-bg); background: var(--color-accent-2); border-color: var(--color-accent-2); }
+body.is-mobile .lesson-links { justify-content: flex-start; }
+
+/* メンバー一覧 */
+.members .section-label { margin-bottom: var(--space-2); }
+.member-list { display: flex; flex-direction: column; gap: 10px; }
+.member-list .person { gap: 10px; }
+.member-list .person-name { font-size: 14px; }
+.member-list .me-mark { font-size: 11px; color: var(--color-neutral-600); margin-left: -4px; }
+.member-group { margin-bottom: var(--space-4); }
+
+/* スマホ：タブで切替 */
+body.is-mobile .detail-wrap { display: block; margin-top: 0; }
+body.is-mobile .detail-tabs { display: flex; }
+body.is-mobile .detail-wrap > [data-tab-pane] { display: none; }
+body.is-mobile .detail-wrap > [data-tab-pane].is-on { display: block; }
+body.is-mobile .live-hero h4 { font-size: 19px; }
+body.is-mobile .live-hero .live-actions .btn-primary { width: 100%; }
+body.is-mobile .code-block .join-code-value { font-size: 26px; }
+body.is-mobile .lessons-head { flex-wrap: wrap; }
+body.is-mobile .lesson-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+body.is-mobile .lesson-row .lesson-actions { flex-direction: row; align-items: center; width: 100%; }
+body.is-mobile .lesson-row .why { white-space: normal; }
+body.is-mobile .app-header .person-name, body.is-mobile .app-header .person .tag { display: none; }
+body.is-mobile .app-header .hdr-back span { display: none; }
+@media (max-width: 800px) {
+  .detail-wrap { grid-template-columns: 1fr; gap: var(--space-6); }
+}
+@media (max-width: 600px) {
+  .app-header .person-name, .app-header .person .tag, .app-header .hdr-back span { display: none; }
+}

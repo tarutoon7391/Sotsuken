@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>授業待機 ｜ 二次関数のグラフと平行移動 ｜ （アプリ名）</title>
+<!-- 9. 授業待機（開始前）  /lessons/:id/learn の開始前  生徒用・PC＋スマホ
+     先生が配信を開始したら（Socket イベント）自動で生徒画面（授業中）へ切り替わる -->
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/common-07-09.css">
+<link rel="stylesheet" href="waiting.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== ヘッダー（生徒画面と同じ。一時退出の代わりに「退出」） ===== -->
+  <header class="app-header">
+    <div class="hdr-titles">
+      <div class="hdr-kicker">2年A組 ・ 数学</div>
+      <div class="hdr-title">二次関数のグラフと平行移動</div>
+    </div>
+
+    <span id="myStatus" class="hdr-spacer status"><span class="dot dot-neutral"></span>開始前</span>
+
+    <span class="person">
+      <span class="avatar avatar-student" aria-hidden="true">田</span>
+      <span class="person-name">田中 ひなた</span>
+      <span class="tag tag-neutral">生徒</span>
+    </span>
+
+    <button id="leaveBtn" class="btn btn-secondary" type="button">退出</button>
+  </header>
+
+  <main class="page-main wait-grid">
+
+    <!-- ===== 待機メッセージ ===== -->
+    <section class="wait-msg">
+      <div class="wait-loader" aria-hidden="true"><span></span><span></span><span></span></div>
+      <h2 class="wait-title">先生が授業を開始するまで<br>お待ちください</h2>
+      <p class="wait-sub">開始すると自動で授業画面に切り替わります。このままお待ちください。</p>
+
+      <dl class="wait-info">
+        <div><dt>授業</dt><dd>二次関数のグラフと平行移動</dd></div>
+        <div><dt>クラス</dt><dd>2年A組 ・ 数学</dd></div>
+        <div><dt>先生</dt><dd>
+          <span class="person">
+            <span class="avatar avatar-teacher avatar-sm" aria-hidden="true">鈴</span>
+            <span class="person-name">鈴木先生</span>
+            <span class="tag tag-accent">先生</span>
+          </span>
+        </dd></div>
+      </dl>
+    </section>
+
+    <!-- ===== カメラ確認 ===== -->
+    <section class="cam">
+      <h6 class="section-label">カメラ確認</h6>
+
+      <div id="camPanel" class="video-panel cam-panel">
+        <span class="video-label">自分のカメラ</span>
+
+        <!-- カメラ OFF / ON のプレビュー -->
+        <div id="camOff" class="video-center">
+          <div class="video-avatar">田</div>
+          カメラはオフです
+        </div>
+        <div id="camOn" class="video-center cam-live" hidden>
+          <div class="cam-fake"></div>
+          <span class="cam-live-tag"><span class="dot"></span>プレビュー中</span>
+        </div>
+
+        <!-- カメラの許可がないとき -->
+        <div id="camDenied" class="video-center cam-denied" hidden>
+          <svg class="ph" width="40" height="40" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path class="duo" d="M176 92v72a16 16 0 0 1-16 16H40a16 16 0 0 1-16-16V80a16 16 0 0 1 16-16h120a16 16 0 0 1 16 16z"/><path d="M232 74.1v107.8a8 8 0 0 1-12.4 6.7L176 162.1V176a16 16 0 0 1-16 16H40a16 16 0 0 1-16-16V80a16 16 0 0 1 16-16h120a16 16 0 0 1 16 16v13.9l43.6-26.5A8 8 0 0 1 232 74.1z"/><path d="M40 24l176 208" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round"/><path d="M40 24l176 208" fill="none" style="stroke:var(--color-neutral-900)" stroke-width="8" stroke-linecap="round" opacity=".9"/></svg>
+          <div class="cam-denied-title">ブラウザでカメラを許可してください</div>
+          <div class="cam-denied-sub">アドレスバーのカメラのアイコンから許可できます。許可しなくても授業には参加できます。</div>
+          <button id="camRetry" class="btn btn-secondary cam-retry" type="button">もう一度試す</button>
+        </div>
+
+        <div class="video-tools">
+          <button id="camToggle" class="video-btn" type="button" aria-pressed="false">
+            <svg class="ph" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path class="duo" d="M176 92v72a16 16 0 0 1-16 16H40a16 16 0 0 1-16-16V80a16 16 0 0 1 16-16h120a16 16 0 0 1 16 16z"/><path d="M232 74.1v107.8a8 8 0 0 1-12.4 6.7L176 162.1V176a16 16 0 0 1-16 16H40a16 16 0 0 1-16-16V80a16 16 0 0 1 16-16h120a16 16 0 0 1 16 16v13.9l43.6-26.5A8 8 0 0 1 232 74.1z"/></svg>
+            <span id="camLabel">カメラ OFF</span>
+          </button>
+          <span class="video-note">ONにしても映像は先生にだけ届きます</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<!-- ===== 開始された（一瞬表示して生徒画面へ） ===== -->
+<div id="startedOverlay" class="started" hidden>
+  <div class="started-card">
+    <div class="started-check" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="currentColor"><path d="M229.7 77.7l-128 128a8.2 8.2 0 0 1-11.4 0l-56-56a8.1 8.1 0 0 1 11.4-11.4L96 188.7 218.3 66.3a8.1 8.1 0 0 1 11.4 11.4z"/></svg>
+    </div>
+    <div class="started-title">授業が始まりました</div>
+    <div class="started-sub">授業画面に移動します…</div>
+  </div>
+</div>
+
+<!-- ===== 退出の確認ダイアログ ===== -->
+<div id="leaveDialog" class="dialog-backdrop" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="leaveTitle">
+    <div id="leaveTitle" class="dialog-title">退出しますか？</div>
+    <div class="dialog-body">授業はまだ始まっていません。退出しても、開始前ならもう一度入室できます。</div>
+    <div class="dialog-actions">
+      <button id="leaveCancel" class="btn btn-secondary" type="button">キャンセル</button>
+      <button id="leaveConfirm" class="btn btn-primary" type="button">退出する</button>
+    </div>
+  </div>
+</div>
+</div><!-- /.page -->
+
+<script src="../common/common-07-09.js"></script>
+<script src="waiting.js"></script>
+</body>
+</html>

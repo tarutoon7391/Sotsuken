@@ -1,0 +1,19 @@
+/* 14 エラー／権限なし — この画面だけのスタイル
+   共通部分（ヘッダー・中央1カラム・状態バー・スマホ枠）は ../css/screens.css */
+
+/* Phosphor duotone 風：薄いほうの面 */
+.ph .duo { opacity: .2; }
+
+/* 怖い印象にしない：見出しはやや小さめ、アイコンはグレー（.is-muted） */
+.err { max-width: 640px; }
+.err h2 { font-size: 28px; text-wrap: balance; }
+.err .lead { margin-top: var(--space-1); }
+body.is-mobile .err h2 { font-size: 24px; }
+@media (max-width: 600px) { .err h2 { font-size: 24px; } }
+
+/* 参加コードの例 */
+.err .hint code {
+  font: inherit; font-weight: 600; letter-spacing: .06em;
+  color: var(--color-text); background: var(--color-surface);
+  padding: 1px 6px; border-radius: var(--radius-sm);
+}

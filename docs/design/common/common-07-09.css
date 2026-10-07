@@ -1,0 +1,163 @@
+/* ==========================================================================
+   common-07-09.css — 07 出席一覧／08 授業結果／09 授業待機 の共通部品
+   （生徒画面（授業中）から引き継いだ見た目）
+   色・余白・角丸はすべて broadsheet.css の変数から取る。直書きしない。
+   ========================================================================== */
+
+html, body { height: 100%; }
+body { min-height: 100vh; }
+[hidden] { display: none !important; }
+
+/* ---- ページ骨格 ---- */
+.page { display: flex; flex-direction: column; min-height: 100vh; }
+.page-main { flex: 1; min-height: 0; padding: 0 var(--space-6) 80px; }
+
+/* ---- ヘッダー（生徒画面と同じ形） ---- */
+.app-header {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 12px var(--space-6); flex: none;
+}
+.hdr-titles { display: flex; flex-direction: column; min-width: 0; }
+.hdr-kicker {
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.hdr-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-spacer { margin-left: auto; }
+.hdr-actions { display: flex; align-items: center; gap: var(--space-2); }
+
+/* ---- 状態（ドット＋文字） ---- */
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--color-accent); }
+.dot-neutral { background: var(--color-neutral-500); }
+.dot-accent-2 { background: var(--color-accent-2); }
+
+/* ---- 名前セット：丸アイコン＋名前＋ロールバッジ ---- */
+.person { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.person-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 14px;
+}
+.avatar-sm { width: 26px; height: 26px; font-size: 12px; }
+.avatar-lg { width: 44px; height: 44px; font-size: 18px; }
+.avatar-teacher { background: var(--color-accent-200); color: var(--color-accent-800); }
+.avatar-student { background: var(--color-accent-2-200); color: var(--color-accent-2-800); }
+.avatar-anon    { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+
+/* ---- 見出しラベル（小さい h6 をグレーで） ---- */
+.section-label { margin: 0 0 var(--space-2); color: var(--color-neutral-700); }
+.section { display: flex; flex-direction: column; min-width: 0; }
+.section + .section { margin-top: var(--space-8); }
+.muted { color: var(--color-neutral-700); }
+.small { font-size: 12px; }
+
+/* ---- 映像エリア（暗いパネル） ---- */
+.video-panel {
+  position: relative; background: var(--color-neutral-900); border-radius: var(--radius-lg);
+  overflow: hidden; display: grid; place-items: center; color: var(--color-neutral-200);
+}
+.video-panel::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, var(--color-neutral-800) 0%, var(--color-neutral-900) 70%);
+}
+.video-panel > * { position: relative; }
+.video-label {
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(0, 0, 0, .45); color: var(--color-neutral-200);
+  font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md);
+}
+.video-center { text-align: center; font-size: 13px; color: var(--color-neutral-400); }
+.video-avatar {
+  width: 96px; height: 96px; border-radius: 50%; background: var(--color-neutral-700);
+  margin: 0 auto 12px; display: grid; place-items: center;
+  font-size: 36px; color: var(--color-surface); font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+}
+.video-tools {
+  position: absolute; bottom: 12px; left: 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.video-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0, 0, 0, .4); color: var(--color-surface);
+  border: 1px solid var(--color-neutral-700); border-radius: var(--radius-md);
+  padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.video-btn:hover { background: rgba(0, 0, 0, .6); }
+.video-btn.is-on { background: var(--color-accent-600); border-color: var(--color-accent-600); }
+.video-btn:disabled { opacity: .45; cursor: not-allowed; }
+.video-btn svg { display: block; }
+.video-note { font-size: 11px; color: var(--color-neutral-400); }
+
+/* ---- くるくる（読み込み中） ---- */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--color-neutral-300); border-top-color: var(--color-accent);
+  animation: spin 1s linear infinite;
+}
+.video-panel .spinner { border-color: var(--color-neutral-700); border-top-color: var(--color-accent-400); }
+
+/* ---- トースト ---- */
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.toast {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--color-neutral-900); color: var(--color-surface);
+  font-size: 13px; padding: 8px 16px; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); z-index: 40; animation: toastIn .2s ease-out;
+}
+
+/* ---- 大きい数字 ---- */
+.stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat-value {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 40px; line-height: 1; letter-spacing: -0.02em;
+}
+.stat-sub { font-size: 12px; color: var(--color-neutral-700); }
+
+/* ---- 選択（ネイティブ select を Broadsheet の .input に寄せる） ---- */
+select.input {
+  appearance: none; -webkit-appearance: none; padding-right: 28px; cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23605d5d'><path d='M213.7 101.7l-80 80a8.1 8.1 0 0 1-11.4 0l-80-80a8.1 8.1 0 0 1 11.4-11.4L128 164.7l74.3-74.4a8.1 8.1 0 0 1 11.4 11.4z'/></svg>");
+  background-repeat: no-repeat; background-position: right 8px center; background-size: 14px;
+}
+
+/* ---- Phosphor duotone 風アイコン（inline SVG） ---- */
+.ph { display: block; flex: none; }
+.ph .duo { opacity: .2; }
+
+/* ---- デモ用「状態」切替バー（生徒画面と同じ形） ---- */
+.state-bar {
+  position: fixed; bottom: 12px; left: 24px; z-index: 30;
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 6px 8px; max-width: calc(100vw - 48px);
+  background: var(--color-neutral-900); color: var(--color-surface);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); font-size: 12px;
+}
+.state-bar-label { color: var(--color-neutral-500); padding: 0 8px; }
+.state-bar button {
+  font: inherit; font-size: 12px; padding: 5px 10px; border: 0; cursor: pointer;
+  border-radius: var(--radius-md); background: transparent; color: var(--color-surface);
+}
+.state-bar button:hover { background: var(--color-neutral-800); }
+.state-bar button.is-on { background: var(--color-neutral-700); }
+.state-bar-sep { width: 1px; height: 16px; background: var(--color-neutral-700); margin: 0 4px; }
+
+/* ---- スマホ表示（PC 上では 390px の枠に入れて確認する） ---- */
+body.is-mobile .page {
+  width: 390px; height: 844px; min-height: 0; margin: 24px auto 80px;
+  border: 1px solid var(--color-neutral-300); border-radius: 8px; overflow: hidden;
+  background: var(--color-bg);
+}
+body.is-mobile .app-header { gap: 10px; padding: 10px 14px; }
+body.is-mobile .hdr-title { font-size: 15px; }
+body.is-mobile .page-main { padding: 0 14px 20px; overflow-y: auto; }
+@media (max-width: 480px) {
+  body.is-mobile .page { width: 100%; height: 100vh; margin: 0; border: 0; border-radius: 0; }
+  .state-bar { left: 12px; }
+}

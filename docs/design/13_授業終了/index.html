@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 授業終了</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens.css">
+<link rel="stylesheet" href="end.css">
+</head>
+<body data-state="student">
+
+<div class="app">
+
+  <!-- ヘッダー（生徒画面と同じ形。左：クラス名・教科＋ページタイトル／右：状態・自分・ロール） -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-class">2年A組 ・ 数学</div>
+      <div class="header-title">授業終了</div>
+    </div>
+
+    <div class="status">
+      <span class="status-dot is-off"></span>終了
+    </div>
+
+    <!-- 生徒版 -->
+    <div class="person" data-show="student">
+      <span class="avatar avatar-student" aria-hidden="true">田</span>
+      <span class="person-name">田中 ひなた</span>
+      <span class="tag tag-neutral">生徒</span>
+    </div>
+    <!-- 先生版 -->
+    <div class="person" data-show="teacher">
+      <span class="avatar avatar-teacher" aria-hidden="true">鈴</span>
+      <span class="person-name">鈴木先生</span>
+      <span class="tag tag-accent">先生</span>
+    </div>
+  </header>
+
+  <!-- 本文：中央寄せ1カラム。メッセージ ＞ 次への導線 -->
+  <main class="center">
+    <div class="center-col end">
+
+      <!-- Phosphor duotone: CheckCircle -->
+      <svg class="icon ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path class="duo" d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z"/>
+        <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/>
+      </svg>
+
+      <h6>2年A組 ・ 数学</h6>
+      <h2>授業は終了しました</h2>
+
+      <p class="lesson-title">二次関数のグラフと平行移動</p>
+      <p class="lesson-time">
+        <!-- Phosphor duotone: Clock -->
+        <svg class="ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path class="duo" d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z"/>
+          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/>
+        </svg>
+        10:00〜10:50
+      </p>
+
+      <!-- 次への導線：生徒版（クラス詳細へ） -->
+      <div class="actions" data-show="student">
+        <a class="btn btn-primary" href="#">クラスに戻る</a>
+      </div>
+
+      <!-- 次への導線：先生版（授業結果へ／クラス詳細へ） -->
+      <div class="actions" data-show="teacher">
+        <a class="btn btn-primary" href="#">授業結果を見る</a>
+        <a class="btn btn-secondary" href="#">クラスに戻る</a>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- デモ用 状態切替（生徒画面と同じ暗いバー） -->
+<div class="demo-bar" data-demo-bar>
+  <span class="demo-label">状態</span>
+  <button type="button" data-state="student">生徒版</button>
+  <button type="button" data-state="teacher">先生版</button>
+  <span class="demo-sep"></span>
+  <button type="button" data-toggle-mobile>スマホ表示</button>
+</div>
+
+<script src="../common/demo-state.js"></script>
+</body>
+</html>

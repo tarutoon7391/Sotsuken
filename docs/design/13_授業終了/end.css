@@ -1,0 +1,15 @@
+/* 13 授業終了 — この画面だけのスタイル
+   共通部分（ヘッダー・中央1カラム・状態バー・スマホ枠）は ../css/screens.css */
+
+/* Phosphor duotone 風：薄いほうの面 */
+.ph .duo { opacity: .2; }
+
+/* 授業タイトルは見出し書体で */
+.end .lesson-title { font-family: var(--font-heading); }
+
+/* 先生版はボタンが2つ：PCでは横並び、スマホでは縦に積む */
+.end .actions[data-show="teacher"] { flex-direction: row; justify-content: center; flex-wrap: wrap; }
+body.is-mobile .end .actions[data-show="teacher"] { flex-direction: column; }
+@media (max-width: 600px) {
+  .end .actions[data-show="teacher"] { flex-direction: column; }
+}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>出席一覧・修正 ｜ 二次関数のグラフと平行移動 ｜ （アプリ名）</title>
+<!-- 7. 出席一覧・修正  /lessons/:id/attendance  先生専用・PC のみ
+     取得：GET   /api/lessons/:id/attendance
+     設定：PATCH /api/lessons/:id                      （欠課判定の閾値＝退出時間の累積・分）
+     修正：PATCH /api/lessons/:id/attendance/:user_id  （状態・メモ） -->
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/common-07-09.css">
+<link rel="stylesheet" href="attendance.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="app-header">
+    <div class="hdr-titles">
+      <div class="hdr-kicker">2年A組 ・ 数学 ・ 出席一覧</div>
+      <div class="hdr-title">二次関数のグラフと平行移動</div>
+    </div>
+
+    <!-- 集計（状態バーで切り替わる） -->
+    <div class="hdr-spacer summary" aria-label="出席の集計">
+      <span class="status"><span class="dot"></span>出席 <strong id="sumPresent">26</strong></span>
+      <span class="status"><span class="dot dot-neutral"></span>一時退出 <strong id="sumAway">2</strong></span>
+      <span class="status"><span class="dot dot-accent-2"></span>欠課 <strong id="sumAbsent">2</strong></span>
+    </div>
+
+    <span id="lessonBadge" class="status" title="授業の状態"><span class="dot"></span>授業中</span>
+
+    <span class="person">
+      <span class="avatar avatar-teacher" aria-hidden="true">鈴</span>
+      <span class="person-name">鈴木先生</span>
+      <span class="tag tag-accent">先生</span>
+    </span>
+
+    <a class="btn btn-secondary" href="../06_先生画面_授業中/index.html">
+      <svg class="ph" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path class="duo" d="M224 128a96 96 0 1 1-96-96 96 96 0 0 1 96 96z"/><path d="M128 24a104 104 0 1 0 104 104A104.1 104.1 0 0 0 128 24zm0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88zm40-88a8 8 0 0 1-8 8h-52.7l18.4 18.3a8.1 8.1 0 0 1 0 11.4 8.2 8.2 0 0 1-11.4 0l-32-32a8.1 8.1 0 0 1 0-11.4l32-32a8.1 8.1 0 0 1 11.4 11.4L107.3 120H160a8 8 0 0 1 8 8z"/></svg>
+      先生画面に戻る
+    </a>
+  </header>
+
+  <main class="page-main">
+
+    <!-- 授業終了後の案内（終了後だけ表示） -->
+    <p id="endedNote" class="ended-note" hidden>
+      <span class="tag tag-accent">確定</span>
+      授業は終了しました。出席は「出席／欠課」で確定済みです（退出中だった生徒は、退出時間の累積で判定）。必要ならこの画面から修正できます。
+    </p>
+
+    <!-- ===== 設定 ===== -->
+    <section class="section settings">
+      <h6 class="section-label">設定</h6>
+      <form class="settings-row" id="settingsForm">
+        <label for="timeoutMin">退出時間の合計がこの時間を超えると欠課</label>
+        <input id="timeoutMin" class="input" type="number" min="1" max="60" step="1" value="15" inputmode="numeric">
+        <span>分</span>
+        <button class="btn btn-secondary" type="submit">保存</button>
+        <span class="small muted" id="timeoutSaved" hidden>保存しました</span>
+      </form>
+      <p class="small muted settings-note">1回ごとではなく、授業全体の退出時間の<strong>累積</strong>で判定します（回線切断の時間も含みます）。</p>
+    </section>
+
+    <!-- ===== 出席一覧 ===== -->
+    <section class="section">
+      <div class="list-head">
+        <h6 class="section-label">出席一覧</h6>
+
+        <!-- 状態で絞り込み -->
+        <div class="seg" role="radiogroup" aria-label="状態で絞り込み">
+          <label class="seg-opt"><input type="radio" name="filter" value="all" checked>すべて</label>
+          <label class="seg-opt"><input type="radio" name="filter" value="present">出席</label>
+          <label class="seg-opt"><input type="radio" name="filter" value="away">一時退出</label>
+          <label class="seg-opt"><input type="radio" name="filter" value="absent">欠課</label>
+        </div>
+
+        <!-- 並び替え -->
+        <label class="sort">
+          <span class="small muted">並び替え</span>
+          <select id="sortSelect" class="input">
+            <option value="name">名前順</option>
+            <option value="status">状態順</option>
+            <option value="entered">入室時刻順</option>
+            <option value="total">累積退出時間が長い順</option>
+          </select>
+        </label>
+      </div>
+
+      <table class="table attendance-table">
+        <thead>
+          <tr>
+            <th scope="col">名前</th>
+            <th scope="col">状態</th>
+            <th scope="col">入室時刻</th>
+            <th scope="col">現在の退出開始</th>
+            <th scope="col">累積退出時間</th>
+            <th scope="col">確認ボタン</th>
+            <th scope="col">メモ</th>
+            <th scope="col"><span class="sr-only">操作</span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"><!-- 07_attendance.js が描画 --></tbody>
+      </table>
+      <p id="emptyNote" class="muted small empty-note" hidden>この条件に当てはまる生徒はいません。</p>
+    </section>
+  </main>
+</div>
+
+<!-- 行の編集テンプレート（状態ドロップダウン＋メモ） -->
+<template id="editorTpl">
+  <tr class="editor-row">
+    <td colspan="8">
+      <form class="editor">
+        <div class="field">
+          <label>状態</label>
+          <select class="input editor-status" name="status">
+            <option value="present">出席</option>
+            <option value="away">一時退出</option>
+            <option value="absent">欠課</option>
+          </select>
+        </div>
+        <div class="field editor-memo-field">
+          <label>メモ（例：回線トラブルのため出席扱い）</label>
+          <input class="input editor-memo" name="memo" maxlength="100" placeholder="修正の理由を残しておくと後で分かりやすい">
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="btn btn-secondary editor-cancel">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </td>
+  </tr>
+</template>
+
+<script src="../common/common-07-09.js"></script>
+<script src="attendance.js"></script>
+</body>
+</html>

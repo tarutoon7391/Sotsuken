@@ -1,0 +1,122 @@
+/* screens.css — 12 一時退出中 / 13 授業終了 / 14 エラー 共通レイアウト
+   （ヘッダー・名前セット・中央寄せ1カラム・状態切替バー・スマホ表示の枠）
+   色・余白は broadsheet.css（Broadsheet）の変数を使う。直書きしない。 */
+
+html, body { height: 100%; }
+body { min-height: 100vh; }
+[hidden] { display: none !important; }
+
+/* ---- 画面の外枠（スマホ表示のときは 390px の枠に入れる） ---- */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+body.is-mobile .app {
+  width: 390px;
+  min-height: 844px;
+  margin: var(--space-6) auto 80px;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ---- ヘッダー（生徒画面と同じ形） ---- */
+.app-header {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 12px 24px; flex: none;
+}
+.app-header .header-class {
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.app-header .header-title {
+  font-weight: 600; font-size: 18px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.app-header .header-left { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.app-header .header-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--color-accent); }
+.status-dot.is-off { background: var(--color-neutral-500); }
+
+/* 名前の表示：丸アイコン＋名前＋ロールバッジ */
+.person { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none;
+}
+.avatar-teacher { background: var(--color-accent-200); color: var(--color-accent-800); }
+.avatar-student { background: var(--color-accent-2-200); color: var(--color-accent-2-800); }
+.avatar-anon    { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+
+body.is-mobile .app-header { padding: 12px 16px; gap: 12px; }
+body.is-mobile .app-header .person-name { display: none; }
+body.is-mobile .app-header .status { display: none; }
+
+/* ---- 中央寄せの1カラム ---- */
+.center {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--space-8) 24px 120px;
+  text-align: center;
+}
+.center-col {
+  width: 100%; max-width: 520px;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+}
+.center .icon {
+  width: 56px; height: 56px; margin-bottom: var(--space-2);
+  color: var(--color-accent);
+}
+.center .icon.is-muted { color: var(--color-neutral-600); }
+.center h6 { margin: 0 0 var(--space-1); color: var(--color-neutral-700); }
+.center h2 { margin: 0; font-size: 30px; }
+.center .lead { margin: 0; font-size: 15px; color: var(--color-neutral-700); max-width: 420px; }
+.center .lesson-title { margin: var(--space-3) 0 0; font-size: 20px; font-weight: 600; line-height: 1.3; }
+.center .lesson-time  { margin: 0; font-size: 14px; color: var(--color-neutral-700); display: inline-flex; align-items: center; gap: 8px; }
+.center .lesson-time svg { width: 16px; height: 16px; }
+
+/* 次への導線：大きく、文字は少なく */
+.actions {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  margin-top: var(--space-6); width: 100%;
+}
+.actions .btn { min-width: 240px; min-height: 52px; font-size: 15px; padding-inline: var(--space-6); }
+.actions .btn svg { width: 18px; height: 18px; }
+.actions .hint { margin: var(--space-1) 0 0; font-size: 12px; color: var(--color-neutral-700); }
+body.is-mobile .actions .btn, .actions.is-block .btn { width: 100%; }
+body.is-mobile .center { padding: var(--space-6) 20px 96px; }
+body.is-mobile .center h2 { font-size: 26px; }
+
+@media (max-width: 600px) {
+  .app-header { padding: 12px 16px; gap: 12px; }
+  .app-header .person-name, .app-header .status { display: none; }
+  .center { padding: var(--space-6) 20px 120px; }
+  .center h2 { font-size: 26px; }
+  .actions .btn { width: 100%; }
+}
+
+/* ---- デモ用 状態切替バー（生徒画面と同じ暗いバー） ---- */
+.demo-bar {
+  position: fixed; bottom: 12px; left: 24px; z-index: 30;
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  max-width: calc(100vw - 48px);
+  padding: 6px 8px; border-radius: var(--radius-lg);
+  background: var(--color-neutral-900); color: var(--color-surface);
+  box-shadow: var(--shadow-lg); font-size: 12px;
+}
+.demo-bar .demo-label { color: var(--color-neutral-500); padding: 0 8px; }
+.demo-bar button {
+  font: inherit; font-size: 12px; padding: 5px 10px; border: 0;
+  border-radius: var(--radius-md); cursor: pointer;
+  background: transparent; color: var(--color-surface);
+}
+.demo-bar button:hover { background: var(--color-neutral-800); }
+.demo-bar button.is-active { background: var(--color-neutral-700); }
+.demo-bar .demo-sep { width: 1px; height: 16px; background: var(--color-neutral-700); margin: 0 4px; }
+@media (max-width: 600px) { .demo-bar { left: 12px; right: 12px; max-width: none; } }

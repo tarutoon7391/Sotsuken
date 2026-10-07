@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>プロフィール設定 ｜ （アプリ名）</title>
+  <link rel="stylesheet" href="../common/broadsheet.css">
+  <link rel="stylesheet" href="../common/screens-01-03.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 1. ヘッダー（他の画面と同じ形） -->
+  <header class="app-header">
+    <div class="header-lead">
+      <div class="header-kicker">（アプリ名）</div>
+      <div class="header-title">プロフィール設定</div>
+    </div>
+    <div class="header-right">
+      <div class="user-chip" id="headerChip">
+        <span class="avatar avatar-student" id="headerAvatar">田</span>
+        <span class="user-name" id="headerName">田中 ひなた</span>
+        <span class="tag tag-neutral" id="headerBadge">生徒</span>
+      </div>
+      <a class="btn btn-secondary back-link" href="#" title="クラス一覧へ戻る">
+        <i data-icon="arrow-left" data-size="16"></i><span class="back-text">クラス一覧へ戻る</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="me-main">
+    <form class="me-panel" id="meForm" action="/api/me" method="post" novalidate>
+
+      <!-- 2. アイコン（POST /api/me/icon） -->
+      <section class="me-section">
+        <h6 class="section-label">アイコン</h6>
+        <div class="icon-row">
+          <div class="avatar avatar-student avatar-xl" id="iconPreview">田</div>
+          <div class="icon-actions">
+            <input type="file" id="iconFile" name="icon" accept="image/*" class="visually-hidden">
+            <button class="btn btn-secondary" type="button" id="pickIconBtn">
+              <i data-icon="image" data-size="18"></i>画像を選ぶ
+            </button>
+            <div class="field-hint" id="iconHint">JPG・PNG。<span id="iconLimitText"></span>までです</div>
+            <div class="field-error" id="iconError"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 表示名 -->
+      <section class="me-section">
+        <h6 class="section-label">表示名</h6>
+        <div class="field">
+          <label for="name" class="visually-hidden">表示名</label>
+          <input class="input" id="name" name="name" type="text" value="田中 ひなた" autocomplete="nickname">
+          <div class="field-error" id="nameError"></div>
+        </div>
+      </section>
+
+      <!-- 4. ロール（変更不可） -->
+      <section class="me-section">
+        <h6 class="section-label">ロール</h6>
+        <div class="role-row">
+          <span class="tag tag-neutral" id="roleBadge">生徒</span>
+          <span class="role-note"><i data-icon="lock" data-size="14"></i>ロールは登録後に変更できません</span>
+        </div>
+      </section>
+
+      <!-- 5. 保存（PUT /api/me）／ログアウト -->
+      <div class="me-actions">
+        <button class="btn btn-primary btn-block btn-lg" id="saveBtn" type="submit">保存</button>
+        <a class="btn btn-ghost btn-logout" href="../01_ログイン/index.html">
+          <i data-icon="sign-out" data-size="16"></i>ログアウト
+        </a>
+      </div>
+
+    </form>
+  </main>
+</div>
+
+<script src="../common/screens-01-03.js"></script>
+<script src="me.js"></script>
+</body>
+</html>

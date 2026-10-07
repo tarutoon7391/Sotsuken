@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>会員登録 ｜ （アプリ名）</title>
+  <link rel="stylesheet" href="../common/broadsheet.css">
+  <link rel="stylesheet" href="../common/screens-01-03.css">
+</head>
+<body>
+<div class="app" id="app">
+  <main class="auth">
+    <div class="auth-panel auth-panel-wide">
+
+      <div class="brand">
+        <h1 class="brand-name">（アプリ名）</h1>
+        <p class="brand-tagline">会員登録</p>
+      </div>
+
+      <form class="form" id="registerForm" action="/api/register" method="post" novalidate>
+
+        <!-- 1. ロール選択（いちばん上・いちばん大きく） -->
+        <div>
+          <h6 class="section-label">あなたは</h6>
+          <div class="role-grid" role="group" aria-label="ロールを選ぶ">
+            <button class="role-card" type="button" data-role="teacher" aria-pressed="false">
+              <span class="role-icon"><i data-icon="chalkboard" data-size="40"></i></span>
+              <span class="role-title">先生</span>
+              <span class="role-desc">クラスを作って<br>授業を配信する</span>
+            </button>
+            <button class="role-card" type="button" data-role="student" aria-pressed="false">
+              <span class="role-icon"><i data-icon="graduation-cap" data-size="40"></i></span>
+              <span class="role-title">生徒</span>
+              <span class="role-desc">参加コードでクラスに入って<br>授業を受ける</span>
+            </button>
+          </div>
+          <input type="hidden" name="role" id="roleInput" value="">
+          <p class="role-help" id="roleHelp">先生か生徒を選んでください</p>
+        </div>
+
+        <!-- 2. 入力欄 -->
+        <div class="field">
+          <label for="name">表示名<span class="text-sub">（授業中に表示される名前）</span></label>
+          <input class="input" id="name" name="name" type="text" autocomplete="nickname" placeholder="例：田中 ひなた">
+          <div class="field-error" id="nameError"></div>
+        </div>
+
+        <div class="field">
+          <label for="loginId">ログインID</label>
+          <input class="input" id="loginId" name="login_id" type="text"
+                 autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="半角英数字">
+          <div class="field-error" id="loginIdError"></div>
+        </div>
+
+        <div class="field">
+          <label for="password">パスワード</label>
+          <div class="pw-wrap">
+            <input class="input" id="password" name="password" type="password" autocomplete="new-password">
+            <button class="pw-toggle" type="button" data-pw-toggle="password"></button>
+          </div>
+          <div class="field-error" id="passwordError"></div>
+        </div>
+
+        <div class="field">
+          <label for="passwordConfirm">パスワード（確認）</label>
+          <div class="pw-wrap">
+            <input class="input" id="passwordConfirm" name="password_confirm" type="password" autocomplete="new-password">
+            <button class="pw-toggle" type="button" data-pw-toggle="passwordConfirm"></button>
+          </div>
+          <div class="field-error" id="passwordConfirmError"></div>
+        </div>
+
+        <!-- 3. 登録ボタン（ロール未選択の間は押せない） -->
+        <button class="btn btn-primary btn-block btn-lg" id="submitBtn" type="submit" disabled>登録してはじめる</button>
+      </form>
+
+      <!-- 4. ログインへの導線 -->
+      <p class="auth-switch">アカウントをお持ちの方は <a href="../01_ログイン/index.html">ログイン</a></p>
+
+    </div>
+  </main>
+</div>
+
+<script src="../common/screens-01-03.js"></script>
+<script src="register.js"></script>
+</body>
+</html>

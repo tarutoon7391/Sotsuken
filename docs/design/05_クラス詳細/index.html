@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>クラス詳細 - （アプリ名）</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens-04-06.css">
+<link rel="stylesheet" href="class-detail.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ヘッダー：クラス一覧へ戻る ／ クラス名 ／ 自分 -->
+  <header class="app-header">
+    <a class="hdr-back" href="../04_クラス一覧/index.html"><i data-icon="arrow-left" data-size="16"></i><span>クラス一覧へ戻る</span></a>
+    <div class="hdr-left">
+      <div class="hdr-kicker">クラス</div>
+      <div class="hdr-title">2年A組・数学</div>
+    </div>
+    <span class="hdr-spacer"></span>
+    <span class="status" id="hdrLive" hidden><span class="dot dot-live"></span>授業中</span>
+    <a class="person" id="me" href="../03_プロフィール設定/index.html" title="プロフィール設定"></a>
+  </header>
+
+  <main class="app-main">
+
+    <!-- スマホ：授業／メンバーのタブ -->
+    <div class="tabs tabs-fill detail-tabs" role="tablist">
+      <button class="tab is-on" role="tab" data-tab="lessons">授業</button>
+      <button class="tab" role="tab" data-tab="members">メンバー <span class="count muted" id="tabMemberCount"></span></button>
+    </div>
+
+    <div class="detail-wrap">
+
+      <!-- 左：参加コード ＋ 開催中の授業 ＋ 授業一覧 -->
+      <section data-tab-pane="lessons" class="is-on">
+
+        <!-- 参加コード（先生のみ） -->
+        <div class="code-block" data-role="teacher">
+          <h6 class="section-label">参加コード</h6>
+          <div class="join-code">
+            <span class="join-code-value" id="joinCode">K7Q-4MP</span>
+            <button type="button" class="btn btn-secondary" id="btnCopy"><i data-icon="copy"></i>コピー</button>
+          </div>
+          <p class="hint small muted">生徒はクラス一覧の「参加コードで参加」からこのコードを入力します</p>
+        </div>
+
+        <!-- 開催中の授業（あるときだけ・いちばん上に大きく） -->
+        <div class="card live-hero" id="liveHero" hidden>
+          <div><span class="live-tag"><span class="dot dot-live"></span>授業中</span></div>
+          <h4 id="liveTitle">二次関数のグラフと平行移動</h4>
+          <div class="live-meta"><i data-icon="clock" data-size="14"></i><span id="liveWhen">今日 10:00 開始</span><span id="liveElapsed"></span></div>
+          <div class="lesson-tags" id="liveTags"></div>
+          <div class="live-actions">
+            <a class="btn btn-primary btn-lg" id="btnEnter" href="../06_先生画面_授業中/index.html"><i data-icon="sign-in" data-size="20"></i>入室する</a>
+            <span class="small muted" id="enterHint">先生画面が開きます</span>
+          </div>
+        </div>
+
+        <!-- 授業一覧 -->
+        <div class="lessons-head">
+          <h6 class="section-label">授業 <span class="count" id="lessonCount"></span></h6>
+          <button type="button" class="btn btn-secondary" data-role="teacher" id="btnCreateLesson"><i data-icon="plus"></i>授業を作成</button>
+        </div>
+
+        <!-- タグで絞り込み（v4） GET /api/classes/:id/tags ／ GET /api/classes/:id/lessons?tag= -->
+        <div class="tag-filter" id="tagFilter" role="group" aria-label="タグで絞り込み"></div>
+        <p class="small muted filter-empty" id="filterEmpty" hidden>このタグが付いた授業はありません。</p>
+
+        <div class="lesson-group" id="plannedGroup">
+          <h6 class="section-label">予定</h6>
+          <div id="plannedList"></div>
+        </div>
+        <div class="lesson-group" id="doneGroup">
+          <h6 class="section-label">終了済み</h6>
+          <div id="doneList"></div>
+        </div>
+
+        <!-- 0件 -->
+        <div class="empty" id="emptyTeacher" hidden>
+          <i data-icon="calendar" data-size="40"></i>
+          <h4>最初の授業を作成しましょう</h4>
+          <p>授業を作成して「開始する」を押すと、配信が始まり生徒が入室できるようになります。</p>
+          <button type="button" class="btn btn-primary btn-lg" data-open-create><i data-icon="plus"></i>授業を作成</button>
+        </div>
+        <div class="empty" id="emptyStudent" hidden>
+          <i data-icon="calendar" data-size="40"></i>
+          <h4>まだ授業はありません</h4>
+          <p>先生が授業を始めると、ここに「入室する」ボタンが表示されます。</p>
+        </div>
+      </section>
+
+      <!-- 右：メンバー一覧 -->
+      <aside data-tab-pane="members" class="members">
+        <h6 class="section-label">メンバー <span class="count" id="memberCount"></span></h6>
+        <div class="member-group">
+          <div class="member-list" id="teacherList"></div>
+        </div>
+        <div class="member-group">
+          <h6 class="section-label">生徒 <span class="count" id="studentCount"></span></h6>
+          <div class="member-list" id="studentList"></div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+</div>
+
+<!-- ダイアログ：授業を作成（先生） POST /api/classes/:id/lessons
+     授業の「編集」でも同じダイアログを使う（タイトル・タグの変更） PATCH /api/lessons/:id -->
+<div class="dialog-backdrop" id="dlgCreate" hidden>
+  <form class="dialog" role="dialog" aria-labelledby="dlgCreateTitle" id="formCreate">
+    <div class="dialog-title" id="dlgCreateTitle">授業を作成</div>
+    <div class="field">
+      <label for="lessonTitle">授業タイトル</label>
+      <input class="input" id="lessonTitle" placeholder="例：二次関数の最大・最小" autocomplete="off">
+      <div class="field-error" id="lessonTitleError" hidden><i data-icon="warning" data-size="14"></i>タイトルを入力してください</div>
+    </div>
+    <!-- タグ（任意・複数可）：既存タグから選ぶ or 新しく入力（v4）。送信は tags:[string] -->
+    <div class="field">
+      <label for="tagInput">タグ <span class="muted">（任意・複数可）</span></label>
+      <div class="tag-picker" id="tagPicker"></div>
+      <div class="tag-add">
+        <input class="input" id="tagInput" maxlength="30" placeholder="新しいタグ（例：二次関数）" autocomplete="off">
+        <button type="button" class="btn btn-secondary" id="btnTagAdd"><i data-icon="plus"></i>追加</button>
+      </div>
+      <div class="small muted">科目や単元を付けておくと、あとで授業やアーカイブを探しやすくなります</div>
+    </div>
+    <p class="small muted" style="margin:0" id="createHint">作成した授業は「予定」に入ります。開始するときに「開始する」を押してください。</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" data-close>キャンセル</button>
+      <button type="submit" class="btn btn-primary" id="btnCreateSubmit">作成</button>
+    </div>
+  </form>
+</div>
+
+<script src="../common/screens-04-06.js"></script>
+<script src="class-detail.js"></script>
+</body>
+</html>

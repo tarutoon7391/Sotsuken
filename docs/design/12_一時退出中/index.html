@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 一時退出中</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens.css">
+<link rel="stylesheet" href="away.css">
+</head>
+<body data-state="normal">
+
+<div class="app">
+
+  <!-- ヘッダー（生徒画面と同じ形。一時退出ボタンは無し：戻る導線は画面中央の1つだけ） -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-class">2年A組 ・ 数学</div>
+      <div class="header-title">二次関数のグラフと平行移動</div>
+    </div>
+    <div class="status">
+      <span class="status-dot is-off" data-show="normal low"></span>
+      <span class="status-dot is-absent" data-show="expired"></span>
+      <span data-show="normal low">一時退出中</span>
+      <span data-show="expired">欠課</span>
+    </div>
+    <div class="person">
+      <span class="avatar avatar-student">田</span>
+      <span class="person-name">田中 ひなた</span>
+      <span class="tag tag-neutral">生徒</span>
+    </div>
+  </header>
+
+  <main class="center">
+    <div class="center-col">
+
+      <!-- ===== 残り時間あり／わずか ===== -->
+      <div class="away" data-show="normal low">
+        <h6>一時退出中</h6>
+        <p class="away-lesson">二次関数のグラフと平行移動</p>
+
+        <!-- 残り時間：この画面でいちばん大きい要素 -->
+        <div class="countdown" aria-live="polite">
+          <span class="countdown-pre">あと</span>
+          <span class="countdown-time" data-countdown>12:34</span>
+          <span class="countdown-post">で欠課になります</span>
+        </div>
+
+        <!-- 累積ベース（v4）：残り時間 ＝ 閾値 − これまでの退出の合計 − 今回の経過
+             表示用の値は GET /api/lessons/:id/attendance/me の away_total_sec / remaining_sec -->
+        <div class="away-total">
+          <div class="away-total-row">
+            <span>この授業での退出時間（合計）</span>
+            <span class="away-total-num"><strong data-used>2:26</strong> / <span data-limit>15:00</span></span>
+          </div>
+          <div class="away-meter" aria-hidden="true"><span data-meter></span></div>
+          <p class="hint">前回までの退出 <span data-prev>2:00</span> を含みます</p>
+        </div>
+
+        <p class="lead" data-show="normal">退出時間の合計が15分を超えると欠課になります。<br>戻っても、退出した時間は元に戻りません。</p>
+        <p class="lead is-warn" data-show="low">残り時間がわずかです。今すぐ戻りましょう。</p>
+
+        <div class="actions">
+          <!-- 送信先：POST /api/lessons/:id/attendance/return -->
+          <button type="button" class="btn btn-primary btn-return" data-return>
+            <svg class="ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M224 128a96 96 0 1 1-96-96 96 96 0 0 1 96 96Z" opacity=".2"/><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88Zm48-88a8 8 0 0 1-8 8h-60.69l18.35 18.34a8 8 0 0 1-11.32 11.32l-32-32a8 8 0 0 1 0-11.32l32-32a8 8 0 0 1 11.32 11.32L107.31 120H168a8 8 0 0 1 8 8Z"/></svg>
+            授業に戻る
+          </button>
+          <p class="hint" data-return-note></p>
+        </div>
+      </div>
+
+      <!-- ===== 期限切れ（欠課確定） =====
+           return API が 409 ALREADY_ABSENT を返したときもこの表示にする -->
+      <div class="away" data-show="expired">
+        <svg class="icon is-muted" viewBox="0 0 256 256" aria-hidden="true"><path d="M224 128a96 96 0 1 1-96-96 96 96 0 0 1 96 96Z" opacity=".2"/><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88Zm-8-88V72a8 8 0 0 1 16 0v52.69l30.34 30.33a8 8 0 0 1-11.31 11.32l-32-32A8 8 0 0 1 120 128Z"/></svg>
+        <h6>一時退出中</h6>
+        <h2>欠課になりました</h2>
+        <p class="lead">退出時間の合計が15分を超えたため、この授業は欠課になりました。<br>先生に出席の修正を依頼してください。</p>
+        <p class="away-lesson is-small">二次関数のグラフと平行移動</p>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary btn-return" data-return-absent>授業に参加する（欠課のまま）</button>
+          <p class="hint">参加しても出席の記録は変わりません</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- デモ用 状態切替（生徒画面と同じ暗いバー） -->
+<div class="demo-bar" data-demo-bar>
+  <span class="demo-label">状態</span>
+  <button type="button" data-state="normal">残り時間あり</button>
+  <button type="button" data-state="low">残り時間わずか</button>
+  <button type="button" data-state="expired">期限切れ</button>
+  <span class="demo-sep"></span>
+  <button type="button" data-toggle-mobile>スマホ表示</button>
+</div>
+
+<script src="../common/demo-state.js"></script>
+<script src="away.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>授業結果 ｜ 二次関数のグラフと平行移動 ｜ （アプリ名）</title>
+<!-- 8. 授業結果（終了後サマリー）  /lessons/:id/result  先生専用・PC のみ -->
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/common-07-09.css">
+<link rel="stylesheet" href="result.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="app-header">
+    <div class="hdr-titles">
+      <div class="hdr-kicker">2年A組 ・ 数学 ・ 授業結果</div>
+      <div class="hdr-title">二次関数のグラフと平行移動</div>
+      <div class="hdr-meta">2026年9月29日（火） 10:45 – 11:35 ・ 50分</div>
+    </div>
+
+    <span class="hdr-spacer status"><span class="dot dot-neutral"></span>終了</span>
+
+    <span class="person">
+      <span class="avatar avatar-teacher" aria-hidden="true">鈴</span>
+      <span class="person-name">鈴木先生</span>
+      <span class="tag tag-accent">先生</span>
+    </span>
+
+    <a class="btn btn-secondary" href="../05_クラス詳細/index.html">
+      <svg class="ph" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path class="duo" d="M224 128a96 96 0 1 1-96-96 96 96 0 0 1 96 96z"/><path d="M128 24a104 104 0 1 0 104 104A104.1 104.1 0 0 0 128 24zm0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88zm40-88a8 8 0 0 1-8 8h-52.7l18.4 18.3a8.1 8.1 0 0 1 0 11.4 8.2 8.2 0 0 1-11.4 0l-32-32a8.1 8.1 0 0 1 0-11.4l32-32a8.1 8.1 0 0 1 11.4 11.4L107.3 120H160a8 8 0 0 1 8 8z"/></svg>
+      クラス詳細へ戻る
+    </a>
+  </header>
+
+  <main class="page-main result-grid">
+
+    <!-- ===== 左：サマリー・理解リアクション・質問 ===== -->
+    <div class="col-main">
+
+      <!-- サマリー -->
+      <section class="section">
+        <h6 class="section-label">サマリー</h6>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-value"><span id="stAttend">90</span><span class="stat-unit">%</span></div>
+            <div class="stat-sub">出席率 ・ <span id="stAttendSub">27 / 30 人</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-value"><span id="stAck">89</span><span class="stat-unit">%</span></div>
+            <div class="stat-sub">確認ボタンの応答率 ・ <span id="stAckSub">24 / 27 人</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-value"><span id="stQ">8</span></div>
+            <div class="stat-sub">質問 ・ <span id="stQSub" class="unanswered">未回答 3</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-value"><span id="stLost">14</span></div>
+            <div class="stat-sub">「わからない」の合計</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 理解リアクション -->
+      <section class="section">
+        <h6 class="section-label">理解リアクション</h6>
+        <div id="reactions" class="bars"><!-- 08_result.js が描画 --></div>
+        <p id="reactionsEmpty" class="empty" hidden>この授業ではリアクションがありませんでした。</p>
+
+        <!-- 将来の時系列グラフ用スペース -->
+        <div class="timeline-slot" aria-hidden="true">
+          <span>時系列グラフ（今後追加）</span>
+        </div>
+      </section>
+
+      <!-- 質問一覧 -->
+      <section class="section">
+        <div class="q-head">
+          <h6 class="section-label">質問</h6>
+          <span id="qCount" class="small muted">未回答を先に表示 ・ 匿名の投稿者は先生にだけ見えます</span>
+        </div>
+        <ol id="questions" class="q-list"><!-- 08_result.js が描画 --></ol>
+        <p id="questionsEmpty" class="empty" hidden>この授業では質問がありませんでした。</p>
+      </section>
+    </div>
+
+    <!-- ===== 右：出席・資料 ===== -->
+    <aside class="col-side">
+
+      <section class="section">
+        <h6 class="section-label">出席</h6>
+        <ul class="att-list">
+          <li><span class="status"><span class="dot"></span>出席</span><strong id="attPresent">27</strong></li>
+          <li><span class="status"><span class="dot dot-accent-2"></span>欠課</span><strong id="attAbsent">3</strong></li>
+        </ul>
+        <!-- 終了後は出席／欠課の2値（v4.1）。退出中だった生徒は累積で確定済み -->
+        <p class="small muted att-note">うち途中退出あり <strong id="attLeft">5</strong> 人（退出時間の累積が15分未満のため出席）</p>
+        <a class="btn btn-ghost att-link" href="../07_出席一覧/index.html">
+          出席一覧を開く
+          <svg class="ph" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M221.7 133.7l-72 72a8.2 8.2 0 0 1-11.4 0 8.1 8.1 0 0 1 0-11.4L196.7 136H40a8 8 0 0 1 0-16h156.7l-58.4-58.3a8.1 8.1 0 0 1 11.4-11.4l72 72a8.1 8.1 0 0 1 0 11.4z"/></svg>
+        </a>
+      </section>
+
+      <section class="section">
+        <h6 class="section-label">資料</h6>
+        <ul id="materials" class="mat-list"><!-- 08_result.js が描画 --></ul>
+      </section>
+
+    </aside>
+  </main>
+</div>
+
+<script src="../common/common-07-09.js"></script>
+<script src="result.js"></script>
+</body>
+</html>

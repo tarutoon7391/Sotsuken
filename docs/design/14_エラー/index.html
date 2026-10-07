@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 エラー／権限なし</title>
+<link rel="stylesheet" href="../common/broadsheet.css">
+<link rel="stylesheet" href="../common/screens.css">
+<link rel="stylesheet" href="error.css">
+</head>
+<body data-state="e401">
+
+<div class="app">
+
+  <!-- ヘッダー：共通画面なのでアプリ名のみ。ログイン中（403/404）は自分の名前も出す -->
+  <header class="app-header">
+    <div class="header-brand">（アプリ名）</div>
+
+    <div class="person" data-show="e403 e404">
+      <span class="avatar avatar-student" aria-hidden="true">田</span>
+      <span class="person-name">田中 ひなた</span>
+      <span class="tag tag-neutral">生徒</span>
+    </div>
+  </header>
+
+  <!-- 本文：中央寄せ1カラム。状況の説明 ＞ 戻る導線。1つの型で3パターン -->
+  <main class="center">
+
+    <!-- 401 ログイン切れ -->
+    <div class="center-col err" data-show="e401">
+      <!-- Phosphor duotone: Lock -->
+      <svg class="icon is-muted ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path class="duo" d="M208,80H48a8,8,0,0,0-8,8V208a8,8,0,0,0,8,8H208a8,8,0,0,0,8-8V88A8,8,0,0,0,208,80Z"/>
+        <path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Zm-68-56a12,12,0,1,1-12-12A12,12,0,0,1,140,152Z"/>
+      </svg>
+      <h6>401</h6>
+      <h2>ログインの有効期限が切れました</h2>
+      <p class="lead">もう一度ログインすると、続きから使えます。</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#">ログインする</a>
+      </div>
+    </div>
+
+    <!-- 403 権限なし -->
+    <div class="center-col err" data-show="e403">
+      <!-- Phosphor duotone: Prohibit -->
+      <svg class="icon is-muted ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path class="duo" d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z"/>
+        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"/>
+        <path d="M195.88,60.12a8,8,0,0,0-11.31,0L60.12,184.57a8,8,0,0,0,11.31,11.31L195.88,71.43A8,8,0,0,0,195.88,60.12Z"/>
+      </svg>
+      <h6>403</h6>
+      <h2>このクラスのメンバーではないため、表示できません</h2>
+      <p class="lead">先生から受け取った参加コードがあれば、クラス一覧から参加できます。</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#">クラス一覧へ</a>
+        <p class="hint">参加コードで参加できます（例：<code>K7Q-4MP</code>）</p>
+      </div>
+    </div>
+
+    <!-- 404 見つからない -->
+    <div class="center-col err" data-show="e404">
+      <!-- Phosphor duotone: MagnifyingGlass -->
+      <svg class="icon is-muted ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path class="duo" d="M176,112a64,64,0,1,1-64-64A64,64,0,0,1,176,112Z"/>
+        <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
+      </svg>
+      <h6>404</h6>
+      <h2>授業が見つかりませんでした</h2>
+      <p class="lead">授業が削除されたか、リンクが間違っている可能性があります。</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#">クラス一覧へ</a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- デモ用 状態切替（生徒画面と同じ暗いバー） -->
+<div class="demo-bar" data-demo-bar>
+  <span class="demo-label">状態</span>
+  <button type="button" data-state="e401">401 ログイン切れ</button>
+  <button type="button" data-state="e403">403 権限なし</button>
+  <button type="button" data-state="e404">404 見つからない</button>
+  <span class="demo-sep"></span>
+  <button type="button" data-toggle-mobile>スマホ表示</button>
+</div>
+
+<script src="../common/demo-state.js"></script>
+</body>
+</html>

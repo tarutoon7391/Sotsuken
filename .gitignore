@@ -1,0 +1,7 @@
+node_modules/
+.env
+# アップロードされたファイル（本番は Railway Volume）
+uploads/
+*.log
+.DS_Store
+Thumbs.db
