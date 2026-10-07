@@ -3,7 +3,8 @@
 const express = require('express');
 const { requireLogin } = require('../middleware/auth');
 const { requireLessonAccess } = require('../middleware/class-member');
-const { notImplemented } = require('./_stub');
+const { asyncHandler } = require('../middleware/error');
+const understanding = require('../services/understanding');
 
 const router = express.Router();
 
@@ -12,7 +13,9 @@ router.get(
   '/lessons/:id/understanding',
   requireLogin,
   requireLessonAccess('id', { teacherOnly: true }),
-  notImplemented('GET /api/lessons/:id/understanding')
+  asyncHandler(async (req, res) => {
+    res.json(await understanding.getSummary(req.lessonAccess.lesson.id));
+  })
 );
 
 module.exports = router;
