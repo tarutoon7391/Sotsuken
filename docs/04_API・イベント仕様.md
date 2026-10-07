@@ -190,3 +190,10 @@
 | `/uploads/...` の配信 | ログイン不要（ファイル名は推測不能な乱数）。**本番課題**：認証付き配信にするかは初回MTGで判断 |
 | `ended` の授業へのトークン発行・spotlight 変更 | 拒否しない（pending #1） |
 | 生徒映像の購読制御 | publisher 側クライアント設定（pending #2）。サーバー強制は本番課題 |
+| `PATCH /lessons/:id/attention/auto` のレスポンス | `{interval_min}` |
+| `POST /lessons/:id/attendance/away` のレスポンス | `{status:"away"}` |
+| `POST /lessons/:id/attention` のステータス | 201 |
+| 受け付ける授業状態 | 質問・理解度・確認ボタンは `live` 中のみ（それ以外 409 `CONFLICT`）。チャットは `ended` 以外（待機中の会話を許容） |
+| Socket の ack | クライアント→サーバーの各イベントは任意で ack を受け取れる（成功 `{}`、失敗 `{error:{code,message}}`）。使わなくても動く |
+| 出席の複数タブ | 同じ生徒の接続が複数あるとき、最後の1本が切れたときだけ away |
+| 確認ボタンの自動発動（`interval_min`） | サーバーのメモリ保持（再起動で消える）。永続化は pending #3 |
