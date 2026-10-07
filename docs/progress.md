@@ -55,3 +55,8 @@
 - manager が受けた本文メッセージ：11通（進捗確認の返信5を含む）。契約変更の要望：0（すべて未記載の補完か仕様判断）
 - 依頼メモ：docs/requests/ 4件（w1-lesson-attendance-hooks、w3-components、w5-components、w5-integration）
 - 判断待ち：pending #7〜#10（結合の着手には影響しない）
+
+## フェーズ2 結合（manager・15:12〜15:30）
+
+- マージ 5 本（コンフリクト 1：progress.md、manager 起因）→ 繋ぎ込み 2 箇所＋_stubs 差し替え → jest 10/10・vite build OK → 通しシナリオ scripts/e2e-scenario.js 39/39
+- 詳細は docs/integration-report.md
