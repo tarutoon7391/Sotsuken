@@ -2,6 +2,10 @@ node_modules/
 .env
 # アップロードされたファイル（本番は Railway Volume）
 uploads/
+# React のビルド出力
+client/dist/
 *.log
 .DS_Store
 Thumbs.db
+# Claude Code の個人設定（チーム共有の settings.json はコミットする）
+.claude/settings.local.json

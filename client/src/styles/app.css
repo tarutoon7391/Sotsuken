@@ -1,0 +1,26 @@
+/* アプリ全体の最小スタイル。色・余白・フォントは broadsheet.css の変数を使う（直書きしない）。
+   画面ごとの CSS は pages/ 配下に置き、そのページのコンポーネントから import する。 */
+
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+/* フェーズ0の仮表示（各ページの空コンポーネントが使う。実装したら消してよい） */
+.placeholder-page {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+.placeholder-page h1 {
+  font-size: 1.4rem;
+}
+.placeholder-page p {
+  opacity: 0.7;
+}

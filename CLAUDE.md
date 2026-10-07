@@ -16,9 +16,11 @@
 ## 技術スタック
 
 - サーバー：Node.js / Express / Socket.IO（`server/`）。`package.json` はリポジトリ直下に1つ
-- フロント：`public/` 配下。**フレームワーク無し（ビルド不要の素の HTML/CSS/JS）**。見た目は `docs/design/` の画面デザインに合わせる
+- フロント：`client/` 配下（**Vite + React + react-router**。並列開発計画 `docs/10_並列開発計画_マネージャー指示書.md` §7 の判断）。見た目は `docs/design/` の画面デザイン（HTMLモック）に合わせ、色・余白は `client/src/styles/broadsheet.css` の変数から取る。`public/` は仮トップのみ（`client/dist` が無いときだけ配信）
+- 共有契約：`shared/`（`@sotsuken/shared`）。定数・Socket イベント名・API 型。**イベント名・エラーコードの文字列を直書きしない**。フェーズ1中は凍結（変更は @manager に相談）
 - DB：MySQL 8（アクセスは `server/src/db/` のモジュール経由のみ。SQL の値は必ずプレースホルダ `?` で渡す）
-- ログイン状態：`express-session`（保存先は MySQL）。`req.session.user = { id, name, role }`。権限チェックは `server/src/middleware/auth.js` を使う
+- ログイン状態：`express-session`（保存先は MySQL）。`req.session.user = { id, name, role }`。権限チェックは `server/src/middleware/auth.js`（ログイン）・`role.js`（先生/生徒）・`class-member.js`（クラス所属、403）を使う。自前の所属チェックを書かない
+- Socket 送信：REST やジョブから送るときは `server/src/sockets/io.js` の `emitToLesson / emitToTeachers / emitToStudents`。イベントハンドラは `server/src/sockets/handlers/*.js`（自動読込）、定期処理は `server/src/jobs/*.js`（自動読込）
 - スキーマ変更：`server/migrations/` に番号付きの `.sql` を足して `npm run migrate`（適用済みのファイルは書き換えない）
 - エラー：`throw new ApiError(status, code, message)`（`server/src/middleware/error.js`）。形式は API 仕様の共通ルールどおり
 - 配信：LiveKit（トークンはサーバー発行。**APIシークレットをフロントに書かない**）

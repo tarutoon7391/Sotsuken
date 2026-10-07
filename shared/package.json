@@ -1,0 +1,12 @@
+{
+  "name": "@sotsuken/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "サーバーとクライアントで共有する契約（定数・イベント名・API型）。フェーズ1中は凍結。",
+  "type": "module",
+  "exports": {
+    "./constants": "./constants.js",
+    "./socket-events": "./socket-events.js",
+    "./api-types": "./api-types.js"
+  }
+}

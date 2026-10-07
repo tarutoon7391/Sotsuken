@@ -1,7 +1,7 @@
 // 環境変数の読み込み。秘密情報はここ（.env）からだけ取る。コードに直書きしない。
-require('dotenv').config();
-
+// .env はリポジトリ直下（worktree ごとに1つ。.env.example をコピーして作る）
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -17,5 +17,8 @@ module.exports = {
     apiSecret: process.env.LIVEKIT_API_SECRET || '',
   },
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
+  // 仮トップ（client/dist が無いときだけ配信）
   publicDir: path.resolve(__dirname, '../../public'),
+  // React のビルド出力（本番）
+  clientDistDir: path.resolve(__dirname, '../../client/dist'),
 };

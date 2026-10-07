@@ -4,14 +4,21 @@
   "private": true,
   "description": "卒業研究：学校のオンライン授業に特化した低遅延・双方向ライブ授業アプリ",
   "main": "server/src/index.js",
+  "workspaces": [
+    "shared",
+    "client"
+  ],
   "scripts": {
     "prestart": "node server/src/db/migrate.js",
     "start": "node server/src/index.js",
     "dev": "node --watch server/src/index.js",
-    "migrate": "node server/src/db/migrate.js"
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "migrate": "node server/src/db/migrate.js",
+    "test": "jest --passWithNoTests"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -24,7 +31,16 @@
     "mysql2": "^3.11.5",
     "socket.io": "^4.8.1"
   },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
   "overrides": {
     "mysql2": "$mysql2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/server"
+    ]
   }
 }

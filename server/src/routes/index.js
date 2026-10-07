@@ -1,6 +1,6 @@
 // REST API の入口（ベースパス /api）。
-// 各担当は routes/ にファイルを足して、ここで router.use する。
-// 追加してよい API は docs/04_API・イベント仕様.md にあるものだけ。
+// docs/04_API・イベント仕様.md のエンドポイントは全部ここに登録済み（フェーズ0は 501 スタブ）。
+// 各担当は自分のファイルの中身を本実装に置き換える。このファイルは触らない。
 const express = require('express');
 const { getPool } = require('../db/pool');
 const { asyncHandler } = require('../middleware/error');
@@ -22,9 +22,20 @@ router.get('/health', asyncHandler(async (req, res) => {
   res.json({ ok: true, db });
 }));
 
-// ここから下に各機能のルートを足していく（例）
-// router.use(require('./account'));     // /register, /login, /logout, /me
-// router.use(require('./classes'));     // /classes...
-// router.use(require('./lessons'));     // /lessons...
+// --- W1：認証・クラス・授業・資料
+router.use(require('./auth'));          // /register /login /logout /me /me/icon
+router.use(require('./classes'));       // /classes /classes/join /classes/:id /classes/:id/members
+router.use(require('./lessons'));       // /classes/:id/lessons /classes/:id/tags /lessons/:id(/start|/end)
+router.use(require('./files'));         // /lessons/:id/files /files/:id
+
+// --- W2：出席・確認・理解度・質問・チャット
+router.use(require('./attendance'));    // /lessons/:id/attendance...
+router.use(require('./attention'));     // /lessons/:id/attention... /attention/:check_id...
+router.use(require('./questions'));     // /lessons/:id/questions /questions/:id
+router.use(require('./understanding')); // /lessons/:id/understanding
+router.use(require('./chat'));          // /lessons/:id/chat
+
+// --- W3：LiveKit
+router.use(require('./token'));         // /lessons/:id/token /lessons/:id/spotlight
 
 module.exports = router;

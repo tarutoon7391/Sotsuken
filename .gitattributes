@@ -1,0 +1,6 @@
+# 改行コードはリポジトリ内では LF に統一（Windows と Mac/Linux の混在対策）
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary
