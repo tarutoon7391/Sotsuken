@@ -1,0 +1,78 @@
+/* 08 授業結果（docs/design/08_授業結果/result.css より。ページ外に影響しないよう .result-page で囲む） */
+.result-page { display: flex; flex-direction: column; min-height: 100vh; }
+.result-page .page-main { flex: 1; min-height: 0; padding: 0 var(--space-6) 80px; }
+.result-page .hdr-titles { display: flex; flex-direction: column; min-width: 0; }
+.result-page .section { display: flex; flex-direction: column; min-width: 0; }
+.result-page .section + .section { margin-top: var(--space-8); }
+.result-page .stat-value { font-size: 40px; }
+
+.result-page .hdr-meta { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
+
+/* 2カラム：左に主役、右に出席・資料 */
+.result-page .result-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-8);
+  max-width: 1240px; width: 100%; margin: 0 auto; padding-top: var(--space-3);
+}
+.result-page .col-main, .result-page .col-side { min-width: 0; }
+
+/* サマリーの大きな数字 */
+.result-page .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-6); }
+.result-page .stat-unit { font-size: 22px; margin-left: 2px; color: var(--color-neutral-700); }
+.result-page .unanswered { color: var(--color-accent-2-700); }
+
+/* 理解リアクションの横棒（先生画面の理解度パネルと同じ見た目） */
+.result-page .bars { display: flex; flex-direction: column; gap: var(--space-2); max-width: 640px; }
+.result-page .bar-row { display: grid; grid-template-columns: 90px 1fr 56px; align-items: center; gap: var(--space-3); font-size: 14px; }
+.result-page .bar-track { height: 14px; background: var(--color-neutral-200); border-radius: var(--radius-md); overflow: hidden; }
+.result-page .bar-fill { height: 100%; border-radius: var(--radius-md); transition: width .4s ease; }
+.result-page .bar-got   .bar-fill { background: var(--color-accent); }
+.result-page .bar-lost  .bar-fill { background: var(--color-accent-2); }
+.result-page .bar-again .bar-fill { background: var(--color-neutral-500); }
+.result-page .bar-num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.result-page .timeline-slot {
+  margin-top: var(--space-4); height: 160px; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  display: grid; place-items: center; font-size: 12px; color: var(--color-neutral-500);
+}
+
+/* 質問一覧 */
+.result-page .q-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.result-page .q-head .section-label { margin-bottom: 0; }
+.result-page .q-head + .q-list { margin-top: var(--space-2); }
+.result-page .q-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.result-page .q-item { display: flex; flex-direction: column; gap: 6px; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md); }
+.result-page .q-item + .q-item { margin-top: 2px; }
+.result-page .q-item.is-unanswered { background: color-mix(in srgb, var(--color-accent-2) 5%, transparent); }
+.result-page .q-meta { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.result-page .q-anon { font-size: 12px; color: var(--color-neutral-700); }
+.result-page .q-time { font-size: 12px; color: var(--color-neutral-700); margin-left: auto; font-variant-numeric: tabular-nums; }
+.result-page .q-body { font-size: 15px; line-height: 1.55; padding-left: 42px; }
+.result-page .q-unread { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-accent-2-700); }
+.result-page .q-actions { padding-left: 42px; }
+.result-page .q-actions .btn { font-size: 13px; padding-block: 6px; }
+.result-page .q-answer { padding-left: 42px; font-size: 13px; color: var(--color-neutral-700); background: var(--color-accent-100); border-radius: var(--radius-md); padding: 8px 10px; margin-left: 42px; }
+
+/* 出席 */
+.result-page .att-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: 14px; }
+.result-page .att-list li { display: flex; align-items: center; justify-content: space-between; }
+.result-page .att-list strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; font-variant-numeric: tabular-nums; }
+.result-page .att-link { margin-top: var(--space-3); align-self: flex-start; }
+
+/* 資料 */
+.result-page .mat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.result-page .mat-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-md);
+  color: var(--color-text); text-decoration: none; font-size: 13px;
+}
+.result-page .mat-item:hover { background: var(--color-neutral-200); color: var(--color-text); }
+.result-page .mat-kind { font-size: 10px; letter-spacing: .08em; width: 32px; flex: none; }
+.result-page .mat-kind-pdf { color: var(--color-accent-2-700); }
+.result-page .mat-kind-img { color: var(--color-accent-700); }
+.result-page .mat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-page .mat-pages { font-size: 11px; color: var(--color-neutral-600); }
+
+.result-page .empty { font-size: 14px; color: var(--color-neutral-700); padding: var(--space-4) 0; margin: 0; }
+
+/* 出席の補足（終了後は出席／欠課の2値） */
+.result-page .att-note { margin: var(--space-2) 0 0; }

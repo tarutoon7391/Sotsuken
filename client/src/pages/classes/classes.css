@@ -1,143 +1,143 @@
 /* 04 クラス一覧 / 05 クラス詳細（docs/design/04・05 の CSS より。スマホ表示はメディアクエリで切り替える） */
 
-.list-wrap { max-width: 1100px; }
+.classes-page .list-wrap { max-width: 1100px; }
 
 /* 見出し＋アクションボタン */
-.list-head { display: flex; align-items: flex-end; gap: var(--space-4); margin: var(--space-4) 0 var(--space-6); flex-wrap: wrap; }
-.list-head h3 { margin: 0; }
-.list-head .sub { color: var(--color-neutral-700); font-size: 13px; margin: 0; }
-.list-head .btn { margin-left: auto; font-size: 15px; padding: 12px 22px; }
+.classes-page .list-head { display: flex; align-items: flex-end; gap: var(--space-4); margin: var(--space-4) 0 var(--space-6); flex-wrap: wrap; }
+.classes-page .list-head h3 { margin: 0; }
+.classes-page .list-head .sub { color: var(--color-neutral-700); font-size: 13px; margin: 0; }
+.classes-page .list-head .btn { margin-left: auto; font-size: 15px; padding: 12px 22px; }
 
 /* いま授業中（いちばん上・大きく） */
-.live-section { margin-bottom: var(--space-8); }
-.live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-4); }
-.live-card { box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm); gap: var(--space-2); padding: var(--space-4); }
-.live-card .live-lesson { font-size: 15px; margin: 0; }
-.live-card .live-actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-1); flex-wrap: wrap; }
-.live-card .live-actions .btn-primary { font-size: 15px; padding: 12px 26px; }
+.classes-page .live-section { margin-bottom: var(--space-8); }
+.classes-page .live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-4); }
+.classes-page .live-card { box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm); gap: var(--space-2); padding: var(--space-4); }
+.classes-page .live-card .live-lesson { font-size: 15px; margin: 0; }
+.classes-page .live-card .live-actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-1); flex-wrap: wrap; }
+.classes-page .live-card .live-actions .btn-primary { font-size: 15px; padding: 12px 26px; }
 
 /* すべてのクラス（カードの一覧） */
-.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
-.class-card { cursor: pointer; gap: var(--space-2); transition: box-shadow .15s; text-align: left; border: 0; color: inherit; }
-.class-card:hover { box-shadow: var(--shadow-md); }
-.class-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.card-top { display: flex; align-items: flex-start; gap: 8px; }
-.card-top .card-title { flex: 1; min-width: 0; }
-.class-card .card-meta { margin-top: auto; gap: 10px; }
-.class-card .card-meta .ph { color: var(--color-neutral-500); }
-.class-card .person-name { font-size: 13px; }
+.classes-page .class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.classes-page .class-card { cursor: pointer; gap: var(--space-2); transition: box-shadow .15s; text-align: left; border: 0; color: inherit; }
+.classes-page .class-card:hover { box-shadow: var(--shadow-md); }
+.classes-page .class-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.classes-page .card-top { display: flex; align-items: flex-start; gap: 8px; }
+.classes-page .card-top .card-title { flex: 1; min-width: 0; }
+.classes-page .class-card .card-meta { margin-top: auto; gap: 10px; }
+.classes-page .class-card .card-meta .ph { color: var(--color-neutral-500); }
+.classes-page .class-card .person-name { font-size: 13px; }
 
 /* 参加コードの入力欄（大きく・等幅っぽく） */
-.input-code { font-size: 22px; letter-spacing: .15em; text-align: center; min-height: 52px; }
+.classes-page .input-code { font-size: 22px; letter-spacing: .15em; text-align: center; min-height: 52px; }
 
 /* スマホ */
 @media (max-width: 600px) {
-  .list-head .btn { width: 100%; margin-left: 0; }
-  .live-grid, .class-grid { grid-template-columns: 1fr; }
-  .app-header .person-name, .app-header .person .tag { display: none; }
+  .classes-page .list-head .btn { width: 100%; margin-left: 0; }
+  .classes-page .live-grid, .classes-page .class-grid { grid-template-columns: 1fr; }
+  .classes-page .app-header .person-name, .classes-page .app-header .person .tag { display: none; }
 }
 
-.detail-wrap { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-8); align-items: start; margin-top: var(--space-3); }
-.detail-tabs { display: none; margin: 0 0 var(--space-3); }
+.classes-page .detail-wrap { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-8); align-items: start; margin-top: var(--space-3); }
+.classes-page .detail-tabs { display: none; margin: 0 0 var(--space-3); }
 
 /* 参加コード（先生のみ） */
-.code-block { margin-bottom: var(--space-6); }
-.code-block .join-code-value { font-size: 30px; }
-.code-block .hint { margin: 6px 0 0; }
+.classes-page .code-block { margin-bottom: var(--space-6); }
+.classes-page .code-block .join-code-value { font-size: 30px; }
+.classes-page .code-block .hint { margin: 6px 0 0; }
 
 /* 開催中の授業（いちばん上に大きく） */
-.live-hero { box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm); padding: var(--space-4); gap: var(--space-2); margin-bottom: var(--space-6); }
-.live-hero h4 { margin: 0; font-size: 22px; }
-.live-hero .live-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--color-neutral-700); }
-.live-hero .live-actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-1); flex-wrap: wrap; }
+.classes-page .live-hero { box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm); padding: var(--space-4); gap: var(--space-2); margin-bottom: var(--space-6); }
+.classes-page .live-hero h4 { margin: 0; font-size: 22px; }
+.classes-page .live-hero .live-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--color-neutral-700); }
+.classes-page .live-hero .live-actions { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-1); flex-wrap: wrap; }
 
 /* 授業一覧 */
-.lessons-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
-.lessons-head .section-label { margin: 0; }
-.lessons-head .btn { margin-left: auto; }
-.lesson-group { margin-bottom: var(--space-6); }
-.lesson-group .section-label { margin-bottom: 4px; }
-.lesson-row { display: flex; align-items: center; gap: var(--space-3); padding: 12px 0; }
-.lesson-row + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
-.lesson-row .lesson-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lesson-row .lesson-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; line-height: 1.3; }
-.lesson-row .lesson-when { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700); }
-.lesson-row .lesson-when .ph { color: var(--color-neutral-500); }
-.lesson-row.is-done .lesson-title { color: var(--color-neutral-700); }
-.lesson-row .lesson-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.lesson-row .why { font-size: 11px; color: var(--color-neutral-600); white-space: nowrap; }
+.classes-page .lessons-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+.classes-page .lessons-head .section-label { margin: 0; }
+.classes-page .lessons-head .btn { margin-left: auto; }
+.classes-page .lesson-group { margin-bottom: var(--space-6); }
+.classes-page .lesson-group .section-label { margin-bottom: 4px; }
+.classes-page .lesson-row { display: flex; align-items: center; gap: var(--space-3); padding: 12px 0; }
+.classes-page .lesson-row + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.classes-page .lesson-row .lesson-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.classes-page .lesson-row .lesson-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; line-height: 1.3; }
+.classes-page .lesson-row .lesson-when { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700); }
+.classes-page .lesson-row .lesson-when .ph { color: var(--color-neutral-500); }
+.classes-page .lesson-row.is-done .lesson-title { color: var(--color-neutral-700); }
+.classes-page .lesson-row .lesson-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.classes-page .lesson-row .why { font-size: 11px; color: var(--color-neutral-600); white-space: nowrap; }
 
 /* タグ（v4）：授業の行のタグ表示／タグで絞り込み／作成ダイアログのタグ選択 */
-.lesson-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.lesson-tags:empty { display: none; }
-.tag-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
-.tag-filter[hidden] { display: none; }
-.tag-filter-label { font-size: 12px; color: var(--color-neutral-700); margin-right: 2px; }
-.chip {
+.classes-page .lesson-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.classes-page .lesson-tags:empty { display: none; }
+.classes-page .tag-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
+.classes-page .tag-filter[hidden] { display: none; }
+.classes-page .tag-filter-label { font-size: 12px; color: var(--color-neutral-700); margin-right: 2px; }
+.classes-page .chip {
   font: inherit; font-size: 13px; line-height: 1; cursor: pointer;
   padding: 7px 12px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
   background: transparent; color: var(--color-text);
 }
-.chip:hover { border-color: var(--color-accent); }
-.chip.is-on { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
-.chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.filter-empty { margin: 0 0 var(--space-4); }
-.tag-picker { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag-picker:empty { display: none; }
-.tag-add { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
-.tag-add .input { flex: 1; min-width: 0; }
+.classes-page .chip:hover { border-color: var(--color-accent); }
+.classes-page .chip.is-on { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
+.classes-page .chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.classes-page .filter-empty { margin: 0 0 var(--space-4); }
+.classes-page .tag-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.classes-page .tag-picker:empty { display: none; }
+.classes-page .tag-add { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.classes-page .tag-add .input { flex: 1; min-width: 0; }
 
 /* 授業の行のボタン（資料・編集）と、終了済み授業の資料一覧（v4.1） */
-.lesson-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-.lesson-files {
+.classes-page .lesson-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.classes-page .lesson-files {
   margin: 0 0 12px; padding: 10px 14px;
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
   border-radius: var(--radius-md);
   display: flex; flex-direction: column; gap: 6px;
 }
-.lesson-files + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
-.file-item { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 28px; }
-.file-kind { font-size: 10px; letter-spacing: .08em; width: 32px; flex: none; color: var(--color-accent-2-700); }
-.file-kind.is-img { color: var(--color-accent-700); }
-.file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); }
-.file-name:hover { color: var(--color-accent); }
-.file-pages { font-size: 11px; color: var(--color-neutral-600); }
-.file-del {
+.classes-page .lesson-files + .lesson-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.classes-page .file-item { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 28px; }
+.classes-page .file-kind { font-size: 10px; letter-spacing: .08em; width: 32px; flex: none; color: var(--color-accent-2-700); }
+.classes-page .file-kind.is-img { color: var(--color-accent-700); }
+.classes-page .file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); }
+.classes-page .file-name:hover { color: var(--color-accent); }
+.classes-page .file-pages { font-size: 11px; color: var(--color-neutral-600); }
+.classes-page .file-del {
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer; flex: none;
   padding: 5px 8px; border-radius: var(--radius-md);
   border: 1px solid transparent; background: transparent; color: var(--color-neutral-600);
 }
-.file-del:hover { color: var(--color-accent-2); border-color: color-mix(in srgb, var(--color-accent-2) 40%, transparent); }
-.file-del.is-armed { color: var(--color-bg); background: var(--color-accent-2); border-color: var(--color-accent-2); }
+.classes-page .file-del:hover { color: var(--color-accent-2); border-color: color-mix(in srgb, var(--color-accent-2) 40%, transparent); }
+.classes-page .file-del.is-armed { color: var(--color-bg); background: var(--color-accent-2); border-color: var(--color-accent-2); }
 
 /* メンバー一覧 */
-.members .section-label { margin-bottom: var(--space-2); }
-.member-list { display: flex; flex-direction: column; gap: 10px; }
-.member-list .person { gap: 10px; }
-.member-list .person-name { font-size: 14px; }
-.member-list .me-mark { font-size: 11px; color: var(--color-neutral-600); margin-left: -4px; }
-.member-group { margin-bottom: var(--space-4); }
+.classes-page .members .section-label { margin-bottom: var(--space-2); }
+.classes-page .member-list { display: flex; flex-direction: column; gap: 10px; }
+.classes-page .member-list .person { gap: 10px; }
+.classes-page .member-list .person-name { font-size: 14px; }
+.classes-page .member-list .me-mark { font-size: 11px; color: var(--color-neutral-600); margin-left: -4px; }
+.classes-page .member-group { margin-bottom: var(--space-4); }
 
 /* スマホ：タブで切替 */
 @media (max-width: 800px) {
-  .detail-wrap { grid-template-columns: 1fr; gap: var(--space-6); }
+  .classes-page .detail-wrap { grid-template-columns: 1fr; gap: var(--space-6); }
 }
 @media (max-width: 600px) {
-  .app-header .person-name, .app-header .person .tag, .app-header .hdr-back span { display: none; }
+  .classes-page .app-header .person-name, .classes-page .app-header .person .tag, .classes-page .app-header .hdr-back span { display: none; }
 }
 
 /* 参加コード（大きく表示） */
-.join-code { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.join-code-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 34px; letter-spacing: .12em; line-height: 1; }
-.app-main .list-head .btn { white-space: nowrap; }
+.classes-page .join-code { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.classes-page .join-code-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 34px; letter-spacing: .12em; line-height: 1; }
+.classes-page .app-main .list-head .btn { white-space: nowrap; }
 @media (max-width: 800px) {
-  .detail-tabs { display: flex; }
-  .detail-wrap > [data-tab-pane] { display: none; }
-  .detail-wrap > [data-tab-pane].is-on { display: block; }
-  .lesson-row { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .lesson-row .lesson-actions { flex-direction: row; align-items: center; width: 100%; }
-  .lesson-links { justify-content: flex-start; }
-  .app-main { padding: var(--space-2) 14px 24px; }
-  .app-header { padding: 10px 14px; gap: 10px; }
+  .classes-page .detail-tabs { display: flex; }
+  .classes-page .detail-wrap > [data-tab-pane] { display: none; }
+  .classes-page .detail-wrap > [data-tab-pane].is-on { display: block; }
+  .classes-page .lesson-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .classes-page .lesson-row .lesson-actions { flex-direction: row; align-items: center; width: 100%; }
+  .classes-page .lesson-links { justify-content: flex-start; }
+  .classes-page .app-main { padding: var(--space-2) 14px 24px; }
+  .classes-page .app-header { padding: 10px 14px; gap: 10px; }
 }

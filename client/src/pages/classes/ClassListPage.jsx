@@ -44,7 +44,7 @@ function ClassListBody() {
   const live = (classes || []).filter((c) => c.live_lesson_id);
 
   return (
-    <div className="app">
+    <div className="app classes-page">
       <header className="app-header">
         <Link className="hdr-brand" to="/classes">{APP_NAME}</Link>
         <span className="hdr-spacer" />

@@ -66,7 +66,7 @@ function ClassDetailBody() {
   }
 
   return (
-    <div className="app">
+    <div className="app classes-page">
       <header className="app-header">
         <Link className="hdr-back" to="/classes">← <span>クラス一覧へ戻る</span></Link>
         <div className="hdr-left">
