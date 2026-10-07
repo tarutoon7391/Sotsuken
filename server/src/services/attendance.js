@@ -264,7 +264,8 @@ async function listAttendance(access) {
 
 /**
  * PATCH /lessons/:id/attendance/:user_id（先生）手動修正。どの状態からでも可
- * - away から抜けるときは今回の経過を累積に足す（記録を失わない）
+ * - present にするときは累積をリセットする（away_total_sec = 0, away_since = NULL。docs/04 §6）
+ * - away から absent にするときは今回の経過を累積に足す（記録を失わない）
  * - away にするときは away_since を今にする
  */
 async function updateAttendance(access, targetUserId, body) {
@@ -306,7 +307,10 @@ async function updateAttendance(access, targetUserId, body) {
     const wasAway = rows[0].status === ATTENDANCE_STATUS.AWAY;
     const toAway = status === ATTENDANCE_STATUS.AWAY;
     let set;
-    if (wasAway && !toAway) {
+    if (status === ATTENDANCE_STATUS.PRESENT) {
+      // 出席への修正は累積をリセットする（docs/04 §6。直した直後の退出ですぐ欠課にならないように）
+      set = 'status = ?, away_total_sec = 0, away_since = NULL';
+    } else if (wasAway && !toAway) {
       set = `away_total_sec = away_total_sec + TIMESTAMPDIFF(SECOND, away_since, UTC_TIMESTAMP()),
              status = ?, away_since = NULL`;
     } else if (!wasAway && toAway) {

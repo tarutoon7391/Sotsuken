@@ -128,6 +128,24 @@ describeDb('出席の判定SQL（DB）', () => {
     await expect(attendance.returnFromAway(access, uid)).rejects.toMatchObject({ code: 'ALREADY_ABSENT' });
   });
 
+  test('先生が欠課→出席に手動修正すると累積がリセットされる', async () => {
+    const uid = studentIds[1]; // 前のテストで欠課（累積 15 分超）になっている
+    expect((await row(uid)).away_total_sec).toBeGreaterThanOrEqual(15 * 60);
+
+    const updated = await attendance.updateAttendance({ ...access, isTeacher: true }, uid, {
+      status: 'present',
+      note: 'w2 回線トラブル',
+    });
+    expect(updated.status).toBe('present');
+    expect(updated.away_total_sec).toBe(0);
+    expect(updated.remaining_sec).toBe(15 * 60);
+
+    const r = await row(uid);
+    expect(r.away_total_sec).toBe(0);
+    expect(r.away_since).toBeNull();
+    expect(r.note).toBe('w2 回線トラブル');
+  });
+
   test('授業終了時の確定：退出中は閾値未満なら出席、未入室は欠課（joined_at null）、away は残らない', async () => {
     const awayUid = studentIds[2];
     const neverUid = studentIds[3];
