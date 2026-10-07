@@ -4,9 +4,21 @@
   "private": true,
   "description": "サーバーとクライアントで共有する契約（定数・イベント名・API型）。フェーズ1中は凍結。",
   "type": "module",
+  "scripts": {
+    "build": "node build-cjs.js"
+  },
   "exports": {
-    "./constants": "./constants.js",
-    "./socket-events": "./socket-events.js",
-    "./api-types": "./api-types.js"
+    "./constants": {
+      "import": "./constants.js",
+      "require": "./cjs/constants.cjs"
+    },
+    "./socket-events": {
+      "import": "./socket-events.js",
+      "require": "./cjs/socket-events.cjs"
+    },
+    "./api-types": {
+      "import": "./api-types.js",
+      "require": "./cjs/api-types.cjs"
+    }
   }
 }
