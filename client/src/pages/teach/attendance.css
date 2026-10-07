@@ -1,0 +1,63 @@
+/* 07 出席一覧・修正（docs/design/07_出席一覧 と common-07-09.css より。.attendance-page で囲む） */
+.attendance-page { display: flex; flex-direction: column; min-height: 100vh; }
+.attendance-page .page-main { flex: 1; min-height: 0; padding: 0 var(--space-6) 80px; }
+.attendance-page .hdr-titles { display: flex; flex-direction: column; min-width: 0; }
+.attendance-page .section { display: flex; flex-direction: column; min-width: 0; }
+.attendance-page .section + .section { margin-top: var(--space-8); }
+
+
+.attendance-page .page-main { max-width: 1240px; width: 100%; margin: 0 auto; }
+.attendance-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ヘッダーの集計 */
+.attendance-page .summary { display: flex; align-items: center; gap: var(--space-4); }
+.attendance-page .summary strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; margin-left: 2px; }
+
+/* 授業終了後の案内 */
+.attendance-page .ended-note { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; margin: var(--space-2) 0 var(--space-4); }
+
+/* 設定 */
+.attendance-page .settings { margin-top: var(--space-3); }
+.attendance-page .settings-row { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; flex-wrap: wrap; }
+.attendance-page .settings-row .input { width: 80px; text-align: right; font-size: 16px; }
+
+/* 一覧の上のツールバー */
+.attendance-page .list-head { display: flex; align-items: end; gap: var(--space-4); margin-bottom: var(--space-2); flex-wrap: wrap; }
+.attendance-page .list-head .section-label { flex: 1; margin: 0 0 8px; }
+.attendance-page .sort { display: inline-flex; align-items: center; gap: var(--space-2); }
+.attendance-page .sort .input { width: 200px; min-height: 34px; }
+
+/* 表 */
+.attendance-page .attendance-table th:nth-child(2) { width: 190px; }
+.attendance-page .attendance-table th:nth-child(3), .attendance-page .attendance-table th:nth-child(4), .attendance-page .attendance-table th:nth-child(5) { width: 120px; }
+.attendance-page .attendance-table th:nth-child(6) { width: 110px; }
+.attendance-page .attendance-table th:last-child { width: 80px; }
+.attendance-page .attendance-table td { vertical-align: middle; }
+.attendance-page .attendance-table .num { font-variant-numeric: tabular-nums; }
+.attendance-page .attendance-table .memo { color: var(--color-neutral-700); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.attendance-page .attendance-table tr.is-editing > td { background: color-mix(in srgb, var(--color-accent) 6%, transparent); border-bottom-color: transparent; }
+.attendance-page .attendance-table tr.is-editing:hover > td { background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+
+/* 状態セル：バッジ＋残り時間＋手動修正の印 */
+.attendance-page .status-cell { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.attendance-page .remain { font-size: 12px; color: var(--color-neutral-700); font-variant-numeric: tabular-nums; }
+.attendance-page .remain.is-soon { color: var(--color-accent-2-700); }
+.attendance-page .total.is-soon { color: var(--color-accent-2-700); font-weight: 600; }
+.attendance-page .settings-note { margin: var(--space-1) 0 0; }
+.attendance-page .manual { font-size: 10px; letter-spacing: .06em; color: var(--color-accent-700); display: inline-flex; align-items: center; gap: 3px; }
+
+/* 確認ボタンの応答 */
+.attendance-page .ack { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.attendance-page .ack-yes { color: var(--color-accent-800); }
+.attendance-page .ack-no { color: var(--color-neutral-700); }
+
+/* 行内の「修正」ボタンは薄く、ホバーで濃く */
+.attendance-page .attendance-table .btn-ghost { font-size: 13px; padding-block: 6px; opacity: .75; }
+.attendance-page .attendance-table tr:hover .btn-ghost, .attendance-page .attendance-table tr.is-editing .btn-ghost { opacity: 1; }
+
+/* 編集行 */
+.attendance-page .editor-row > td { padding: var(--space-2) var(--space-2) var(--space-4); background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+.attendance-page .editor { display: grid; grid-template-columns: 180px 1fr auto; gap: var(--space-3); align-items: end; padding-left: 42px; }
+.attendance-page .editor-actions { display: flex; gap: var(--space-2); }
+
+.attendance-page .empty-note { padding: var(--space-6) 0; text-align: center; }

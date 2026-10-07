@@ -1,5 +1,6 @@
-/* アプリ全体の最小スタイル。色・余白・フォントは broadsheet.css の変数を使う（直書きしない）。
-   画面ごとの CSS は pages/ 配下に置き、そのページのコンポーネントから import する。 */
+/* アプリ全体の共通スタイル。色・余白・フォントは broadsheet.css の変数を使う（直書きしない）。
+   画面ごとの CSS は pages/ 配下に置き、そのページのコンポーネントから import する。
+   ここには docs/design/common/screens-04-06.css 由来の共通部品と、共通コンポーネント（components/shared）の見た目を置く。 */
 
 html, body, #root {
   min-height: 100%;
@@ -11,6 +12,9 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
 }
+
+[hidden] { display: none !important; }
+button { font: inherit; }
 
 /* フェーズ0の仮表示（各ページの空コンポーネントが使う。実装したら消してよい） */
 .placeholder-page {
@@ -24,3 +28,155 @@ body {
 .placeholder-page p {
   opacity: 0.7;
 }
+.page-loading { padding: var(--space-6); color: var(--color-neutral-700); }
+
+/* ---- 画面の外枠・ヘッダー ---- */
+.app { display: flex; flex-direction: column; min-height: 100vh; background: var(--color-bg); }
+.app-main { flex: 1; min-height: 0; padding: var(--space-2) var(--space-6) 96px; }
+.app-header { display: flex; align-items: center; gap: var(--space-4); padding: 12px var(--space-6); flex: none; }
+.hdr-left { display: flex; flex-direction: column; min-width: 0; }
+.hdr-kicker { font-size: 11px; letter-spacing: .08em; color: var(--color-neutral-700); white-space: nowrap; }
+.hdr-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-brand { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; color: inherit; text-decoration: none; white-space: nowrap; }
+.hdr-spacer { margin-left: auto; }
+.hdr-back { display: inline-flex; align-items: center; gap: 6px; color: var(--color-neutral-700); text-decoration: none; font-size: 13px; white-space: nowrap; }
+.hdr-back:hover { color: var(--color-accent-700); }
+
+/* ---- 状態（ドット＋文字） ---- */
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--color-accent); }
+.dot-live { animation: pulse 1.6s ease-in-out infinite; }
+.dot-neutral { background: var(--color-neutral-500); }
+.dot-accent-2 { background: var(--color-accent-2); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
+
+/* ---- 名前セット：丸アイコン＋名前＋ロールバッジ（Avatar / RoleBadge） ---- */
+.person { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.person-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+a.person:hover .person-name { color: var(--color-accent-700); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none; display: inline-grid; place-items: center;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 14px; line-height: 1;
+}
+.avatar--image { object-fit: cover; background: var(--color-neutral-200); }
+.avatar-teacher { background: var(--color-accent-200); color: var(--color-accent-800); }
+.avatar-student { background: var(--color-accent-2-200); color: var(--color-accent-2-800); }
+.avatar-anon    { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+.role-badge { white-space: nowrap; flex: none; }
+
+/* ---- 見出しラベル・補助テキスト ---- */
+.section-label { margin: 0 0 var(--space-2); color: var(--color-neutral-700); display: flex; align-items: center; gap: 8px; }
+.section-label .count { color: var(--color-neutral-500); letter-spacing: 0; text-transform: none; }
+.muted { color: var(--color-neutral-700); }
+.small { font-size: 12px; }
+.tiny { font-size: 11px; }
+.strong { font-weight: 600; font-family: var(--font-heading); }
+.accent-2-text { color: var(--color-accent-2-700); }
+
+/* ---- バッジ・タブ ---- */
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--color-accent-2); color: var(--color-bg); font-size: 10px; font-weight: 600; line-height: 1; }
+.live-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .02em; padding: 3px 10px; border-radius: calc(var(--radius-md) * .75); background: var(--color-accent-100); color: var(--color-accent-800); white-space: nowrap; }
+.live-tag .dot { width: 6px; height: 6px; }
+.tabs { display: flex; gap: 2px; min-height: 28px; }
+.tab { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--color-neutral-700); font-size: 14px; font-weight: 600; font-family: var(--font-heading); cursor: pointer; white-space: nowrap; }
+.tab:hover { color: var(--color-accent-700); }
+.tab.is-on { color: var(--color-accent-700); border-bottom-color: var(--color-accent); }
+
+/* ---- 映像エリア（暗いパネル） ---- */
+.video-panel { position: relative; background: var(--color-neutral-900); border-radius: var(--radius-lg); overflow: hidden; display: grid; place-items: center; color: var(--color-neutral-200); }
+.video-label { position: absolute; top: 10px; left: 10px; z-index: 1; background: rgba(0,0,0,.45); color: var(--color-neutral-200); font-size: 12px; padding: 3px 9px; border-radius: var(--radius-md); }
+.video-center { text-align: center; font-size: 13px; color: var(--color-neutral-400); padding: 12px; }
+
+/* ---- 空状態 ---- */
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-6) 0; max-width: 460px; }
+.empty h4 { margin: 0; font-size: 20px; }
+.empty p { margin: 0; color: var(--color-neutral-700); font-size: 14px; }
+
+/* ---- ボタンの大きさ違い ---- */
+.btn-lg { font-size: 16px; padding: 14px 28px; }
+.btn-sm { font-size: 12px; padding: 5px 10px; }
+.btn-danger { border-color: var(--color-accent-2-300); color: var(--color-accent-2-700); }
+.btn-danger:hover { background: var(--color-accent-2-100); }
+.btn-accent-2 { background: var(--color-accent-2); color: var(--color-bg); }
+.btn-accent-2:hover { background: var(--color-accent-2-600); }
+
+/* ---- フォームのエラー ---- */
+.field-error { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: var(--color-accent-2-700); }
+.input.is-error { border-color: var(--color-accent-2); }
+.form-alert { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-accent-2-100); color: var(--color-accent-2-800); font-size: 13px; }
+.form-ok { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 13px; }
+
+/* ---- トースト ---- */
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--color-neutral-900); color: var(--color-surface); font-size: 13px; padding: 8px 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 40; animation: toastIn .2s ease-out; display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- くるくる ---- */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; animation: spin .8s linear infinite; }
+
+/* ---- 大きい数字 ---- */
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 32px; line-height: 1; letter-spacing: -.02em; }
+.stat-sub { font-size: 12px; color: var(--color-neutral-700); }
+
+/* ---- ダイアログ（Broadsheet の .dialog を使う） ---- */
+.dialog-backdrop { z-index: 20; }
+.dialog .field + .field { margin-top: var(--space-3); }
+
+/* ==========================================================================
+   共通コンポーネント：ChatPanel / QuestionBox（先生画面・生徒画面で同じ見た目）
+   親が高さを決める（flex の子として置けば中のリストがスクロールする）
+   ========================================================================== */
+.chat-panel, .question-box { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* チャット */
+.chat-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 10px; }
+.chat-more { align-self: center; }
+.chat-empty, .q-empty { margin: 0; font-size: 12px; color: var(--color-neutral-600); }
+.msg { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius-md); }
+.msg.is-teacher { background: var(--color-accent-100); }
+.msg.is-mine { box-shadow: inset 2px 0 0 var(--color-accent-400); }
+.msg-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-neutral-700); min-width: 0; }
+.msg-head .name { font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-head .time, .q-head .time { margin-left: auto; white-space: nowrap; }
+.msg-body { font-size: 14px; line-height: 1.5; padding-left: 30px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-thumb-link { margin-left: 30px; width: fit-content; }
+.msg-thumb { width: 160px; max-width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-md); background: var(--color-neutral-100); box-shadow: var(--shadow-sm); }
+.msg-file {
+  margin-left: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; width: fit-content; max-width: calc(100% - 30px);
+  background: var(--color-neutral-100); border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md);
+  font-size: 12px; color: var(--color-text); text-decoration: none;
+}
+.msg-file:hover { border-color: var(--color-accent); }
+.msg-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-file-size { color: var(--color-neutral-600); }
+.chat-input { display: flex; gap: 8px; align-items: center; }
+
+/* 質問箱 */
+.hands { display: flex; flex-direction: column; gap: 6px; }
+.hands .section-label { margin: 0; }
+.hands .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hand-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 1px solid var(--color-accent-300); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 12px; cursor: pointer; }
+.hand-chip:hover { background: var(--color-accent-200); }
+.hands .none { font-size: 12px; color: var(--color-neutral-600); }
+.q-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 14px; }
+.q { display: flex; flex-direction: column; gap: 4px; }
+.q.is-answered .q-body { color: var(--color-neutral-700); }
+.q-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-neutral-700); }
+.q-head .real { color: var(--color-neutral-500); }
+.q-body { font-size: 14px; line-height: 1.5; padding-left: 30px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.q-actions { padding-left: 30px; }
+.compose { display: flex; flex-direction: column; gap: 8px; }
+.compose textarea.input { min-height: 64px; resize: none; }
+.compose-row { display: flex; align-items: center; gap: 10px; }
+.compose-row .btn-primary { margin-left: auto; }
+.switch { position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track { width: 32px; height: 18px; border-radius: 999px; background: var(--color-neutral-400); position: relative; transition: background .15s; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--color-bg); transition: left .15s; }
+.switch input:checked + .track { background: var(--color-accent); }
+.switch input:checked + .track::after { left: 16px; }
+.switch input:focus-visible + .track { outline: 2px solid var(--color-accent); outline-offset: 2px; }
