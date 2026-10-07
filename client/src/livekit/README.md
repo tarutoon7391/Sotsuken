@@ -7,6 +7,12 @@
 | `StudentCamera.jsx` | 生徒：カメラ ON/OFF。publish 時に購読許可を先生のみに設定、`spotlight:update` で全員に広げる |
 | `RemoteVideo.jsx` | 特定参加者のトラックを `<video>` に表示 |
 | `StudentGrid.jsx` | 先生用：全生徒の映像を低画質でグリッド表示 |
+| `RoomAudio.jsx` | ルーム内の音声（先生のマイク）を再生。自動再生ブロック時は「音声を再生」ボタン |
+| `permissions.js` | 生徒のトラック購読許可（先生のみ／スポットライト時は全員） |
+| `identity.js` | identity（`user:{id}`）とユーザーID・ロールの変換 |
+| `spotlight.js` | `PUT /api/lessons/:id/spotlight` の呼び出し |
+| `livekit.css` | 部品の最小スタイル（`lk-` 接頭辞） |
+| `index.js` | まとめて export（`import { ... } from '../../livekit'`） |
 
 - pages/ は触らない。部品を export するだけで、組み込みは W4（生徒）／W5（先生）が行う
 - props の定義は `docs/requests/w3-components.md` に書き、確定したら @w4-learn と @w5-teach に送る
