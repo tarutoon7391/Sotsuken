@@ -1,5 +1,5 @@
 // 先生の配信操作とプレビュー（担当：W3）
-// カメラ／画面キャプチャ／マイクをそれぞれ ON/OFF して publish する。
+// カメラ／画面キャプチャ／マイクをそれぞれ ON/OFF して publish する。「配信停止」で3つともまとめて止める。
 // 生徒側は RemoteVideo source="auto" で「画面共有があれば画面共有、無ければカメラ」を表示する。
 import { useState } from 'react';
 import { Track } from 'livekit-client';
@@ -48,6 +48,7 @@ export default function TeacherPublisher({ room, status, showPreview = true, cla
   const screenOn = isOn(lp, Track.Source.ScreenShare);
   const micOn = isOn(lp, Track.Source.Microphone);
   const previewTrack = findVideoTrack(lp, 'auto');
+  const anyOn = cameraOn || screenOn || micOn;
 
   const run = async (fn, label) => {
     setBusy(true);
@@ -61,6 +62,13 @@ export default function TeacherPublisher({ room, status, showPreview = true, cla
       setBusy(false);
     }
   };
+
+  const stopAll = () =>
+    run(async () => {
+      await lp.setScreenShareEnabled(false);
+      await lp.setCameraEnabled(false);
+      await lp.setMicrophoneEnabled(false);
+    }, '配信停止');
 
   return (
     <div className={`lk-teacher-publisher ${className}`}>
@@ -102,6 +110,9 @@ export default function TeacherPublisher({ room, status, showPreview = true, cla
           onClick={() => run(() => lp.setMicrophoneEnabled(!micOn), 'マイク')}
         >
           マイク
+        </button>
+        <button type="button" className="lk-button" disabled={busy || !anyOn} onClick={stopAll}>
+          配信停止
         </button>
         {status && status !== 'connected' && <span className="lk-note">{STATUS_LABELS[status]}</span>}
       </div>

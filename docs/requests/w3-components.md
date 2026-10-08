@@ -3,7 +3,7 @@
 - 依頼元：w3-livekit
 - 依頼先：w4-learn（生徒画面）、w5-teach（先生画面）
 - 何を：`client/src/livekit/` の部品を pages に組み込んでほしい。import は `import { ... } from '../../livekit'`
-- 現状：部品は実装済み。サーバーに `LIVEKIT_*` が未設定の環境では `status='unconfigured'` になり、部品は「配信サーバーが未設定です」等を表示する（クラッシュしない）
+- 現状：部品は実装済み（2026-10-08 監査対応で更新：RoomAudio に `spotlightUserId`、TeacherPublisher に「配信停止」、切断時の自動再接続）。サーバーに `LIVEKIT_*` が未設定の環境では `status='unconfigured'` になり、部品は「配信サーバーが未設定です」等を表示する（クラッシュしない）
 
 ## useLiveKitRoom(lessonId, { enabled = true })
 
@@ -13,7 +13,7 @@ const { room, status, error, identity, remoteParticipants } = useLiveKitRoom(les
 
 | 戻り値 | 型 | 説明 |
 |---|---|---|
-| `room` | `Room \| null` | 接続済みのときだけ入る。下の部品にそのまま渡す |
+| `room` | `Room \| null` | 接続済みのときだけ入る。下の部品にそのまま渡す。切断→再接続のあいだは null になり、つながると新しい Room に変わる |
 | `status` | `'idle'\|'connecting'\|'connected'\|'reconnecting'\|'disconnected'\|'unconfigured'\|'error'` | 表示文言は `STATUS_LABELS[status]` |
 | `error` | `Error \| null` | |
 | `identity` | `string \| null` | 自分の `"user:{id}"` |
@@ -21,6 +21,7 @@ const { room, status, error, identity, remoteParticipants } = useLiveKitRoom(les
 
 - `enabled=false` の間は接続しない。**生徒は授業が `live` のときだけ `enabled=true`**（待機画面では接続しない）。先生は `preparing` でも接続してプレビューしてよい
 - アンマウントで切断する。画面の上位で1回だけ呼ぶ
+- 切断されたらトークンを取り直して自動で入り直す（最大3回）。その間 `status='reconnecting'`、諦めたら `'disconnected'` または `'error'`
 
 ## 生徒画面（W4）
 
@@ -28,7 +29,7 @@ const { room, status, error, identity, remoteParticipants } = useLiveKitRoom(les
 <RemoteVideo room={room} userId={lesson.teacher.id} source="auto" fit="contain" />   {/* 先生の映像（画面共有優先） */}
 <RemoteVideo room={room} userId={spotlightUserId} source="camera" />                {/* スポットライト中の生徒（null なら placeholder） */}
 <StudentCamera room={room} myUserId={me.id} teacherUserId={lesson.teacher.id} spotlightUserId={spotlightUserId} />
-<RoomAudio room={room} />                                                           {/* 先生の音声。画面に1つ */}
+<RoomAudio room={room} spotlightUserId={spotlightUserId} />                          {/* 先生＋スポットライト中の生徒の音声。画面に1つ */}
 ```
 
 - 待機画面（09）のカメラ確認は `<StudentCamera room={null} myUserId={me.id} teacherUserId={null} />`（どこにも送らないローカルプレビュー）
@@ -47,18 +48,18 @@ const { room, status, error, identity, remoteParticipants } = useLiveKitRoom(les
   highlightUserIds={raisedUserIds}         // 挙手中など目立たせたい生徒（任意）
   renderCellFooter={(s) => <AttendanceBadge userId={s.id} />} // セル下部に足したいもの（任意）
 />
-<RoomAudio room={room} />
+<RoomAudio room={room} spotlightUserId={spotlightUserId} />
 ```
 
 ## 部品一覧
 
 | 部品 | props |
 |---|---|
-| `TeacherPublisher` | `room`, `status?`, `showPreview?=true`, `className?` |
+| `TeacherPublisher` | `room`, `status?`, `showPreview?=true`, `className?`（カメラ／画面キャプチャ／マイク／配信停止のボタン付き） |
 | `StudentCamera` | `room`（null 可）, `myUserId`, `teacherUserId`, `spotlightUserId?=null`, `defaultEnabled?=false`, `onEnabledChange?(bool)`, `showPreview?=true`, `className?` |
 | `RemoteVideo` | `room`, `userId`, `source?='auto'\|'camera'\|'screen'`, `fit?='cover'\|'contain'`, `className?`, `placeholder?`（映像が無いとき） |
 | `StudentGrid` | `room`, `students?`, `spotlightUserId?`, `onSpotlight?(userId\|null)`, `highlightUserIds?`, `renderCellFooter?(student)`, `className?` |
-| `RoomAudio` | `room`（自動再生がブロックされたら「音声を再生」ボタンを出す） |
+| `RoomAudio` | `room`, `spotlightUserId?=null`。先生とスポットライト中の生徒の音声だけ再生。自動再生がブロックされたら「音声を再生」ボタンを出す |
 | `VideoTrackView` | `track`, `mirror?`, `fit?`, `className?`（ローカルトラックを貼るだけ） |
 | `putSpotlight(lessonId, userId\|null)` | `PUT /api/lessons/:id/spotlight` |
 

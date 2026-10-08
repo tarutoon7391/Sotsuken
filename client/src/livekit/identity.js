@@ -1,9 +1,10 @@
 // LiveKit の participant identity と ユーザーID の変換（担当：W3）
-// identity はサーバー（services/livekit.js）が "user:{id}" で発行する。
+// identity はサーバー（services/livekit.js）が LIVEKIT_IDENTITY_PREFIX + id（"user:{id}"）で発行する。
 // ロールは token の属性（attributes.role）に入っていて、本人は書き換えられない（canUpdateOwnMetadata=false）。
-import { ROLES } from '@sotsuken/shared/constants';
+// role はその授業での立場（クラスの teacher_id なら teacher）。
+import { ROLES, LIVEKIT_IDENTITY_PREFIX } from '@sotsuken/shared/constants';
 
-const PREFIX = 'user:';
+const PREFIX = LIVEKIT_IDENTITY_PREFIX;
 
 /** ユーザーID → identity */
 export function toIdentity(userId) {
