@@ -68,3 +68,4 @@
 - 契約追加5件（docs/04 v4.3）：`material:added`／`attention:check` を全員宛にして `issued_at`・`auto` を追加／発動直後の `attention:update`／`GET /lessons/:id/attention`／`GET /lessons/:id/attention/auto`
 - あわせて更新：shared（`LIMITS`・`LIVEKIT_IDENTITY_PREFIX`・`ATTENTION_AUTO_TICK_SEC`・`MATERIAL_ADDED`、cjs 再生成）、broadsheet.css（`--color-overlay`・`--color-surface-glass`）、`client/src/lib/safe-url.js`、docs/03・07・08、CLAUDE.md
 - 誤検知1件：W1「startLesson が classId と授業の所属を照合していない」（route が lesson.class_id を渡しているため問題なし）
+- 追加裁定（同日）：W4 C-1 → pdf.js を client に追加してよい。C-2 → 半透明は color-mix でベース色は変数（`--color-overlay` / `--color-surface-glass` は取り消して削除）。W5 の凡例「わからない」→ 取り下げ（個人別の理解度表示はストレッチ）。W2 の auto フラグ → メモリ保持のまま（docs/03 §3 に既知の制約として記載）

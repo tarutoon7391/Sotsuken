@@ -72,6 +72,11 @@
   - B-6：`'teacher'` は `ROLES.TEACHER` にする。`'connect'` / `'disconnect'` は直書きしてよい（CLAUDE.md で例外にした）
   - B-9：700〜887px で横スクロールが出ないようにする
   - B-5：`/away` の 409 は ALREADY_ABSENT に揃えた（docs/04 v4.3）。エラーコードで判定する
-  - A-2：半透明は `--color-overlay` / `--color-surface-glass` を使う。変数に無い色が必要なら @manager へ
+  - A-2：半透明は `color-mix(in srgb, var(--color-xxx) N%, transparent)`。ベース色は必ず変数（追加裁定で `--color-overlay` / `--color-surface-glass` は取り消し）
 - **仕様側で解決したもの**：B-11（docs/04 §4 に `/away` と `/ended` を追記した）
 - **未裁定**（@manager の判断待ち。着手しない）：B-4、B-10
+
+## 【追加裁定】（2026-10-08 manager）
+- C-1：pdf.js（`pdfjs-dist`）を client の依存に追加してよい。worker は `?url` で import する（例：`import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'`）。S-06（資料のページ同期）の布石にもなる。B-10 の「総ページ数・1/2/4 ページ同時表示」もこれで片付けてよい
+- C-2：color-mix の書き方で OK。ベース色は必ず変数にする
+- `--color-overlay` / `--color-surface-glass` は broadsheet.css から削除した（main）。learn.css の 3 か所（:68, :88, :205）を color-mix に置き換えること

@@ -34,7 +34,7 @@
   - ファイル名：`kebab-case.js`。例外：React コンポーネントの `.jsx` は `PascalCase.jsx`、React フックは `useXxx.js`
   - DBテーブル・カラム：`snake_case`
 - 文字列の直書き：イベント名・エラーコードは `shared/` から import する。例外：Socket.IO 組み込みのイベント名（`connect` / `disconnect` など）は直書きしてよい
-- CSS：**色は必ず `broadsheet.css` の変数から取る**（`#fff`・`rgba()` の直書き禁止。半透明は `--color-overlay` 等を使い、無ければ @manager に相談）。余白は `--space-*` を使い、変数に無い値だけ px で書いてよい
+- CSS：**色は必ず `broadsheet.css` の変数から取る**（`#fff`・`rgba()` の直書き禁止）。半透明は `color-mix(in srgb, var(--color-xxx) N%, transparent)` で書き、ベース色は必ず変数にする。余白は `--space-*` を使い、変数に無い値だけ px で書いてよい
 - 入力の上限（文字数・サイズ）は `shared/constants.js` の `LIMITS` から読む。値を直書きしない
 - **日時カラムは UTC で保存し、表示時のみ日本時間に変換する**（期限計算バグの温床対策）
 - 文字列に埋め込むユーザー入力は必ずエスケープ（チャット・プロフィール・タイトルは特に注意）
