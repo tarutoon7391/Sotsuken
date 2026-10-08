@@ -39,11 +39,28 @@ export function usePdfDocument(url) {
   return state;
 }
 
+/**
+ * 画面の devicePixelRatio。ブラウザの拡大縮小や別のモニターへの移動で変わったら更新する
+ * （古い解像度のまま引き伸ばされてぼやけるのを防ぐ）
+ */
+function useDevicePixelRatio() {
+  const [dpr, setDpr] = useState(() => window.devicePixelRatio || 1);
+  useEffect(() => {
+    // matchMedia は「今の値と一致するか」しか見張れないので、変わるたびに今の値で作り直す
+    const mq = window.matchMedia(`(resolution: ${dpr}dppx)`);
+    const onChange = () => setDpr(window.devicePixelRatio || 1);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [dpr]);
+  return dpr;
+}
+
 export function PdfPage({ doc, pageNumber, className = '' }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [rendered, setRendered] = useState(false);
+  const dpr = useDevicePixelRatio();
 
   // 枠の大きさを見張る
   useEffect(() => {
@@ -57,7 +74,11 @@ export function PdfPage({ doc, pageNumber, className = '' }) {
     return () => ro.disconnect();
   }, []);
 
-  // 枠に収まる倍率で描く（高解像度の画面では devicePixelRatio 倍で描いて縮める）
+  // 枠に収まる大きさで、画面の画素にぴったり合わせて描く（ぼやけ対策）
+  // 1. 表示サイズ（CSS px）を整数で決める
+  // 2. canvas の画素数＝表示サイズ×dpr（四捨五入）。描く倍率は canvas の画素数から逆算する
+  //    → 中身と表示の比率がちょうど dpr になり、ブラウザによる引き伸ばし（にじみ）が起きない
+  // 3. 置く位置も画面の画素の境目にそろえる（枠の大きさが半端だと中央寄せで 0.5px ずれてにじむ）
   useEffect(() => {
     if (!doc || box.w < 1 || box.h < 1) return undefined;
     let cancelled = false;
@@ -69,13 +90,21 @@ export function PdfPage({ doc, pageNumber, className = '' }) {
         if (cancelled) return;
         const base = page.getViewport({ scale: 1 });
         const fit = Math.min(box.w / base.width, box.h / base.height);
-        const dpr = window.devicePixelRatio || 1;
-        const viewport = page.getViewport({ scale: fit * dpr });
+        const cssW = Math.max(1, Math.floor(base.width * fit));
+        const cssH = Math.max(1, Math.floor(base.height * fit));
         const canvas = canvasRef.current;
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
-        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        canvas.style.width = `${cssW}px`;
+        canvas.style.height = `${cssH}px`;
+
+        // 中央に置き、画面の画素の境目にスナップする
+        const r = wrapRef.current.getBoundingClientRect();
+        const snap = (v) => Math.round(v * dpr) / dpr;
+        canvas.style.left = `${snap(r.left + (r.width - cssW) / 2) - r.left}px`;
+        canvas.style.top = `${snap(r.top + (r.height - cssH) / 2) - r.top}px`;
+
+        const viewport = page.getViewport({ scale: canvas.width / base.width });
         renderTask = page.render({ canvas, viewport });
         return renderTask.promise.then(() => !cancelled && setRendered(true));
       })
@@ -84,7 +113,7 @@ export function PdfPage({ doc, pageNumber, className = '' }) {
       cancelled = true;
       if (renderTask) renderTask.cancel();
     };
-  }, [doc, pageNumber, box.w, box.h]);
+  }, [doc, pageNumber, box.w, box.h, dpr]);
 
   return (
     <div ref={wrapRef} className={`lr-pdf-page ${className}`}>
