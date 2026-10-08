@@ -74,3 +74,5 @@
 ## 機能追加：Office 資料のプレビュー（v4.4・2026-10-08）
 - トーンさんの要望。方式は案 1（アップロード時にサーバーで LibreOffice により PDF 変換 → pdf.js で表示）。元ファイルのダウンロードボタンも付ける
 - 契約：docs/04 v4.4、docs/03 `files.preview_url`（migration 002）、`FileInfo.preview_url`。依頼メモ docs/requests/office-preview.md（W1：変換・マイグレーション・Dockerfile、W4：資料パネル）
+- Office プレビューの結合（同日）：W1 0f5e7c2・W4 1affe71 を main に結合（コンフリクト 0）。jest 23/23・build OK・通しシナリオ 39/39・W1 スモーク 54/54（LibreOffice の無い環境で preview_url=null のまま成功することを確認）。実際の PDF 変換と Docker ビルドは Railway デプロイ後に確認する
+- migration 002 は manager が w1-core の migrate.js を直接実行して適用した。docs/10 §0（migrate はトーンさんだけ）と deny の回り道だったので、以後はしない
