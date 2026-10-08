@@ -1,6 +1,6 @@
 // クラス API（docs/04 §2「クラス」）— 担当：W1（認証・クラス・授業・資料）
 const express = require('express');
-const { ERROR_CODES } = require('@sotsuken/shared/constants');
+const { ERROR_CODES, LIMITS } = require('@sotsuken/shared/constants');
 const { requireLogin } = require('../middleware/auth');
 const { requireTeacher, requireStudent } = require('../middleware/role');
 const { requireClassAccess } = require('../middleware/class-member');
@@ -9,13 +9,11 @@ const classService = require('../services/classes');
 
 const router = express.Router();
 
-const CLASS_NAME_MAX = 50;
-
 // POST /api/classes（先生）{name} → {id, join_code}
 router.post('/classes', requireTeacher, asyncHandler(async (req, res) => {
   const raw = (req.body || {}).name;
-  if (typeof raw !== 'string' || !raw.trim() || raw.trim().length > CLASS_NAME_MAX) {
-    throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `クラス名は1〜${CLASS_NAME_MAX}文字で入力してください`);
+  if (typeof raw !== 'string' || !raw.trim() || raw.trim().length > LIMITS.CLASS_NAME_MAX) {
+    throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `クラス名は1〜${LIMITS.CLASS_NAME_MAX}文字で入力してください`);
   }
   res.status(201).json(await classService.createClass(req.session.user.id, raw.trim()));
 }));

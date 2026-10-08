@@ -1,12 +1,12 @@
 // 授業のビジネスロジック（docs/04 §2「授業」）— 担当：W1
 // 所属・先生チェックは middleware/class-member.js で済ませてから呼ぶ前提
-// ※ 出席（present 記録・終了時の確定）は W2 の services/attendance.js が担当。ここからは呼ぶだけ（結合時に接続）
+// ※ 出席（present 記録・終了時の確定）は W2 の services/attendance.js が担当。ここからは呼ぶだけ
 const crypto = require('crypto');
 const { ERROR_CODES, LESSON_STATUS, FILE_KINDS } = require('@sotsuken/shared/constants');
 const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
 const { query, transaction } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
-const { emitToLesson } = require('../sockets/io');
+const { emitToLesson, emitToTeachers } = require('../sockets/io');
 const attendance = require('./attendance');
 
 /** LiveKit のルーム名（推測されにくいランダム文字列） */
@@ -168,15 +168,21 @@ async function startLesson(lessonId, classId) {
     );
   });
 
-  // 待機中（Socket 接続済み）の生徒を present で記録する（W2・結合で接続）
-  await attendance.markPresentOnStart(lessonId);
+  // 待機中（Socket 接続済み）の生徒を present で記録する。
+  // 授業はもう live なので、ここで失敗しても lesson:started は必ず送る（送らないと生徒が待機画面に残り、
+  // 再度 start しても ALREADY_LIVE になって復旧できない）。記録漏れの生徒は再接続時に present になる
+  try {
+    await attendance.markPresentOnStart(lessonId);
+  } catch (err) {
+    console.error('授業開始時の出席記録に失敗しました', err);
+  }
   emitToLesson(lessonId, SERVER_EVENTS.LESSON_STARTED, {});
   return getLessonDetail(lessonId);
 }
 
 /** 授業終了（live のときだけ）。ended_at を記録し、全員に lesson:ended */
 async function endLesson(lessonId) {
-  await transaction(async (conn) => {
+  const changed = await transaction(async (conn) => {
     const [own] = await conn.execute('SELECT status FROM lessons WHERE id = ? FOR UPDATE', [lessonId]);
     if (!own[0]) throw new ApiError(404, ERROR_CODES.NOT_FOUND, '授業が見つかりません');
     if (own[0].status !== LESSON_STATUS.LIVE) {
@@ -186,10 +192,17 @@ async function endLesson(lessonId) {
       'UPDATE lessons SET status = ?, ended_at = UTC_TIMESTAMP() WHERE id = ?',
       [LESSON_STATUS.ENDED, lessonId]
     );
-    // 出席を出席／欠課の2値に確定する（docs/03「判定SQL」3。W2・結合で接続。同じトランザクション内）
-    await attendance.finalizeAttendance(lessonId, conn);
+    // 出席を出席／欠課の2値に確定する（docs/03「判定SQL」3。同じトランザクション内）
+    // 戻り値は状態が変わった生徒の一覧 [{user_id, status, away_total_sec}]（v4.3 裁定）
+    return attendance.finalizeAttendance(lessonId, conn);
   });
 
+  // コミット後に、確定で変わった生徒の出席を先生に送る（先生の出席一覧を再読込なしで更新するため）
+  for (const row of Array.isArray(changed) ? changed : []) {
+    emitToTeachers(lessonId, SERVER_EVENTS.ATTENDANCE_UPDATE, {
+      user_id: row.user_id, status: row.status, away_total_sec: row.away_total_sec,
+    });
+  }
   emitToLesson(lessonId, SERVER_EVENTS.LESSON_ENDED, {});
   return getLessonDetail(lessonId);
 }

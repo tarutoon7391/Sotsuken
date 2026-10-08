@@ -5,13 +5,16 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const { ERROR_CODES, DEFAULTS, ALLOWED_UPLOAD_MIMES } = require('@sotsuken/shared/constants');
+const { ERROR_CODES, LIMITS, FILE_KINDS, ALLOWED_UPLOAD_MIMES } = require('@sotsuken/shared/constants');
+const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
 const config = require('../config');
 const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
+const { emitToLesson } = require('../sockets/io');
 
 const UPLOAD_URL_PREFIX = '/uploads/';
-const ICON_MIMES = ALLOWED_UPLOAD_MIMES.filter((m) => m.startsWith('image/'));
+// アイコンは PNG・JPEG のみ（docs/04 §6）
+const ICON_MIMES = ['image/png', 'image/jpeg'];
 
 // MIME → 保存時の拡張子（配信時の Content-Type を正しくするため）
 const EXT_BY_MIME = {
@@ -41,12 +44,13 @@ const storage = multer.diskStorage({
  * 1ファイルを受け取るミドルウェアを作る。MIME 違い・サイズ超過は 400
  * @param {string} field     multipart のフィールド名
  * @param {string[]} mimes   許可する MIME
+ * @param {number} maxBytes  サイズ上限（LIMITS から渡す）
  */
-function singleUpload(field, mimes) {
+function singleUpload(field, mimes, maxBytes) {
   const upload = multer({
     storage,
     defParamCharset: 'utf8', // 日本語のファイル名を文字化けさせない
-    limits: { fileSize: DEFAULTS.FILE_MAX_BYTES, files: 1 },
+    limits: { fileSize: maxBytes, files: 1 },
     fileFilter(req, file, cb) {
       if (!mimes.includes(file.mimetype)) {
         return cb(new ApiError(400, ERROR_CODES.BAD_REQUEST, 'このファイル形式はアップロードできません'));
@@ -60,7 +64,7 @@ function singleUpload(field, mimes) {
       if (!err) return next();
       if (err instanceof multer.MulterError) {
         const message = err.code === 'LIMIT_FILE_SIZE'
-          ? `ファイルサイズは ${DEFAULTS.FILE_MAX_BYTES / 1024 / 1024}MB までです`
+          ? `ファイルサイズは ${maxBytes / 1024 / 1024}MB までです`
           : 'アップロードの形式が不正です';
         return next(new ApiError(400, ERROR_CODES.BAD_REQUEST, message));
       }
@@ -70,9 +74,9 @@ function singleUpload(field, mimes) {
 }
 
 /** 資料・添付用（POST /api/lessons/:id/files の file） */
-const uploadLessonFile = singleUpload('file', ALLOWED_UPLOAD_MIMES);
-/** アイコン用（POST /api/me/icon の icon。画像のみ） */
-const uploadIcon = singleUpload('icon', ICON_MIMES);
+const uploadLessonFile = singleUpload('file', ALLOWED_UPLOAD_MIMES, LIMITS.MATERIAL_MAX_BYTES);
+/** アイコン用（POST /api/me/icon の icon。PNG・JPEG） */
+const uploadIcon = singleUpload('icon', ICON_MIMES, LIMITS.ICON_MAX_BYTES);
 
 /** multer が保存したファイル → 配信 URL */
 function urlOf(savedFile) {
@@ -108,7 +112,7 @@ function toFileInfo(row) {
 }
 
 /**
- * アップロード済みのファイルを files に登録する
+ * アップロード済みのファイルを files に登録する。資料（material）なら全員に material:added を送る（v4.3）
  * @param {{lessonId:number, uploaderId:number, kind:string, savedFile:object}} p  savedFile は req.file
  * @returns {Promise<{file_id:number, url:string}>}
  */
@@ -120,6 +124,13 @@ async function createFile({ lessonId, uploaderId, kind, savedFile }) {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [uploaderId, lessonId, kind, fileName, url, savedFile.mimetype, savedFile.size]
   );
+  if (kind === FILE_KINDS.MATERIAL) {
+    const rows = await query(
+      `SELECT id, kind, file_name, url, mime, size, uploader_id, created_at FROM files WHERE id = ?`,
+      [result.insertId]
+    );
+    emitToLesson(lessonId, SERVER_EVENTS.MATERIAL_ADDED, { file: toFileInfo(rows[0]) });
+  }
   return { file_id: result.insertId, url };
 }
 
