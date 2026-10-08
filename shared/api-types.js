@@ -180,8 +180,8 @@
 /**
  * POST /api/lessons/:id/token のレスポンス
  * @typedef {Object} TokenResponse
- * @property {string} token   LiveKit のアクセストークン（JWT）
- * @property {string} url     LiveKit サーバーの URL（wss://...）
+ * @property {string|null} token   LiveKit のアクセストークン（JWT）。LiveKit 未設定なら null（v4.3）
+ * @property {string|null} url     LiveKit サーバーの URL（wss://...）。未設定なら null（v4.3）
  * @property {string} room_name
  * @property {string} identity 自分の participant identity（"user:{id}" 形式）
  */
@@ -254,7 +254,20 @@
  * @property {UserBrief[]} pending
  */
 
-// POST /api/attention/:check_id/respond（生徒）… ボディ無し。締切超過は 409 CHECK_EXPIRED
+// POST /api/attention/:check_id/respond（生徒）… ボディ無し。締切超過は 409 CHECK_EXPIRED（応答済みの再押下は成功・v4.3）
+
+/**
+ * GET /api/lessons/:id/attention の要素（先生・v4.3）
+ * @typedef {Object} AttentionSummary
+ * @property {number} check_id
+ * @property {string} issued_at
+ * @property {string} deadline_at
+ * @property {boolean} auto 自動発動なら true
+ * @property {number} responded_count
+ * @property {number} pending_count
+ */
+
+// GET /api/lessons/:id/attention/auto（先生・v4.3）… {interval_min}
 
 // ---------------------------------------------------------------- 理解リアクション
 

@@ -3,6 +3,7 @@
 > **この文書が分担間の「契約」。** ここに従えば各担当は独立して開発できる。
 > 変更したい場合は PM に相談 → 合意後にこの文書を更新してから実装する。
 > v4.1（2026-10-05）：クラス詳細・チャット履歴・理解度の取得 API、`lesson:started` / `understanding:reset` イベントを追加。出席の記録タイミング・復帰時の閾値判定・授業終了時の確定を明記。
+> v4.3（2026-10-08・W1〜W5 監査の裁定）：`material:added` を追加。`attention:check` を全員宛にして `issued_at`・`auto` を追加。確認ボタンの一覧・自動設定の取得 API を追加。`question:new` に `status`。入力の上限を `LIMITS` として §6 にまとめた。購読制御の文言を実装に合わせた。
 
 ## 1. 共通ルール
 
@@ -50,9 +51,9 @@
 ### 配信トークン（LiveKit）
 | メソッド | パス | 説明 |
 |---|---|---|
-| POST | /api/lessons/:id/token | ロールに応じたトークンを発行。**先生**：publish可・全員subscribe可。**生徒**：publish可（自分のカメラ）、subscribe は「先生」と「スポットライト中の生徒」のみ許可。クラス外は 403 |
+| POST | /api/lessons/:id/token | ロールに応じたトークンを発行。**先生**：publish可・全員subscribe可。**生徒**：publish可（自分のカメラ・マイク）・subscribe可。クラス外は 403 |
 
-> 生徒映像を他の生徒に見せない制御は、**LiveKit のトラック購読許可（publisher 側で許可先を先生＋スポットライト時は全員に限定）＋サーバー発行トークン**で強制する。フロントの表示制御だけに頼らない。
+> 生徒映像を他の生徒に見せない制御は、**publisher 側のトラック購読許可（SFU が強制）＋サーバー発行トークン**で行う。生徒が購読許可を広げられるのは自分のトラックだけで、他の生徒のトラックは購読できない（v4.3）。フロントの表示制御だけに頼らない。
 
 ### スポットライト
 | メソッド | パス | ロール | 説明 |
@@ -62,10 +63,10 @@
 ### 出席
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
-| GET | /api/lessons/:id/attendance | 先生 | **クラスの全生徒**の状態一覧 `[{user, status, joined_at, away_since, away_total_sec, remaining_sec}]`。まだ入室していない生徒は `status:"absent"`, `joined_at:null` で返す |
+| GET | /api/lessons/:id/attendance | 先生 | **クラスの全生徒**の状態一覧 `[{user, status, joined_at, away_since, away_total_sec, remaining_sec, note}]`。まだ入室していない生徒は `status:"absent"`, `joined_at:null` で返す。`absent` の行の `remaining_sec` は 0（v4.3：`note` を明記） |
 | GET | /api/lessons/:id/attendance/me | 生徒 | 自分の状態 `{status, away_total_sec, remaining_sec}`（一時退出中画面の残り時間表示用） |
 | PATCH | /api/lessons/:id/attendance/:user_id | 先生 | `{status, note}` 手動修正 |
-| POST | /api/lessons/:id/attendance/away | 生徒 | 一時退出（`away_since` 記録） |
+| POST | /api/lessons/:id/attendance/away | 生徒 | 一時退出（`away_since` 記録）。既に absent のときは 409 `ALREADY_ABSENT`（v4.3） |
 | POST | /api/lessons/:id/attendance/return | 生徒 | 復帰。`WHERE status='away'` の条件付きUPDATEで**今回の退出時間を away_total_sec に加算**。**累積＋今回分が閾値以上ならその場で欠課にして** 409 `ALREADY_ABSENT`（タイマーを待たない）。既に absent のときも 409 `ALREADY_ABSENT`（先生に修正を依頼する導線を表示） |
 
 > 入室（Socket接続）で present、切断で away（サーバーが自動記録）。away→absent の自動判定はサーバータイマー（1分間隔）で、**累積退出時間＋現在の経過 ≥ 閾値** を条件とする（v4）。
@@ -75,9 +76,11 @@
 ### 確認ボタン
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
-| POST | /api/lessons/:id/attention | 先生 | 発動。`{timeout_sec:60}` → 全生徒に `attention:check` |
+| POST | /api/lessons/:id/attention | 先生 | 発動。`{timeout_sec:60}` → 全員に `attention:check`、直後に先生へ `attention:update`（v4.3） |
+| GET | /api/lessons/:id/attention | 先生 | 授業の確認の一覧 `[{check_id, issued_at, deadline_at, auto, responded_count, pending_count}]`（授業結果画面の応答率用）（v4.3） |
 | PATCH | /api/lessons/:id/attention/auto | 先生 | `{interval_min}` 自動発動の設定（0で無効） |
-| POST | /api/attention/:check_id/respond | 生徒 | 応答。deadline 超過は 409 `CHECK_EXPIRED` |
+| GET | /api/lessons/:id/attention/auto | 先生 | 自動発動の現在の設定 `{interval_min}`（先生画面の再読込用）（v4.3） |
+| POST | /api/attention/:check_id/respond | 生徒 | 応答。deadline 超過は 409 `CHECK_EXPIRED`。**応答済みの再押下は締切後でも成功**（409 にしない）（v4.3） |
 | GET | /api/attention/:check_id | 先生 | 応答者／未応答者一覧 |
 
 ### 理解リアクション
@@ -92,12 +95,12 @@
 |---|---|---|---|
 | POST | /api/lessons/:id/questions | 生徒 | `{body, is_anonymous}`。**挙手のみは body 省略** |
 | GET | /api/lessons/:id/questions | 全員 | 一覧。匿名の投稿者は先生にのみ含める |
-| PATCH | /api/questions/:id | 先生 | `{status:"answered"}` |
+| PATCH | /api/questions/:id | 先生 | `{status:"answered"}`。終了済み（`ended`）の授業でも可（授業結果画面から操作する）（v4.3） |
 
 ### 資料・添付
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
-| POST | /api/lessons/:id/files | 先生(material) / 全員(attachment) | multipart `{kind, file}`。画像・PDF・Office文書、10MBまで → `{file_id, url}` |
+| POST | /api/lessons/:id/files | 先生(material) / 全員(attachment) | multipart `{kind, file}`。画像・PDF・Office文書、10MBまで → `{file_id, url}`。`kind=material` のときは全員に `material:added`（v4.3） |
 | GET | /api/lessons/:id/files?kind=material | 全員 | 資料パネル用一覧（終了済み授業でも取得可） |
 | DELETE | /api/files/:id | アップロード者 | 資料・添付の削除（ファイル本体も削除） |
 
@@ -129,15 +132,16 @@
 | `chat:message` | `{id, user:{id,name,role,icon_url}, body, file?, created_at}` | 全員 | |
 | `understanding:update` | `{understood, confused, again, total}` | 先生 | リアルタイム集計（リセット以降の各生徒の最新1件） |
 | `understanding:reset` | `{}` | 全員 | リセットされた。生徒側は選択中のボタンを解除する（v4.1） |
-| `question:new` | `{id, user?, body, is_anonymous, created_at}` | 全員（匿名時 user は先生のみ） | |
+| `question:new` | `{id, user?, body, is_anonymous, status, created_at}` | 全員（匿名時 user は先生のみ） | `status` は v4.3 で追加（REST の Question と同じ形） |
 | `question:answered` | `{id}` | 全員 | |
 | `question:raised` | `{user:{id,name}}` | 先生 | 挙手通知 |
-| `attention:check` | `{check_id, deadline_at}` | 生徒 | ポップアップ表示トリガー |
-| `attention:update` | `{responded[], pending[]}` | 先生 | 応答状況 |
+| `attention:check` | `{check_id, issued_at, deadline_at, auto}` | 全員 | 生徒はポップアップ表示（カウントダウンは `issued_at` 基準）、先生は応答状況パネルの表示に使う。`auto` は自動発動なら true（v4.3：宛先を全員に、`issued_at`・`auto` を追加） |
+| `attention:update` | `{responded[], pending[]}` | 先生 | 応答状況。発動直後と応答のたびに送る（v4.3） |
 | `attendance:update` | `{user_id, status, away_total_sec}` | 先生 | 出席状態の変化 |
 | `spotlight:update` | `{user_id\|null}` | 全員 | 表示切替 |
 | `lesson:started` | `{}` | 全員 | 授業開始。待機画面（9）の生徒は授業画面（10）へ遷移する（v4.1） |
 | `lesson:ended` | `{}` | 全員 | 授業終了 |
+| `material:added` | `{file}`（`FileInfo`） | 全員 | 先生が資料（`kind=material`）をアップロードした。資料パネルを更新する（v4.3） |
 
 ### 予約（ストレッチ）
 `stats:update`（S-01）／`quiz:*`（S-02）／`caption:update`（S-05）／`material:page`（S-06）／`breakout:*`（S-07）
@@ -151,6 +155,8 @@
 | /classes/:id | クラス詳細（授業一覧・タグ絞り込み・メンバー・授業作成／編集・終了済み授業の資料） | classes, lessons, tags, files | クラス・出席担当 |
 | /lessons/:id/teach | **先生画面**：配信プレビュー、生徒グリッド、スポットライト、理解度集計、出席一覧、確認発動、質問箱、資料アップ | token, spotlight, attendance, attention, questions, files | 先生画面担当 |
 | /lessons/:id/learn | **生徒画面**：先生映像、資料パネル、理解ボタン、質問ボタン/質問箱、一時退出、確認ポップ、チャット | token, understanding, questions, attendance, chat | 生徒画面担当 |
+| /lessons/:id/away | 一時退出中（残り時間・復帰）（v4.3 で一覧に追記） | attendance | 生徒画面担当 |
+| /lessons/:id/ended | 授業終了（生徒：クラスへ戻る／先生：授業結果へ）（v4.3 で一覧に追記） | lessons, classes | 先生画面担当 |
 | 共通部品 | チャット・質問箱・Socket接続・ロールバッジ | chat/question イベント | 通信基盤担当 |
 
 ## 5. テストケース（抜粋・担当者はそのまま使う）
@@ -170,7 +176,7 @@
 - 生徒のトークンで他生徒の映像が購読できないこと／スポットライト指定後は購読できること
 - クラス外ユーザーが授業APIにアクセスすると 403 になること
 - 匿名質問が他の生徒には投稿者非表示、先生には表示されること
-- 確認ボタンの deadline 超過応答が 409 になること
+- 確認ボタンの deadline 超過応答が 409 になること（未応答の生徒の場合。応答済みの再押下は成功）
 
 ## 6. v4.2 補足（実装で決めた未記載事項・2026-10-07 並列開発で確定）
 
@@ -185,15 +191,18 @@
 | ログイン失敗 | 401 `UNAUTHORIZED` |
 | `ended` の授業を start ／ `live` 以外を end | 409 `CONFLICT` |
 | 入力の上限 | `away_timeout_min` 1〜180、タグ 30文字以内・10個まで、パスワード 8文字以上・72バイト以内 |
+| 入力の上限（v4.3・`shared/constants.js` の `LIMITS`） | ログインID 3〜50文字・半角英数字と `_` `.` `-`／表示名 30文字／クラス名 50文字／授業タイトル 100文字／タグ 30文字・10個／チャット・質問の本文 1000文字／パスワード 8文字以上・72バイト以内／アイコン 2MB（PNG・JPEG）／資料・添付 10MB。文字数は `String.length` で数える。クライアントもサーバーも `LIMITS` から読み、値を直書きしない |
+| 確認ボタンの範囲（v4.3） | `timeout_sec` 10〜600、`interval_min` 0〜180。自動発動ジョブの間隔は `ATTENTION_AUTO_TICK_SEC`（15秒） |
+| LiveKit トークン（v4.3） | 有効期限 6時間。LiveKit 未設定のときは 200 で `{token:null, url:null, room_name, identity}` を返し、クライアントは「配信サーバー未設定」を表示する。identity は `LIVEKIT_IDENTITY_PREFIX + user.id`。先生用の権限は「その授業のクラスの先生（`classes.teacher_id`）」かどうかで決める |
 | 参加コード | 8桁・英大文字＋数字（0/O/1/I/L を除く） |
 | `room_name` | `lesson-<乱数>` |
 | `/uploads/...` の配信 | ログイン不要（ファイル名は推測不能な乱数）。**本番課題**：認証付き配信にするかは初回MTGで判断 |
 | `ended` の授業へのトークン発行・spotlight 変更 | 拒否しない（pending #1） |
-| 生徒映像の購読制御 | publisher 側クライアント設定（pending #2）。サーバー強制は本番課題 |
+| 生徒映像の購読制御 | publisher 側のトラック購読許可（SFU が強制）＋サーバー発行トークン。生徒が広げられるのは自分のトラックだけ（v4.3 で §2 の文言を実装に合わせた。pending #2） |
 | `PATCH /lessons/:id/attention/auto` のレスポンス | `{interval_min}` |
 | `POST /lessons/:id/attendance/away` のレスポンス | `{status:"away"}` |
 | `POST /lessons/:id/attention` のステータス | 201 |
-| 受け付ける授業状態 | 質問・理解度・確認ボタンは `live` 中のみ（それ以外 409 `CONFLICT`）。チャットは `ended` 以外（待機中の会話を許容） |
+| 受け付ける授業状態 | 質問・理解度・確認ボタンは `live` 中のみ（それ以外 409 `CONFLICT`）。理解度リセット・確認ボタンの応答も含む。ただし**質問の回答済み操作（`PATCH /questions/:id`）は `ended` でも可**（v4.3）。チャットは `ended` 以外（待機中の会話を許容） |
 | Socket の ack | クライアント→サーバーの各イベントは任意で ack を受け取れる（成功 `{}`、失敗 `{error:{code,message}}`）。使わなくても動く |
 | 出席の複数タブ | 同じ生徒の接続が複数あるとき、最後の1本が切れたときだけ away |
 | 確認ボタンの自動発動（`interval_min`） | サーバーのメモリ保持（再起動で消える）。永続化は pending #3 |

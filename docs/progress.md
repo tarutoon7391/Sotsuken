@@ -60,3 +60,11 @@
 
 - マージ 5 本（コンフリクト 1：progress.md、manager 起因）→ 繋ぎ込み 2 箇所＋_stubs 差し替え → jest 10/10・vite build OK → 通しシナリオ scripts/e2e-scenario.js 39/39
 - 詳細は docs/integration-report.md
+
+## 監査（manager・2026-10-08）
+
+- 監査：W1 12体/6A/22B、W2 10体/5A/20B、W3 3体/1A/10B、W4 3体/6A/11B、W5 5体/8A/21B、契約追加5件、誤検知1件
+- 方法：Haiku のサブエージェント（読み取りのみ）で 1ファイル（群）×1軸を照合し、manager が重複をまとめて主要な A を裏取りした。結果は docs/requests/audit-w1〜w5.md
+- 契約追加5件（docs/04 v4.3）：`material:added`／`attention:check` を全員宛にして `issued_at`・`auto` を追加／発動直後の `attention:update`／`GET /lessons/:id/attention`／`GET /lessons/:id/attention/auto`
+- あわせて更新：shared（`LIMITS`・`LIVEKIT_IDENTITY_PREFIX`・`ATTENTION_AUTO_TICK_SEC`・`MATERIAL_ADDED`、cjs 再生成）、broadsheet.css（`--color-overlay`・`--color-surface-glass`）、`client/src/lib/safe-url.js`、docs/03・07・08、CLAUDE.md
+- 誤検知1件：W1「startLesson が classId と授業の所属を照合していない」（route が lesson.class_id を渡しているため問題なし）

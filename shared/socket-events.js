@@ -29,15 +29,15 @@ export const SERVER_EVENTS = Object.freeze({
   UNDERSTANDING_UPDATE: 'understanding:update',
   /** {}。全員。生徒は選択中のボタンを解除する（v4.1） */
   UNDERSTANDING_RESET: 'understanding:reset',
-  /** { id, user?, body, is_anonymous, created_at }。全員（匿名時 user は先生のみ） */
+  /** { id, user?, body, is_anonymous, status, created_at }。全員（匿名時 user は先生のみ） */
   QUESTION_NEW: 'question:new',
   /** { id }。全員 */
   QUESTION_ANSWERED: 'question:answered',
   /** { user:{id,name} }。先生 */
   QUESTION_RAISED: 'question:raised',
-  /** { check_id, deadline_at }。生徒 */
+  /** { check_id, issued_at, deadline_at, auto }。全員（生徒は応答ポップアップ、先生は応答状況の表示に使う） */
   ATTENTION_CHECK: 'attention:check',
-  /** { responded[], pending[] }。先生 */
+  /** { responded[], pending[] }。先生。発動直後と応答のたびに送る */
   ATTENTION_UPDATE: 'attention:update',
   /** { user_id, status, away_total_sec }。先生 */
   ATTENDANCE_UPDATE: 'attendance:update',
@@ -47,6 +47,8 @@ export const SERVER_EVENTS = Object.freeze({
   LESSON_STARTED: 'lesson:started',
   /** {}。全員 */
   LESSON_ENDED: 'lesson:ended',
+  /** { file }（FileInfo）。全員。先生が資料（kind=material）をアップロードしたとき */
+  MATERIAL_ADDED: 'material:added',
 });
 
 /** 予約（ストレッチ。MVP では実装しない） */
