@@ -1,0 +1,11 @@
+# Docker イメージに入れないもの（.env は秘密情報なので絶対に入れない。Railway の環境変数で渡す）
+.env
+.env.*
+!.env.example
+.git
+node_modules
+client/node_modules
+shared/node_modules
+client/dist
+uploads
+.claude

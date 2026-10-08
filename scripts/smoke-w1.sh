@@ -141,6 +141,25 @@ check 403 "アップロード者以外は削除 403" -b "$S_JAR" -X DELETE "$API
 check 204 "アップロード者が削除" -b "$T_JAR" -X DELETE "$API/files/$FILE_ID"
 check 404 "削除後はファイル本体も消えている" "$BASE$FILE_URL"
 
+echo "== Office 資料のプレビュー（v4.4）"
+# LibreOffice が無い環境では preview_url が null でアップロード成功。ある環境では PDF の URL が返る
+SAMPLE_DOCX="$WORK/sample.docx"
+printf 'w1 smoke docx' > "$SAMPLE_DOCX"
+check 201 "Office 資料のアップロード（preview_url を返す。null でも成功）" -b "$T_JAR" -X POST "$API/lessons/$LESSON_ID/files" \
+  -F kind=material -F "file=@$SAMPLE_DOCX;type=application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+OFFICE_ID="$(json_num file_id)"
+PREVIEW_URL="$(json_str preview_url)"
+if printf '%s' "$BODY" | grep -q '"preview_url":'; then
+  PASS=$((PASS + 1)); echo "OK   応答に preview_url がある（${PREVIEW_URL:-null}）"
+else
+  FAIL=$((FAIL + 1)); echo "NG   応答に preview_url が無い: $BODY"
+fi
+check 200 "資料一覧にも preview_url が入る" -b "$S_JAR" "$API/lessons/$LESSON_ID/files?kind=material"
+printf '%s' "$BODY" | grep -q '"preview_url"' && echo "     preview_url 含む: OK" || { echo "     NG 一覧に preview_url が無い"; FAIL=$((FAIL + 1)); }
+[ -n "$PREVIEW_URL" ] && check 200 "プレビュー用 PDF が配信される" "$BASE$PREVIEW_URL"
+check 204 "Office 資料の削除" -b "$T_JAR" -X DELETE "$API/files/$OFFICE_ID"
+[ -n "$PREVIEW_URL" ] && check 404 "削除後はプレビュー用 PDF も消えている" "$BASE$PREVIEW_URL"
+
 echo "== 授業終了・ログアウト"
 check 200 "授業終了" -b "$T_JAR" -X POST "$API/lessons/$LESSON_ID/end"
 check 409 "終了済みを再度終了すると 409" -b "$T_JAR" -X POST "$API/lessons/$LESSON_ID/end"

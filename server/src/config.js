@@ -17,6 +17,8 @@ module.exports = {
     apiSecret: process.env.LIVEKIT_API_SECRET || '',
   },
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
+  // Office 資料を PDF に変換する LibreOffice のコマンド（v4.4。Docker では PATH にある soffice）
+  sofficePath: process.env.SOFFICE_PATH || 'soffice',
   // 仮トップ（client/dist が無いときだけ配信）
   publicDir: path.resolve(__dirname, '../../public'),
   // React のビルド出力（本番）

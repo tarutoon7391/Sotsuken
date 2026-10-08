@@ -11,6 +11,7 @@ const config = require('../config');
 const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { emitToLesson } = require('../sockets/io');
+const { isOfficeMime, convertToPdf } = require('./office-convert');
 
 const UPLOAD_URL_PREFIX = '/uploads/';
 // アイコンは PNG・JPEG のみ（docs/04 §6）
@@ -104,6 +105,7 @@ function toFileInfo(row) {
     kind: row.kind,
     file_name: row.file_name,
     url: row.url,
+    preview_url: row.preview_url ?? null,
     mime: row.mime,
     size: row.size,
     uploader_id: row.uploader_id,
@@ -111,27 +113,41 @@ function toFileInfo(row) {
   };
 }
 
+const FILE_COLUMNS = 'id, kind, file_name, url, preview_url, mime, size, uploader_id, created_at';
+
 /**
  * アップロード済みのファイルを files に登録する。資料（material）なら全員に material:added を送る（v4.3）
+ * Office 資料は PDF に変換して preview_url に記録する（v4.4）。変換できなくてもアップロードは成功させる
  * @param {{lessonId:number, uploaderId:number, kind:string, savedFile:object}} p  savedFile は req.file
- * @returns {Promise<{file_id:number, url:string}>}
+ * @returns {Promise<{file_id:number, url:string, preview_url:string|null}>}
  */
 async function createFile({ lessonId, uploaderId, kind, savedFile }) {
   const url = urlOf(savedFile);
   const fileName = (savedFile.originalname || 'file').slice(0, 255);
-  const result = await query(
-    `INSERT INTO files (uploader_id, lesson_id, kind, file_name, url, mime, size)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [uploaderId, lessonId, kind, fileName, url, savedFile.mimetype, savedFile.size]
-  );
-  if (kind === FILE_KINDS.MATERIAL) {
-    const rows = await query(
-      `SELECT id, kind, file_name, url, mime, size, uploader_id, created_at FROM files WHERE id = ?`,
-      [result.insertId]
+
+  let previewUrl = null;
+  if (kind === FILE_KINDS.MATERIAL && isOfficeMime(savedFile.mimetype)) {
+    const pdfName = await convertToPdf(savedFile.path);
+    if (pdfName) previewUrl = UPLOAD_URL_PREFIX + pdfName;
+  }
+
+  let result;
+  try {
+    result = await query(
+      `INSERT INTO files (uploader_id, lesson_id, kind, file_name, url, preview_url, mime, size)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [uploaderId, lessonId, kind, fileName, url, previewUrl, savedFile.mimetype, savedFile.size]
     );
+  } catch (err) {
+    await removeUploadedFile(previewUrl); // 登録できなかったらプレビューも残さない（元ファイルはルートが消す）
+    throw err;
+  }
+
+  if (kind === FILE_KINDS.MATERIAL) {
+    const rows = await query(`SELECT ${FILE_COLUMNS} FROM files WHERE id = ?`, [result.insertId]);
     emitToLesson(lessonId, SERVER_EVENTS.MATERIAL_ADDED, { file: toFileInfo(rows[0]) });
   }
-  return { file_id: result.insertId, url };
+  return { file_id: result.insertId, url, preview_url: previewUrl };
 }
 
 /** 授業のファイル一覧（kind 指定なしは全種別）。古い順 */
@@ -143,16 +159,15 @@ async function listFiles(lessonId, kind) {
     params.push(kind);
   }
   const rows = await query(
-    `SELECT id, kind, file_name, url, mime, size, uploader_id, created_at
-       FROM files WHERE ${where} ORDER BY created_at, id`,
+    `SELECT ${FILE_COLUMNS} FROM files WHERE ${where} ORDER BY created_at, id`,
     params
   );
   return rows.map(toFileInfo);
 }
 
-/** ファイル削除（アップロード者のみ）。行を消してから本体を消す */
+/** ファイル削除（アップロード者のみ）。行を消してから本体とプレビュー用 PDF を消す */
 async function deleteFile(fileId, userId) {
-  const rows = await query('SELECT id, uploader_id, url FROM files WHERE id = ?', [fileId]);
+  const rows = await query('SELECT id, uploader_id, url, preview_url FROM files WHERE id = ?', [fileId]);
   const file = rows[0];
   if (!file) throw new ApiError(404, ERROR_CODES.NOT_FOUND, 'ファイルが見つかりません');
   if (file.uploader_id !== userId) {
@@ -160,6 +175,7 @@ async function deleteFile(fileId, userId) {
   }
   await query('DELETE FROM files WHERE id = ?', [fileId]);
   await removeUploadedFile(file.url);
+  await removeUploadedFile(file.preview_url);
 }
 
 module.exports = {
