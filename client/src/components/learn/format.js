@@ -6,29 +6,6 @@ export function formatMmSs(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** UTC の ISO 文字列 → 日本時間の "HH:MM"（DB・API は UTC、表示だけ日本時間） */
-export function formatTimeJst(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
-}
-
-/**
- * サーバーから受け取った URL を src / href に入れてよいか確かめる。
- * 同一オリジンの相対パスと http(s) だけ通し、javascript: などは null にする。
- */
-export function safeUrl(url) {
-  if (typeof url !== 'string' || url === '') return null;
-  if (url.startsWith('/') && !url.startsWith('//')) return url;
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' || u.protocol === 'http:' ? url : null;
-  } catch {
-    return null;
-  }
-}
-
 /** MIME → 資料一覧に出す短い種別 */
 export function fileKindLabel(mime) {
   if (mime === 'application/pdf') return 'PDF';

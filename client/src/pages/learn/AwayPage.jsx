@@ -2,8 +2,10 @@
 // 残り時間は GET attendance/me の remaining_sec（閾値 − 累積 − 今回の経過）から手元で数える。
 // 30秒ごとに取り直して時計のずれを直し、授業が終わっていないかも確かめる（この画面は Socket に繋がない）。
 // 「授業に戻る」→ POST attendance/return。409 ALREADY_ABSENT なら欠課確定の表示にする。
+// 欠課の表示はサーバーが absent と返したとき（attendance/me または 409）だけ。手元の 0 では判定しない。
+// 欠課でも授業画面に戻って視聴は続けられる（授業画面に欠課のバナーが出る）。
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ATTENDANCE_STATUS, DEFAULTS, ERROR_CODES, LESSON_STATUS } from '@sotsuken/shared/constants';
 import { get, post } from '../../api/client.js';
 import LessonHeader from '../../components/learn/LessonHeader.jsx';
@@ -14,6 +16,7 @@ import './learn.css';
 
 const LOW_SEC = 3 * 60; // 残り3分未満で「わずか」
 const RESYNC_MS = 30 * 1000;
+const JUDGE_POLL_MS = 10 * 1000; // 残り 0 のあと、サーバーの欠課判定を待つ間隔
 
 export default function AwayPage() {
   const { id } = useParams();
@@ -44,9 +47,11 @@ export default function AwayPage() {
     [lessonId, navigate]
   );
 
-  // ---- 初回読み込み
+  // ---- 初回読み込み（失敗したら reloadKey を増やして読み直す）
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     let alive = true;
+    setNote('');
     Promise.all([get('/me'), get(`/lessons/${lessonId}`), get(`/lessons/${lessonId}/attendance/me`)])
       .then(([meRes, lessonRes, att]) => {
         if (!alive) return;
@@ -67,7 +72,7 @@ export default function AwayPage() {
     return () => {
       alive = false;
     };
-  }, [lessonId, navigate, applyMe]);
+  }, [lessonId, navigate, applyMe, reloadKey]);
 
   // ---- 1秒ごとの描き直し
   useEffect(() => {
@@ -89,10 +94,15 @@ export default function AwayPage() {
 
   const limitSec = ((lesson && lesson.away_timeout_min) || DEFAULTS.AWAY_TIMEOUT_MIN) * 60;
   const remaining = sync ? Math.max(0, Math.ceil((sync.endsAt - now) / 1000)) : limitSec;
-  // 手元で 0 になったら欠課の表示へ（サーバーの判定は1分間隔。戻るを押しても 409 になる）
+  // 手元で 0 になっても自分では欠課にしない。サーバーの判定（1分間隔のタイマー）を attendance/me で確かめる
+  const judging = Boolean(sync) && remaining <= 0 && !expired;
   useEffect(() => {
-    if (sync && remaining <= 0) setExpired(true);
-  }, [sync, remaining]);
+    if (!judging) return undefined;
+    const check = () => get(`/lessons/${lessonId}/attendance/me`).then(applyMe).catch(() => {});
+    check();
+    const t = setInterval(check, JUDGE_POLL_MS);
+    return () => clearInterval(t);
+  }, [judging, lessonId, applyMe]);
 
   async function handleReturn() {
     setReturning(true);
@@ -108,9 +118,21 @@ export default function AwayPage() {
   }
 
   if (!me || !lesson) {
+    if (!note) {
+      return (
+        <div className="lr-loading">
+          <span className="lr-spinner" />
+        </div>
+      );
+    }
+    // 読み込み失敗：再読み込みと、クラス一覧へ戻る導線（docs/07 §2-14）
     return (
-      <div className="lr-loading">
-        {note ? <p>{note}</p> : <span className="lr-spinner" />}
+      <div className="lr-loading" role="alert">
+        <p>{note}</p>
+        <button type="button" className="btn btn-primary" onClick={() => setReloadKey((k) => k + 1)}>
+          再読み込み
+        </button>
+        <Link to="/classes">クラス一覧へ戻る</Link>
       </div>
     );
   }
@@ -151,7 +173,9 @@ export default function AwayPage() {
                 <p className="lr-hint">前回までの退出 {formatMmSs(sync ? sync.awayTotalSec : 0)} を含みます</p>
               </div>
 
-              {low ? (
+              {judging ? (
+                <p className="lr-lead is-warn">欠課になったかどうかを確認しています…</p>
+              ) : low ? (
                 <p className="lr-lead is-warn">残り時間がわずかです。今すぐ戻りましょう。</p>
               ) : (
                 <p className="lr-lead">
