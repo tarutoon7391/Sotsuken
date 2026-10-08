@@ -1,41 +1,50 @@
 // 確認ポップアップ — 担当：W4（デザイン：docs/design/10_生徒画面_授業中 の data-check）
 // LearnPage の上に重ねる。attention:check を受けたら表示し、締切までカウントダウンする。
 // props:
-//   check:     { check_id, deadline_at }   attention:check のペイロード
-//   onRespond: (checkId) => void           「確認」を押した（attention:respond を送る）
-//   onTimeout: () => void                  締切を過ぎた（トーストを出して閉じる）
+//   check:     { check_id, issued_at, deadline_at, receivedAt }   attention:check のペイロード＋受信した端末時刻
+//   busy:      boolean                 応答を送って ack 待ち（ボタンを押せなくし、時間切れにしない）
+//   onRespond: (checkId) => void       「確認」を押した（attention:respond を送る。結果は ack で親が判断）
+//   onTimeout: (checkId) => void       時間切れ（トーストを出して閉じる）
+//
+// 秒数は「issued_at〜deadline_at の長さ（どちらもサーバーの時計）」を受信した時点から数える。
+// 端末の時計がずれていても早く閉じたり締切後も残ったりしない（v4.3）。最終的な判定はサーバー（CHECK_EXPIRED）。
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULTS } from '@sotsuken/shared/constants';
 
-/** 締切までの残り秒数。端末の時計がずれていて 0 以下なら既定の猶予秒を使う */
-function initialSeconds(deadlineAt) {
-  const left = Math.ceil((new Date(deadlineAt).getTime() - Date.now()) / 1000);
-  if (!Number.isFinite(left) || left <= 0) return DEFAULTS.ATTENTION_TIMEOUT_SEC;
-  return left;
+/** 応答の猶予（秒）。issued_at が無い古いサーバーでは既定値を使う */
+function totalSeconds(check) {
+  const issued = new Date(check.issued_at).getTime();
+  const deadline = new Date(check.deadline_at).getTime();
+  const sec = Math.round((deadline - issued) / 1000);
+  return Number.isFinite(sec) && sec > 0 ? sec : DEFAULTS.ATTENTION_TIMEOUT_SEC;
 }
 
-export default function AttentionModal({ check, onRespond, onTimeout }) {
-  const [sec, setSec] = useState(() => initialSeconds(check.deadline_at));
+export default function AttentionModal({ check, busy = false, onRespond, onTimeout }) {
+  const total = totalSeconds(check);
+  const startedAt = check.receivedAt || Date.now();
+  const [sec, setSec] = useState(() => Math.max(0, total - Math.floor((Date.now() - startedAt) / 1000)));
   const buttonRef = useRef(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   const onTimeoutRef = useRef(onTimeout);
   onTimeoutRef.current = onTimeout;
 
   useEffect(() => {
-    // 受け取った時点からの経過で数える（端末の時計のずれに影響されない）
-    const total = initialSeconds(check.deadline_at);
-    const startedAt = Date.now();
-    setSec(total);
     const timer = setInterval(() => {
       const left = total - Math.floor((Date.now() - startedAt) / 1000);
-      if (left <= 0) {
-        clearInterval(timer);
-        onTimeoutRef.current();
-      } else {
+      if (left > 0) {
         setSec(left);
+        return;
+      }
+      setSec(0);
+      // 応答を送った後はサーバーの結果（ack）を待つ
+      if (!busyRef.current) {
+        clearInterval(timer);
+        onTimeoutRef.current(check.check_id);
       }
     }, 250);
     return () => clearInterval(timer);
-  }, [check.check_id, check.deadline_at]);
+  }, [check.check_id, total, startedAt]);
 
   useEffect(() => {
     if (buttonRef.current) buttonRef.current.focus();
@@ -49,8 +58,14 @@ export default function AttentionModal({ check, onRespond, onTimeout }) {
         <div className={`lr-check-sec${sec <= 10 ? ' is-low' : ''}`} aria-live="polite">
           {sec}
         </div>
-        <button ref={buttonRef} type="button" className="btn btn-primary" onClick={() => onRespond(check.check_id)}>
-          確認
+        <button
+          ref={buttonRef}
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => onRespond(check.check_id)}
+        >
+          {busy ? '送信中…' : '確認'}
         </button>
       </div>
     </div>

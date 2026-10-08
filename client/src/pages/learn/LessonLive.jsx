@@ -31,20 +31,30 @@ function mergeById(prev, rows) {
 }
 
 const COL_MIN = 0.6; // 列幅の下限（fr）
+const ACK_TIMEOUT_MS = 8000; // Socket の ack を待つ上限（届かなければ通信エラーとして扱う）
 
 export default function LessonLive({ lessonId, lesson, className, me, socket, connected, mobile }) {
   const navigate = useNavigate();
   // 生徒は授業が live のときだけ LiveKit に接続する（W3 の取り決め）
   const { room, status: videoStatus } = useLiveKitRoom(lessonId, { enabled: lesson.status === LESSON_STATUS.LIVE });
 
-  // ---- 自分の出席状態（ヘッダー表示用）
+  // ---- 初回読み込みの失敗（画面に出して再読み込みできるようにする）
+  const [loadErrors, setLoadErrors] = useState({ attendance: '', questions: '', chat: '' });
+  const setLoadError = useCallback(
+    (key, msg) => setLoadErrors((e) => (e[key] === msg ? e : { ...e, [key]: msg })),
+    []
+  );
+
+  // ---- 自分の出席状態（ヘッダー表示・欠課バナー用）
   const [attendance, setAttendance] = useState(null);
-  useEffect(() => {
-    if (!connected) return;
+  const loadAttendance = useCallback(() => {
     get(`/lessons/${lessonId}/attendance/me`)
-      .then(setAttendance)
-      .catch(() => {});
-  }, [lessonId, connected]);
+      .then((a) => {
+        setAttendance(a);
+        setLoadError('attendance', '');
+      })
+      .catch((err) => setLoadError('attendance', err.message || '出席状態を取得できませんでした'));
+  }, [lessonId, setLoadError]);
 
   // ---- トースト（映像の右上）・ボタン下の一文
   const [toast, setToast] = useState(null);
@@ -83,11 +93,6 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
     if (visibleTabRef.current !== tab) setUnread((u) => ({ ...u, [tab]: u[tab] + 1 }));
   }, []);
 
-  // ---- 理解リアクション・挙手
-  const [reaction, setReaction] = useState(null);
-  const [hand, setHand] = useState(false);
-  const myRaiseIdRef = useRef(null); // 自分の挙手（body=null の質問）の id。回答済みになったら挙手を下ろす
-
   // ---- 質問・チャット・資料
   const [questions, setQuestions] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -95,40 +100,54 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
   const [materials, setMaterials] = useState([]);
   const [materialsState, setMaterialsState] = useState({ loading: true, error: null });
 
+  // ---- 理解リアクション・挙手
+  const [reaction, setReaction] = useState(null);
+  const [raising, setRaising] = useState(false); // question:raise を送って ack 待ち
+  // 挙手中かどうかは「自分の open の挙手（body=null）が質問一覧にあるか」で決める（先生が回答済みにすると解除）
+  const hand =
+    raising ||
+    questions.some((q) => q.body == null && q.user && q.user.id === me.id && q.status === QUESTION_STATUS.OPEN);
+
   const loadMaterials = useCallback(() => {
-    setMaterialsState({ loading: true, error: null });
+    setMaterialsState((s) => ({ ...s, loading: true, error: null }));
     get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL })
       .then((rows) => {
         setMaterials(rows || []);
         setMaterialsState({ loading: false, error: null });
       })
-      .catch((err) => setMaterialsState({ loading: false, error: err.message }));
+      .catch((err) => setMaterialsState({ loading: false, error: err.message || '資料を読み込めませんでした' }));
   }, [lessonId]);
 
-  useEffect(() => {
-    loadMaterials();
-
+  const loadQuestions = useCallback(() => {
     get(`/lessons/${lessonId}/questions`)
       .then((rows) => {
-        rows = rows || [];
-        setQuestions(mergeById([], rows));
-        // 再読込しても自分の挙手中を復元する
-        const mine = rows.find((q) => q.body == null && q.user && q.user.id === me.id && q.status === QUESTION_STATUS.OPEN);
-        if (mine) {
-          myRaiseIdRef.current = mine.id;
-          setHand(true);
-        }
+        setQuestions((prev) => mergeById(prev, rows || []));
+        setLoadError('questions', '');
       })
-      .catch(() => {});
+      .catch((err) => setLoadError('questions', err.message || '質問を読み込めませんでした'));
+  }, [lessonId, setLoadError]);
 
+  const loadChat = useCallback(() => {
     get(`/lessons/${lessonId}/chat`, { limit: DEFAULTS.CHAT_PAGE_LIMIT })
       .then((rows) => {
         rows = rows || [];
         setMessages((prev) => mergeById(prev, rows));
-        setHasMoreChat(rows.length >= DEFAULTS.CHAT_PAGE_LIMIT);
+        setHasMoreChat((more) => more || rows.length >= DEFAULTS.CHAT_PAGE_LIMIT);
+        setLoadError('chat', '');
       })
-      .catch(() => {});
-  }, [lessonId, me.id, loadMaterials]);
+      .catch((err) => setLoadError('chat', err.message || 'チャットを読み込めませんでした'));
+  }, [lessonId, setLoadError]);
+
+  // 初回（Socket の接続を待たない）と、再接続のたび（切れている間の発言・質問・資料を取りこぼさないため）に読み直す
+  const loadedOnce = useRef(false);
+  useEffect(() => {
+    if (!connected && loadedOnce.current) return;
+    loadedOnce.current = true;
+    loadAttendance();
+    loadMaterials();
+    loadQuestions();
+    loadChat();
+  }, [connected, loadAttendance, loadMaterials, loadQuestions, loadChat]);
 
   const loadOlderChat = useCallback(() => {
     if (!messages.length) return;
@@ -153,27 +172,24 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
         bumpUnread('chat');
       },
       [SERVER_EVENTS.QUESTION_NEW]: (q) => {
-        const item = { status: QUESTION_STATUS.OPEN, ...q };
-        setQuestions((prev) => mergeById(prev, [item]));
-        if (q.body == null) {
-          if (q.user && q.user.id === me.id) myRaiseIdRef.current = q.id;
-        } else {
-          bumpUnread('qa');
-        }
+        // status は v4.3 で追加。古いサーバーでも動くよう open を既定にする
+        setQuestions((prev) => mergeById(prev, [{ status: QUESTION_STATUS.OPEN, ...q }]));
+        if (q.body != null) bumpUnread('qa'); // 挙手のみ（body=null）は生徒の一覧に出ないので数えない
       },
       [SERVER_EVENTS.QUESTION_ANSWERED]: ({ id }) => {
         setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
-        if (id === myRaiseIdRef.current) {
-          myRaiseIdRef.current = null;
-          setHand(false);
-        }
       },
       [SERVER_EVENTS.UNDERSTANDING_RESET]: () => setReaction(null),
-      [SERVER_EVENTS.ATTENTION_CHECK]: (payload) => setCheck(payload),
+      // 受け取った端末時刻を残す（カウントダウンは issued_at〜deadline_at の長さをここから数える）
+      [SERVER_EVENTS.ATTENTION_CHECK]: (payload) => setCheck({ ...payload, receivedAt: Date.now() }),
+      [SERVER_EVENTS.MATERIAL_ADDED]: (payload) => {
+        const file = payload && payload.file;
+        if (file) setMaterials((prev) => (prev.some((m) => m.id === file.id) ? prev : [...prev, file]));
+      },
     };
     Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
     return () => Object.entries(handlers).forEach(([ev, fn]) => socket.off(ev, fn));
-  }, [socket, me.id, bumpUnread]);
+  }, [socket, bumpUnread]);
 
   // ---- 操作
   function sendReaction(type) {
@@ -184,17 +200,17 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
     showFeedback(`「${r ? r.label : type}」を送りました`);
   }
 
-  function toggleHand() {
-    if (!socket) return;
-    if (hand) {
-      // 取り下げのイベントは契約に無いので、自分の表示だけ戻す（先生の一覧には回答済みにされるまで残る）
-      setHand(false);
-      showFeedback('挙手を取り下げました（先生の一覧には残ります）');
-      return;
-    }
-    socket.emit(CLIENT_EVENTS.QUESTION_RAISE, {});
-    setHand(true);
-    showFeedback('先生に手を挙げました');
+  // 挙手の取り下げは無い（ストレッチ）。挙手中は押せない
+  function raiseHand() {
+    if (!socket || hand) return;
+    setRaising(true);
+    socket.timeout(ACK_TIMEOUT_MS).emit(CLIENT_EVENTS.QUESTION_RAISE, {}, (err, res) => {
+      // 成功時は ack より先に question:new が届いているので、一覧から挙手中になる
+      setRaising(false);
+      if (err) showToast('挙手を送れませんでした。通信を確認してください', 'miss');
+      else if (res && res.error) showToast(res.error.message || '挙手できませんでした', 'miss');
+      else showFeedback('先生に手を挙げました');
+    });
   }
 
   async function postQuestion(body, isAnonymous) {
@@ -222,14 +238,21 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
     }
   }
 
+  // 結果はサーバーの ack で判断する（締切超過は CHECK_EXPIRED）
   function respondCheck(checkId) {
-    if (socket) socket.emit(CLIENT_EVENTS.ATTENTION_RESPOND, { check_id: checkId });
-    setCheck(null);
-    showToast('確認しました', 'ok');
+    if (!socket) return;
+    setCheck((c) => (c && c.check_id === checkId ? { ...c, responding: true } : c));
+    socket.timeout(ACK_TIMEOUT_MS).emit(CLIENT_EVENTS.ATTENTION_RESPOND, { check_id: checkId }, (err, res) => {
+      setCheck((c) => (c && c.check_id === checkId ? null : c));
+      if (err) showToast('応答を送れませんでした。通信を確認してください', 'miss');
+      else if (res && res.error && res.error.code === ERROR_CODES.CHECK_EXPIRED) showToast('締切を過ぎました', 'miss');
+      else if (res && res.error) showToast(res.error.message || '応答できませんでした', 'miss');
+      else showToast('確認しました', 'ok');
+    });
   }
 
-  function timeoutCheck() {
-    setCheck(null);
+  function timeoutCheck(checkId) {
+    setCheck((c) => (c && c.check_id === checkId ? null : c));
     showToast('確認に応答できませんでした', 'miss');
   }
 
@@ -242,7 +265,7 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       navigate(`/lessons/${lessonId}/away`);
     } catch (err) {
       const msg =
-        err.code === ERROR_CODES.CONFLICT || err.code === ERROR_CODES.ALREADY_ABSENT
+        err.code === ERROR_CODES.ALREADY_ABSENT
           ? 'この授業ではすでに欠課になっています。'
           : err.message || '一時退出できませんでした';
       setLeave({ open: true, busy: false, error: msg });
@@ -283,6 +306,29 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
   if (!connected) headerStatus = { label: '再接続中', tone: 'off' };
   else if (attendance && attendance.status === ATTENDANCE_STATUS.ABSENT) headerStatus = { label: '欠課', tone: 'absent' };
 
+  // 読み込み失敗の一文＋再読み込み
+  const errorBar = (msg, retry) =>
+    msg ? (
+      <div className="lr-load-error" role="alert">
+        <span>{msg}</span>
+        <button type="button" className="btn btn-ghost" onClick={retry}>
+          再読み込み
+        </button>
+      </div>
+    ) : null;
+
+  // ヘッダーの下に出すお知らせ（欠課・出席状態の取得失敗）
+  const banners = (
+    <>
+      {attendance && attendance.status === ATTENDANCE_STATUS.ABSENT && (
+        <div className="lr-banner is-absent" role="status">
+          この授業は欠課になっています。視聴は続けられます。出席の修正は先生に依頼してください。
+        </div>
+      )}
+      {loadErrors.attendance && <div className="lr-banner">{errorBar(loadErrors.attendance, loadAttendance)}</div>}
+    </>
+  );
+
   const leaveButton = (
     <button type="button" className="btn btn-secondary lr-btn-leave" onClick={() => setLeave({ open: true, busy: false, error: '' })}>
       一時退出
@@ -306,29 +352,44 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       selected={reaction}
       onReact={sendReaction}
       hand={hand}
-      onHand={toggleHand}
+      onHand={raiseHand}
       feedback={feedback || (hand ? '挙手中です。先生が対応すると解除されます' : '')}
       mobile={mobile}
     />
   );
-  const questionBox = <QuestionBox questions={questions} onPost={postQuestion} isTeacher={false} />;
+  const questionBox = (
+    <>
+      {errorBar(loadErrors.questions, loadQuestions)}
+      <QuestionBox questions={questions} onPost={postQuestion} isTeacher={false} />
+    </>
+  );
   const chatPanel = (
-    <ChatPanel
-      messages={messages}
-      onSend={sendChat}
-      onAttach={attachChat}
-      currentUser={me}
-      onLoadMore={hasMoreChat ? loadOlderChat : undefined}
-    />
+    <>
+      {errorBar(loadErrors.chat, loadChat)}
+      <ChatPanel
+        messages={messages}
+        onSend={sendChat}
+        onAttach={attachChat}
+        currentUser={me}
+        onLoadMore={hasMoreChat ? loadOlderChat : undefined}
+      />
+    </>
   );
   const badge = (tab) => (unread[tab] > 0 ? <span className="lr-badge">{unread[tab]}</span> : null);
+  // 資料は material:added で増える（再読み込みボタンは置かない）。読み込み失敗時だけ再読み込みを出す
   const materialPanel = (
-    <MaterialPanel materials={materials} loading={materialsState.loading} error={materialsState.error} mobile={mobile} />
+    <MaterialPanel
+      materials={materials}
+      loading={materialsState.loading && materials.length === 0}
+      error={materialsState.error}
+      onRetry={loadMaterials}
+      mobile={mobile}
+    />
   );
 
   const overlays = (
     <>
-      <RoomAudio room={room} />
+      <RoomAudio room={room} spotlightUserId={lesson.spotlight_user_id} />
       {leave.open && (
         <ConfirmDialog
           title="一時退出しますか？"
@@ -340,7 +401,15 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
           onConfirm={confirmLeave}
         />
       )}
-      {check && <AttentionModal key={check.check_id} check={check} onRespond={respondCheck} onTimeout={timeoutCheck} />}
+      {check && (
+        <AttentionModal
+          key={check.check_id}
+          check={check}
+          busy={Boolean(check.responding)}
+          onRespond={respondCheck}
+          onTimeout={timeoutCheck}
+        />
+      )}
     </>
   );
 
@@ -348,6 +417,7 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
     return (
       <div className="lr-m">
         <LessonHeader className={className} title={lesson.title} status={headerStatus} me={me} action={leaveButton} mobile />
+        {banners}
         <div className="lr-m-video">{video}</div>
         <div className="lr-cam-note">カメラONでも映像は先生にだけ届きます</div>
 
@@ -387,12 +457,13 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
   return (
     <div className={`lr-pc${dragging ? ' is-dragging' : ''}`}>
       <LessonHeader className={className} title={lesson.title} status={headerStatus} me={me} action={leaveButton} />
+      {banners}
 
       <main
         className="lr-pc-main"
         ref={mainRef}
         style={{
-          gridTemplateColumns: `minmax(320px,${weights[0]}fr) 20px minmax(220px,${weights[1]}fr) 20px minmax(260px,${weights[2]}fr)`,
+          gridTemplateColumns: `minmax(220px,${weights[0]}fr) 20px minmax(150px,${weights[1]}fr) 20px minmax(200px,${weights[2]}fr)`,
         }}
       >
         <section className="lr-col">
@@ -410,9 +481,6 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
         <section className="lr-col">
           <div className="lr-col-head">
             <h6>資料</h6>
-            <button type="button" className="btn btn-ghost lr-reload" onClick={loadMaterials}>
-              更新
-            </button>
           </div>
           {materialPanel}
         </section>

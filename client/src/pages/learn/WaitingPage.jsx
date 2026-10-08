@@ -9,7 +9,9 @@
 //   mobile:    boolean
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROLES } from '@sotsuken/shared/constants';
 import LessonHeader from '../../components/learn/LessonHeader.jsx';
+import useCameraDenied from '../../components/learn/useCameraDenied.js';
 import ConfirmDialog from '../../components/learn/ConfirmDialog.jsx';
 import Icon from '../../components/learn/Icon.jsx';
 import { Avatar, RoleBadge, StudentCamera } from '../../components/learn/parts.js';
@@ -17,6 +19,7 @@ import { Avatar, RoleBadge, StudentCamera } from '../../components/learn/parts.j
 export default function WaitingPage({ lesson, className, me, started, mobile }) {
   const navigate = useNavigate();
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [camDenied, retryCamera] = useCameraDenied();
 
   const status = started ? { label: '出席中', tone: 'on' } : { label: '開始前', tone: 'off' };
   const leaveButton = (
@@ -64,9 +67,9 @@ export default function WaitingPage({ lesson, className, me, started, mobile }) 
                 <dt>先生</dt>
                 <dd>
                   <span className="lr-person">
-                    <Avatar user={{ ...lesson.teacher, role: 'teacher' }} size={26} />
+                    <Avatar user={{ ...lesson.teacher, role: ROLES.TEACHER }} size={26} />
                     <span className="lr-person-name">{lesson.teacher.name}</span>
-                    <RoleBadge role="teacher" />
+                    <RoleBadge role={ROLES.TEACHER} />
                   </span>
                 </dd>
               </div>
@@ -79,7 +82,20 @@ export default function WaitingPage({ lesson, className, me, started, mobile }) 
           {/* room=null：どこにも送らないローカルプレビュー（W3 の StudentCamera）。待機中は LiveKit に接続しない */}
           <div className="lr-cam-panel">
             <span className="lr-video-label">自分のカメラ</span>
-            <StudentCamera room={null} myUserId={me.id} teacherUserId={null} className="lr-cam-preview" />
+            {camDenied ? (
+              <div className="lr-cam-denied" role="alert">
+                <Icon name="cam" size={40} />
+                <div className="lr-cam-denied-title">ブラウザでカメラを許可してください</div>
+                <div className="lr-cam-denied-sub">
+                  アドレスバーのカメラのアイコンから許可できます。許可しなくても授業には参加できます。
+                </div>
+                <button type="button" className="btn btn-secondary lr-cam-retry" onClick={retryCamera}>
+                  もう一度試す
+                </button>
+              </div>
+            ) : (
+              <StudentCamera room={null} myUserId={me.id} teacherUserId={null} className="lr-cam-preview" />
+            )}
           </div>
           <div className="lr-cam-note">ONにしても映像は先生にだけ届きます</div>
         </section>
