@@ -11,7 +11,8 @@ import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
 import useToast from '../../components/shared/useToast.jsx';
 import { formatBytes, formatDateTime, formatTime } from '../../components/shared/format.js';
-import { FileLink, fileKindLabel } from '../classes/ClassDetailPage.jsx';
+import { MaterialButton, fileKindLabel } from '../classes/ClassDetailPage.jsx';
+import MaterialPreview from '../../components/shared/MaterialPreview.jsx';
 import './result.css';
 
 export default function ResultPage() {
@@ -33,6 +34,7 @@ function ResultBody() {
   const [questions, setQuestions] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [checks, setChecks] = useState([]);
+  const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const [loadError, setLoadError] = useState('');
   const [toast, showToast] = useToast(3000);
   // 補助データの失敗はトーストで知らせる（401/403/404 は client.js が遷移させる）
@@ -237,11 +239,11 @@ function ResultBody() {
                   const kind = fileKindLabel(f.mime);
                   return (
                     <li key={f.id}>
-                      <FileLink className="mat-item" file={f}>
+                      <MaterialButton className="mat-item" file={f} onOpen={setPreview} active={preview ? preview.id === f.id : false}>
                         <span className={`mat-kind ${kind === '画像' ? 'mat-kind-img' : 'mat-kind-pdf'}`}>{kind}</span>
                         <span className="mat-name">{f.file_name}</span>
                         <span className="mat-pages">{formatBytes(f.size)}</span>
-                      </FileLink>
+                      </MaterialButton>
                     </li>
                   );
                 })}
@@ -250,6 +252,7 @@ function ResultBody() {
           </section>
         </aside>
       </main>
+      <MaterialPreview file={preview} onClose={() => setPreview(null)} />
       {toast}
     </div>
   );

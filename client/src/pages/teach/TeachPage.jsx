@@ -28,6 +28,7 @@ import ChatPanel from '../../components/shared/ChatPanel.jsx';
 import QuestionBox from '../../components/shared/QuestionBox.jsx';
 import useToast from '../../components/shared/useToast.jsx';
 import useEscape from '../../components/shared/useEscape.js';
+import MaterialPreview from '../../components/shared/MaterialPreview.jsx';
 import { formatBytes, formatDuration } from '../../components/shared/format.js';
 import {
   useLiveKitRoom,
@@ -91,6 +92,7 @@ function TeachBody() {
   const [collapsed, setCollapsed] = useState(false);
   const [unread, setUnread] = useState({ qa: 0, chat: 0 });
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const [busy, setBusy] = useState('');
   const closeEnd = useCallback(() => setConfirmEnd(false), []);
   useEscape(confirmEnd ? closeEnd : null); // 終了確認ダイアログは Esc で閉じる
@@ -369,6 +371,7 @@ function TeachBody() {
     try {
       await del(`/files/${f.id}`, { redirect: false });
       setMaterials((list) => list.filter((x) => x.id !== f.id));
+      setPreview((p) => (p && p.id === f.id ? null : p));
     } catch (err) {
       setMaterialError(err.message);
     }
@@ -482,7 +485,14 @@ function TeachBody() {
             onAutoChange={changeAuto}
             busy={busy === 'check'}
           />
-          <MaterialPanel files={materials} onUpload={uploadMaterial} onDelete={deleteMaterial} error={materialError} />
+          <MaterialPanel
+            files={materials}
+            onUpload={uploadMaterial}
+            onDelete={deleteMaterial}
+            error={materialError}
+            onOpen={setPreview}
+            previewId={preview ? preview.id : null}
+          />
         </aside>
 
         {/* ===== 中央：理解度＋生徒グリッド（主役） ===== */}
@@ -578,6 +588,7 @@ function TeachBody() {
           </div>
         </div>
       )}
+      <MaterialPreview file={preview} onClose={() => setPreview(null)} />
       {toast}
     </div>
   );

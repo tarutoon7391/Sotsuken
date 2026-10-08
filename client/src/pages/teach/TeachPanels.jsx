@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { ALLOWED_UPLOAD_MIMES, DEFAULTS, LESSON_STATUS } from '@sotsuken/shared/constants';
 import Avatar from '../../components/shared/Avatar.jsx';
 import { formatBytes, formatDuration } from '../../components/shared/format.js';
-import { FileLink, fileKindLabel, useArmed } from '../classes/ClassDetailPage.jsx';
+import { MaterialButton, fileKindLabel, useArmed } from '../classes/ClassDetailPage.jsx';
 
 /** 見出しを押すと折りたためるパネル */
 export function Panel({ label, right, children, className = '', defaultOpen = true }) {
@@ -136,7 +136,7 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
 }
 
 /** 資料：一覧＋アップロード＋削除（2回押し） */
-export function MaterialPanel({ files, onUpload, onDelete, error }) {
+export function MaterialPanel({ files, onUpload, onDelete, error, onOpen, previewId }) {
   const fileRef = useRef(null);
   const [armed, setArmed] = useArmed(); // 3秒押さなければ元に戻る
 
@@ -160,7 +160,7 @@ export function MaterialPanel({ files, onUpload, onDelete, error }) {
         {files.map((f) => (
           <div key={f.id} className={`mat-item${f.mime && f.mime.startsWith('image/') ? ' is-img' : ''}`}>
             <span className="tiny strong">{fileKindLabel(f.mime)}</span>
-            <FileLink className="name" file={f} title={f.file_name} />
+            <MaterialButton className="mat-open name" file={f} onOpen={onOpen} active={previewId === f.id} />
             <span className="pages">{formatBytes(f.size)}</span>
             <button
               type="button"

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FILE_KINDS, LESSON_STATUS, LIMITS, ROLES } from '@sotsuken/shared/constants';
 import { del, get, patch, post } from '../../api/client.js';
-import { safeUrl } from '../../lib/safe-url.js';
+import MaterialPreview from '../../components/shared/MaterialPreview.jsx';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
@@ -37,6 +37,7 @@ function ClassDetailBody() {
   const [openFiles, setOpenFiles] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [toast, showToast] = useToast();
+  const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const fail = useCallback((err) => setLoadError(err.message), []); // 401/403/404 は client.js が遷移させる
 
   const loadLessons = useCallback(() => {
@@ -190,11 +191,14 @@ function ClassDetailBody() {
                       <LessonFiles
                         lessonId={l.id}
                         user={user}
-                        onDeleted={(name) => {
+                        onDeleted={(f) => {
                           loadLessons();
-                          showToast(`「${name}」を削除しました`);
+                          if (preview && preview.id === f.id) setPreview(null);
+                          showToast(`「${f.file_name}」を削除しました`);
                         }}
                         onError={showToast}
+                        onOpen={setPreview}
+                        previewId={preview ? preview.id : null}
                       />
                     )}
                   </div>
@@ -276,6 +280,7 @@ function ClassDetailBody() {
           }}
         />
       )}
+      <MaterialPreview file={preview} onClose={() => setPreview(null)} />
       {toast}
     </div>
   );
@@ -343,7 +348,7 @@ function LessonRow({ lesson, user, hasLive, filesOpen, onToggleFiles, onEdit }) 
 }
 
 /** 終了済み授業の資料一覧（先生は自分がアップした資料を2回押しで削除） */
-function LessonFiles({ lessonId, user, onDeleted, onError }) {
+function LessonFiles({ lessonId, user, onDeleted, onError, onOpen, previewId }) {
   const [files, setFiles] = useState(null);
   const [armed, setArmed] = useArmed();
 
@@ -363,7 +368,7 @@ function LessonFiles({ lessonId, user, onDeleted, onError }) {
     try {
       await del(`/files/${f.id}`, { redirect: false });
       load();
-      onDeleted(f.file_name);
+      onDeleted(f);
     } catch (err) {
       onError(err.message);
     }
@@ -378,7 +383,7 @@ function LessonFiles({ lessonId, user, onDeleted, onError }) {
           <span className={`file-kind${f.mime && f.mime.startsWith('image/') ? ' is-img' : ''}`}>
             {fileKindLabel(f.mime)}
           </span>
-          <FileLink className="file-name" file={f} />
+          <MaterialButton className="mat-open file-name" file={f} onOpen={onOpen} active={previewId === f.id} />
           <span className="file-pages">{formatBytes(f.size)}</span>
           {f.uploader_id === user.id && (
             <button
@@ -403,15 +408,21 @@ export function fileKindLabel(mime) {
   return 'DOC';
 }
 
-/** 資料へのリンク（URL は safeUrl を通す。安全でなければリンクにしない） */
-export function FileLink({ file, className, title, children }) {
-  const url = safeUrl(file.url);
-  const label = children || file.file_name;
-  if (!url) return <span className={className}>{label}</span>;
+/**
+ * 資料名のボタン。押すと右下のプレビューウィンドウ（MaterialPreview）で開く（新しいタブでは開かない・docs/07 §0）
+ * active：いまプレビュー中の資料なら true
+ */
+export function MaterialButton({ file, onOpen, active = false, className = 'mat-open', children }) {
   return (
-    <a className={className} href={url} target="_blank" rel="noopener noreferrer" title={title}>
-      {label}
-    </a>
+    <button
+      type="button"
+      className={`${className}${active ? ' is-active' : ''}`}
+      onClick={() => onOpen(file)}
+      title={`${file.file_name} をプレビュー`}
+      aria-pressed={active}
+    >
+      {children || file.file_name}
+    </button>
   );
 }
 

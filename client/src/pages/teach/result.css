@@ -76,3 +76,7 @@
 
 /* 出席の補足（終了後は出席／欠課の2値） */
 .result-page .att-note { margin: var(--space-2) 0 0; }
+
+/* 資料名はボタン（押すと右下のプレビュー）。リンクの見た目にしない */
+.result-page button.mat-item { width: 100%; border: 1px solid transparent; background: transparent; font: inherit; cursor: pointer; text-align: left; }
+.result-page button.mat-item.is-active { border-color: var(--color-accent); background: var(--color-accent-100); }
