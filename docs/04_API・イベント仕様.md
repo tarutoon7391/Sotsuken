@@ -3,6 +3,7 @@
 > **この文書が分担間の「契約」。** ここに従えば各担当は独立して開発できる。
 > 変更したい場合は PM に相談 → 合意後にこの文書を更新してから実装する。
 > v4.1（2026-10-05）：クラス詳細・チャット履歴・理解度の取得 API、`lesson:started` / `understanding:reset` イベントを追加。出席の記録タイミング・復帰時の閾値判定・授業終了時の確定を明記。
+> v4.4（2026-10-08）：Office 資料（Word・Excel・PowerPoint）をアップロード時に PDF へ変換し、`FileInfo.preview_url` で資料パネルに表示する（別タブを開かずに見られるようにする）。
 > v4.3（2026-10-08・W1〜W5 監査の裁定）：`material:added` を追加。`attention:check` を全員宛にして `issued_at`・`auto` を追加。確認ボタンの一覧・自動設定の取得 API を追加。`question:new` に `status`。入力の上限を `LIMITS` として §6 にまとめた。購読制御の文言を実装に合わせた。
 
 ## 1. 共通ルール
@@ -100,9 +101,12 @@
 ### 資料・添付
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
-| POST | /api/lessons/:id/files | 先生(material) / 全員(attachment) | multipart `{kind, file}`。画像・PDF・Office文書、10MBまで → `{file_id, url}`。`kind=material` のときは全員に `material:added`（v4.3） |
-| GET | /api/lessons/:id/files?kind=material | 全員 | 資料パネル用一覧（終了済み授業でも取得可） |
-| DELETE | /api/files/:id | アップロード者 | 資料・添付の削除（ファイル本体も削除） |
+| POST | /api/lessons/:id/files | 先生(material) / 全員(attachment) | multipart `{kind, file}`。画像・PDF・Office文書、10MBまで → `{file_id, url, preview_url}`。`kind=material` のときは全員に `material:added`（v4.3）。**Office 文書の資料は PDF に変換してから応答する**（v4.4。下の注記） |
+| GET | /api/lessons/:id/files?kind=material | 全員 | 資料パネル用一覧（終了済み授業でも取得可）。要素は `FileInfo`（`preview_url` を含む） |
+| DELETE | /api/files/:id | アップロード者 | 資料・添付の削除（ファイル本体も削除。プレビュー用 PDF があればそれも削除） |
+
+> **Office 資料のプレビュー（v4.4）**：`kind=material` で Word・Excel・PowerPoint（`.doc/.docx/.xls/.xlsx/.ppt/.pptx`）が上がったら、サーバーが LibreOffice（headless）で PDF に変換し、`/uploads/<乱数名>.pdf` に保存して `files.preview_url` に記録する。変換はアップロードの処理の中で待つ（上限 60 秒）。失敗・タイムアウト・LibreOffice 未導入のときは `preview_url` を null にして、アップロード自体は成功させる。PDF・画像・チャット添付は変換しない（`preview_url` は null）。
+> クライアントは `preview_url` があれば pdf.js のビューアで表示し、無ければ従来どおりの表示（PDF・画像はそのまま、Office はダウンロード案内）にする。**どの資料にも元ファイル（`url`）のダウンロードボタンを付ける**。
 
 ### チャット
 | メソッド | パス | ロール | 説明 |

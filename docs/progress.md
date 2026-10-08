@@ -70,3 +70,7 @@
 - 誤検知1件：W1「startLesson が classId と授業の所属を照合していない」（route が lesson.class_id を渡しているため問題なし）
 - 追加裁定（同日）：W4 C-1 → pdf.js を client に追加してよい。C-2 → 半透明は color-mix でベース色は変数（`--color-overlay` / `--color-surface-glass` は取り消して削除）。W5 の凡例「わからない」→ 取り下げ（個人別の理解度表示はストレッチ）。W2 の auto フラグ → メモリ保持のまま（docs/03 §3 に既知の制約として記載）
 - 監査対応の結合（同日）：W1 e4af954／W2 bc26f33／W3 fe9405b／W4 783ecf1／W5 4982760 を main に結合（b68ea41、コンフリクト 0）。manager の本体フォルダで jest 23/23・vite build OK（chunk サイズ警告あり）・通しシナリオ 39/39（Railway の MySQL）
+
+## 機能追加：Office 資料のプレビュー（v4.4・2026-10-08）
+- トーンさんの要望。方式は案 1（アップロード時にサーバーで LibreOffice により PDF 変換 → pdf.js で表示）。元ファイルのダウンロードボタンも付ける
+- 契約：docs/04 v4.4、docs/03 `files.preview_url`（migration 002）、`FileInfo.preview_url`。依頼メモ docs/requests/office-preview.md（W1：変換・マイグレーション・Dockerfile、W4：資料パネル）

@@ -311,6 +311,7 @@
  * @typedef {Object} UploadFileResponse
  * @property {number} file_id
  * @property {string} url
+ * @property {string|null} preview_url Office 資料を変換したプレビュー用 PDF の URL（/uploads/...）。変換していない・失敗したときは null（v4.4）
  */
 
 /**
@@ -320,6 +321,7 @@
  * @property {FileKind} kind
  * @property {string} file_name
  * @property {string} url
+ * @property {string|null} preview_url Office 資料を変換したプレビュー用 PDF の URL（/uploads/...）。変換していない・失敗したときは null（v4.4）
  * @property {string} mime
  * @property {number} size
  * @property {number} uploader_id
