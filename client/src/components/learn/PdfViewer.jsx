@@ -3,10 +3,13 @@
 // pdf.js は大きいので MaterialPanel から React.lazy で読み込む（PDF を開いたときだけ取得される）。
 //
 // default export <PdfViewer url fileName mobile? />
-//   ページの表示（PC は 1/2/4 ページ同時表示）、総ページ数、ページ送り（ボタン・左右の端・スマホのスワイプ）、拡大
+//   ページの表示（PC は 1/2/4 ページ同時表示）、総ページ数、ページ送り（ボタン・左右の端・スマホのスワイプ）、
+//   拡大画面（PdfZoom.jsx：アプリ自前の 100〜400%）
 // 部品：usePdfDocument(url) → { doc, numPages, error, loading } / <PdfPage doc pageNumber />
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
+import PdfZoom from './PdfZoom.jsx';
+import { cappedDpr, useDevicePixelRatio } from './pdf-canvas.js';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -37,22 +40,6 @@ export function usePdfDocument(url) {
   }, [url]);
 
   return state;
-}
-
-/**
- * 画面の devicePixelRatio。ブラウザの拡大縮小や別のモニターへの移動で変わったら更新する
- * （古い解像度のまま引き伸ばされてぼやけるのを防ぐ）
- */
-function useDevicePixelRatio() {
-  const [dpr, setDpr] = useState(() => window.devicePixelRatio || 1);
-  useEffect(() => {
-    // matchMedia は「今の値と一致するか」しか見張れないので、変わるたびに今の値で作り直す
-    const mq = window.matchMedia(`(resolution: ${dpr}dppx)`);
-    const onChange = () => setDpr(window.devicePixelRatio || 1);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [dpr]);
-  return dpr;
 }
 
 export function PdfPage({ doc, pageNumber, className = '' }) {
@@ -93,8 +80,9 @@ export function PdfPage({ doc, pageNumber, className = '' }) {
         const cssW = Math.max(1, Math.floor(base.width * fit));
         const cssH = Math.max(1, Math.floor(base.height * fit));
         const canvas = canvasRef.current;
-        canvas.width = Math.round(cssW * dpr);
-        canvas.height = Math.round(cssH * dpr);
+        const useDpr = cappedDpr(cssW, cssH, dpr);
+        canvas.width = Math.round(cssW * useDpr);
+        canvas.height = Math.round(cssH * useDpr);
         canvas.style.width = `${cssW}px`;
         canvas.style.height = `${cssH}px`;
 
@@ -143,18 +131,6 @@ export default function PdfViewer({ url, fileName, mobile = false }) {
   useEffect(() => {
     if (numPages && cols > numPages) setCols(numPages >= 2 ? 2 : 1);
   }, [numPages, cols]);
-
-  // 拡大中のキー操作（Esc で閉じる・←→でページ送り）
-  useEffect(() => {
-    if (zoomPage == null) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setZoomPage(null);
-      else if (e.key === 'ArrowLeft') setZoomPage((z) => Math.max(1, z - 1));
-      else if (e.key === 'ArrowRight') setZoomPage((z) => Math.min(numPages, z + 1));
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [zoomPage, numPages]);
 
   if (loading) {
     return (
@@ -256,46 +232,14 @@ export default function PdfViewer({ url, fileName, mobile = false }) {
       </div>
 
       {zoomPage != null && (
-        <div className="lr-zoom" onClick={() => setZoomPage(null)}>
-          <div className="lr-zoom-head">
-            <span className="lr-zoom-name">{fileName}</span>
-            <span className="lr-zoom-pos">
-              p.{zoomPage} / {numPages}
-            </span>
-            <button type="button" className="lr-zoom-close" aria-label="閉じる" onClick={() => setZoomPage(null)}>
-              <Icon name="close" size={28} />
-            </button>
-          </div>
-          <div className="lr-zoom-body">
-            <button
-              type="button"
-              className="lr-zoom-arrow"
-              aria-label="前のページ"
-              disabled={zoomPage <= 1}
-              onClick={(e) => {
-                e.stopPropagation();
-                setZoomPage((z) => Math.max(1, z - 1));
-              }}
-            >
-              <Icon name="prev" size={44} />
-            </button>
-            <div className="lr-zoom-stage" onClick={(e) => e.stopPropagation()}>
-              <PdfPage doc={doc} pageNumber={zoomPage} />
-            </div>
-            <button
-              type="button"
-              className="lr-zoom-arrow"
-              aria-label="次のページ"
-              disabled={zoomPage >= numPages}
-              onClick={(e) => {
-                e.stopPropagation();
-                setZoomPage((z) => Math.min(numPages, z + 1));
-              }}
-            >
-              <Icon name="next" size={44} />
-            </button>
-          </div>
-        </div>
+        <PdfZoom
+          doc={doc}
+          numPages={numPages}
+          pageNumber={zoomPage}
+          fileName={fileName}
+          onPage={setZoomPage}
+          onClose={() => setZoomPage(null)}
+        />
       )}
     </>
   );
