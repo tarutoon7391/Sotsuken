@@ -124,8 +124,18 @@ describeDb('出席の判定SQL（DB）', () => {
     });
     expect((await row(uid)).status).toBe('absent');
 
-    // 欠課のまま再度「戻る」も 409
+    // 欠課のまま再度「戻る」も、「一時退出」も 409（v4.3）
     await expect(attendance.returnFromAway(access, uid)).rejects.toMatchObject({ code: 'ALREADY_ABSENT' });
+    await expect(attendance.goAway(access, uid)).rejects.toMatchObject({ status: 409, code: 'ALREADY_ABSENT' });
+
+    // 再接続しても欠課のまま（present に戻さない）
+    expect(await attendance.markJoined(lessonId, uid)).toBe(false);
+    expect((await row(uid)).status).toBe('absent');
+
+    // 一覧・自分の状態では、欠課の残り秒数は 0
+    const list = await attendance.listAttendance({ ...access, isTeacher: true });
+    expect(list.find((r) => r.user.id === uid)).toMatchObject({ status: 'absent', remaining_sec: 0 });
+    expect(await attendance.getMyAttendance(access, uid)).toMatchObject({ status: 'absent', remaining_sec: 0 });
   });
 
   test('先生が欠課→出席に手動修正すると累積がリセットされる', async () => {
@@ -144,6 +154,12 @@ describeDb('出席の判定SQL（DB）', () => {
     expect(r.away_total_sec).toBe(0);
     expect(r.away_since).toBeNull();
     expect(r.note).toBe('w2 回線トラブル');
+
+    // 手動で away にすると away_since が今になる。もう一度 present に戻しておく
+    const away = await attendance.updateAttendance({ ...access, isTeacher: true }, uid, { status: 'away' });
+    expect(away.status).toBe('away');
+    expect(away.away_since).not.toBeNull();
+    await attendance.updateAttendance({ ...access, isTeacher: true }, uid, { status: 'present' });
   });
 
   test('授業終了時の確定：退出中は閾値未満なら出席、未入室は欠課（joined_at null）、away は残らない', async () => {
@@ -152,7 +168,16 @@ describeDb('出席の判定SQL（DB）', () => {
     await setAway(awayUid, 60, 30);
 
     await query("UPDATE lessons SET status = 'ended', ended_at = UTC_TIMESTAMP() WHERE id = ?", [lessonId]);
-    await attendance.finalizeAttendance(lessonId);
+    const changed = await attendance.finalizeAttendance(lessonId);
+
+    // 変化した生徒の一覧が返る（呼び出し側がコミット後に attendance:update を送る）
+    expect(changed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ user_id: awayUid, status: 'present' }),
+        expect.objectContaining({ user_id: neverUid, status: 'absent', away_total_sec: 0 }),
+      ])
+    );
+    expect(changed).toHaveLength(2);
 
     const a = await row(awayUid);
     expect(a.status).toBe('present');
@@ -177,5 +202,11 @@ describeDb('出席の判定SQL（DB）', () => {
     ]);
     expect(await attendance.markJoined(lessonId, r.insertId)).toBe(false);
     expect(await row(r.insertId)).toBeNull();
+
+    // 終了後の切断でも away にしない（終了後に away の行を作らない）
+    const presentUid = studentIds[1];
+    expect((await row(presentUid)).status).toBe('present');
+    expect(await attendance.markDisconnected(lessonId, presentUid)).toBe(false);
+    expect((await row(presentUid)).status).toBe('present');
   });
 });

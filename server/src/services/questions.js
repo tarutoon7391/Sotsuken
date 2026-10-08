@@ -2,15 +2,12 @@
 // - 挙手のみ（質問ボタン / question:raise）は body NULL
 // - 匿名の投稿者は先生にだけ見せる（DB には user_id を保持）
 // 本文はそのまま保存し、表示側（React）でエスケープする。
-const { ERROR_CODES, LESSON_STATUS, QUESTION_STATUS } = require('@sotsuken/shared/constants');
+const { ERROR_CODES, LESSON_STATUS, LIMITS, QUESTION_STATUS } = require('@sotsuken/shared/constants');
 const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
 const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { getLessonAccess } = require('./access');
-const { getLesson } = require('./attendance');
 const { emitToLesson, emitToStudents, emitToTeachers } = require('../sockets/io');
-
-const BODY_MAX_LENGTH = 1000;
 
 const SELECT_QUESTION = `
   SELECT q.id, q.body, q.is_anonymous, q.status, q.created_at,
@@ -34,20 +31,22 @@ function toQuestion(row, forTeacher) {
   return q;
 }
 
-/** 入力チェック。body は省略・空なら挙手（null） */
+/**
+ * 入力チェック。挙手は body 省略（または question:raise）だけで、空白だけの本文は 400。
+ * 挙手は匿名にしない（is_anonymous は無視して false）
+ */
 function normalizeInput(input) {
   const raw = input || {};
-  let body = null;
-  if (raw.body !== undefined && raw.body !== null) {
-    if (typeof raw.body !== 'string') throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'body は文字列です');
-    body = raw.body.trim();
-    if (body.length > BODY_MAX_LENGTH) {
-      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `質問は${BODY_MAX_LENGTH}文字以内です`);
-    }
-    if (body === '') body = null;
-  }
   if (raw.is_anonymous !== undefined && typeof raw.is_anonymous !== 'boolean') {
     throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'is_anonymous は true / false です');
+  }
+  if (raw.body === undefined || raw.body === null) return { body: null, isAnonymous: false };
+
+  if (typeof raw.body !== 'string') throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'body は文字列です');
+  const body = raw.body.trim();
+  if (body === '') throw new ApiError(400, ERROR_CODES.BAD_REQUEST, '質問の本文が空です（挙手は本文を省略してください）');
+  if (body.length > LIMITS.BODY_MAX) {
+    throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `質問は${LIMITS.BODY_MAX}文字以内です`);
   }
   return { body, isAnonymous: raw.is_anonymous === true };
 }
@@ -62,23 +61,22 @@ async function postQuestion(access, user, input) {
   if (access.isTeacher) throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'この操作は生徒だけができます');
   const { body, isAnonymous } = normalizeInput(input);
 
-  const lesson = await getLesson(access.lesson.id);
-  if (lesson.status !== LESSON_STATUS.LIVE) {
-    throw new ApiError(409, ERROR_CODES.CONFLICT, '授業は開催中ではありません');
-  }
+  const lessonId = access.lesson.id;
 
+  // live の確認と記録を1文で行う
   const result = await query(
     `INSERT INTO questions (lesson_id, user_id, body, is_anonymous, status, created_at)
-     VALUES (?, ?, ?, ?, 'open', UTC_TIMESTAMP())`,
-    [lesson.id, user.id, body, isAnonymous]
+     SELECT l.id, ?, ?, ?, ?, UTC_TIMESTAMP() FROM lessons l WHERE l.id = ? AND l.status = ?`,
+    [user.id, body, isAnonymous, QUESTION_STATUS.OPEN, lessonId, LESSON_STATUS.LIVE]
   );
+  if (result.affectedRows === 0) throw new ApiError(409, ERROR_CODES.CONFLICT, '授業は開催中ではありません');
   const rows = await query(`${SELECT_QUESTION} WHERE q.id = ?`, [result.insertId]);
   const row = rows[0];
 
-  emitToTeachers(lesson.id, SERVER_EVENTS.QUESTION_NEW, toQuestion(row, true));
-  emitToStudents(lesson.id, SERVER_EVENTS.QUESTION_NEW, toQuestion(row, false));
+  emitToTeachers(lessonId, SERVER_EVENTS.QUESTION_NEW, toQuestion(row, true));
+  emitToStudents(lessonId, SERVER_EVENTS.QUESTION_NEW, toQuestion(row, false));
   if (body === null) {
-    emitToTeachers(lesson.id, SERVER_EVENTS.QUESTION_RAISED, { user: { id: user.id, name: row.user_name } });
+    emitToTeachers(lessonId, SERVER_EVENTS.QUESTION_RAISED, { user: { id: user.id, name: row.user_name } });
   }
   // 投稿者本人への返り値には自分の情報を含めてよい
   return toQuestion(row, true);
@@ -103,7 +101,8 @@ async function answerQuestion(questionId, user, input) {
   const access = await getLessonAccess(user, found[0].lesson_id);
   if (!access.isTeacher) throw new ApiError(403, ERROR_CODES.FORBIDDEN, 'この操作は授業の先生だけができます');
 
-  await query("UPDATE questions SET status = 'answered' WHERE id = ?", [questionId]);
+  // 終了済みの授業でも可（授業結果画面から操作する。docs/04 §2 v4.3）
+  await query('UPDATE questions SET status = ? WHERE id = ?', [QUESTION_STATUS.ANSWERED, questionId]);
   emitToLesson(found[0].lesson_id, SERVER_EVENTS.QUESTION_ANSWERED, { id: questionId });
 
   const rows = await query(`${SELECT_QUESTION} WHERE q.id = ?`, [questionId]);
