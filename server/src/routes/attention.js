@@ -25,6 +25,26 @@ router.post(
   })
 );
 
+// GET /api/lessons/:id/attention（先生・v4.3）→ [{check_id, issued_at, deadline_at, auto, responded_count, pending_count}]
+router.get(
+  '/lessons/:id/attention',
+  requireLogin,
+  requireLessonAccess('id', { teacherOnly: true }),
+  asyncHandler(async (req, res) => {
+    res.json(await attention.listChecks(req.lessonAccess.lesson.id));
+  })
+);
+
+// GET /api/lessons/:id/attention/auto（先生・v4.3）→ {interval_min}
+router.get(
+  '/lessons/:id/attention/auto',
+  requireLogin,
+  requireLessonAccess('id', { teacherOnly: true }),
+  (req, res) => {
+    res.json(attention.getAuto(req.lessonAccess.lesson.id));
+  }
+);
+
 // PATCH /api/lessons/:id/attention/auto（先生）{interval_min}（0 で無効）
 router.patch(
   '/lessons/:id/attention/auto',

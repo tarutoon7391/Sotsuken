@@ -1,14 +1,11 @@
 // 雑談チャットのビジネスロジック — 担当：W2
 // 投稿は Socket（chat:message）、履歴は REST（GET /lessons/:id/chat）。要素の形は同じ ChatMessage。
 // 本文はそのまま保存し、表示側（React）でエスケープする。
-const { DEFAULTS, ERROR_CODES, LESSON_STATUS } = require('@sotsuken/shared/constants');
+const { DEFAULTS, ERROR_CODES, FILE_KINDS, LESSON_STATUS, LIMITS } = require('@sotsuken/shared/constants');
 const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
 const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
-const { getLesson } = require('./attendance');
 const { emitToLesson } = require('../sockets/io');
-
-const BODY_MAX_LENGTH = 1000;
 
 const SELECT_MESSAGE = `
   SELECT m.id, m.body, m.created_at,
@@ -54,34 +51,41 @@ async function postMessage(lessonId, user, input) {
   if (raw.body !== undefined && raw.body !== null) {
     if (typeof raw.body !== 'string') throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'body は文字列です');
     body = raw.body.trim();
-    if (body.length > BODY_MAX_LENGTH) {
-      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `メッセージは${BODY_MAX_LENGTH}文字以内です`);
+    if (body.length > LIMITS.BODY_MAX) {
+      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `メッセージは${LIMITS.BODY_MAX}文字以内です`);
     }
     if (body === '') body = null;
   }
   let fileId = null;
   if (raw.file_id !== undefined && raw.file_id !== null) {
-    fileId = Number(raw.file_id);
-    if (!Number.isInteger(fileId) || fileId <= 0) throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'file_id が不正です');
+    // 正の整数だけ受け付ける（true や "1" は不可）
+    if (typeof raw.file_id !== 'number' || !Number.isInteger(raw.file_id) || raw.file_id <= 0) {
+      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'file_id が不正です');
+    }
+    fileId = raw.file_id;
   }
   if (body === null && fileId === null) {
     throw new ApiError(400, ERROR_CODES.BAD_REQUEST, '本文か添付ファイルのどちらかが必要です');
   }
 
-  const lesson = await getLesson(lessonId);
-  if (!lesson || lesson.status === LESSON_STATUS.ENDED) {
-    throw new ApiError(409, ERROR_CODES.CONFLICT, '授業は終了しています');
-  }
   if (fileId !== null) {
-    // 他の授業のファイルを貼れないようにする
-    const files = await query('SELECT id FROM files WHERE id = ? AND lesson_id = ?', [fileId, lessonId]);
+    // 同じ授業のチャット添付（kind=attachment）で、自分がアップロードしたものだけ貼れる
+    const files = await query('SELECT id FROM files WHERE id = ? AND lesson_id = ? AND kind = ? AND uploader_id = ?', [
+      fileId,
+      lessonId,
+      FILE_KINDS.ATTACHMENT,
+      user.id,
+    ]);
     if (!files.length) throw new ApiError(404, ERROR_CODES.NOT_FOUND, '添付ファイルが見つかりません');
   }
 
+  // 授業が終了していないことの確認と記録を1文で行う（待機中の会話は許容。docs/04 §6）
   const result = await query(
-    'INSERT INTO chat_messages (lesson_id, user_id, body, file_id, created_at) VALUES (?, ?, ?, ?, UTC_TIMESTAMP())',
-    [lessonId, user.id, body, fileId]
+    `INSERT INTO chat_messages (lesson_id, user_id, body, file_id, created_at)
+     SELECT l.id, ?, ?, ?, UTC_TIMESTAMP() FROM lessons l WHERE l.id = ? AND l.status <> ?`,
+    [user.id, body, fileId, lessonId, LESSON_STATUS.ENDED]
   );
+  if (result.affectedRows === 0) throw new ApiError(409, ERROR_CODES.CONFLICT, '授業は終了しています');
   const rows = await query(`${SELECT_MESSAGE} WHERE m.id = ?`, [result.insertId]);
   const message = toMessage(rows[0]);
   emitToLesson(lessonId, SERVER_EVENTS.CHAT_MESSAGE, message);
@@ -94,9 +98,10 @@ async function listMessages(lessonId, params) {
   let limit = DEFAULTS.CHAT_PAGE_LIMIT;
   if (p.limit !== undefined) {
     limit = Number(p.limit);
-    if (!Number.isInteger(limit) || limit < 1 || limit > DEFAULTS.CHAT_PAGE_LIMIT_MAX) {
-      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, `limit は 1〜${DEFAULTS.CHAT_PAGE_LIMIT_MAX} の整数です`);
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new ApiError(400, ERROR_CODES.BAD_REQUEST, 'limit は 1 以上の整数です');
     }
+    limit = Math.min(limit, DEFAULTS.CHAT_PAGE_LIMIT_MAX); // 最大を超えたら丸める
   }
   let before = null;
   if (p.before !== undefined) {
