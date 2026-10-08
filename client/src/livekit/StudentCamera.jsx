@@ -60,7 +60,8 @@ export default function StudentCamera({
     };
   }, [room, teacherUserId, spotlighted]);
 
-  // カメラの取得・停止
+  // カメラの取得・停止。Room が変わったら（再接続で作り直されたら）取り直す：
+  // 切断時に LiveKit が publish 中のトラックを止めるので、同じトラックは使い回せない
   useEffect(() => {
     if (!enabled) return undefined;
     let cancelled = false;
@@ -88,7 +89,7 @@ export default function StudentCamera({
     };
     // onEnabledChange は親の再描画で変わっても取り直さない
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled]);
+  }, [enabled, room]);
 
   // 授業中なら publish（カメラ OFF・退室で unpublish）
   useEffect(() => {

@@ -1,6 +1,6 @@
 // 配信トークン・スポットライト API（docs/04 §2「配信トークン」「スポットライト」）— 担当：W3（LiveKit 基盤）
 // トークン発行は services/livekit.js（livekit-server-sdk の AccessToken）。シークレットはサーバーだけが持つ。
-// LIVEKIT_* が未設定の環境では 503 ではなく、url を空にしたレスポンスを返してクライアント側で「未設定」表示にする（クラッシュさせない）。
+// LIVEKIT_* が未設定の環境では 503 ではなく、token/url を null にしたレスポンスを返してクライアント側で「未設定」表示にする（クラッシュさせない）。
 const express = require('express');
 const { ERROR_CODES } = require('@sotsuken/shared/constants');
 const { requireLogin } = require('../middleware/auth');
@@ -11,13 +11,15 @@ const livekit = require('../services/livekit');
 const router = express.Router();
 
 // POST /api/lessons/:id/token（全員・クラス外は 403）→ {token, url, room_name, identity}
-// 先生：publish 可・全員 subscribe 可。生徒：publish 可、subscribe は先生＋スポットライト中の生徒のみ
+// 先生（その授業のクラスの teacher_id）：publish 可・全員 subscribe 可。生徒：カメラ・マイクの publish 可・subscribe 可
+// 生徒映像を他の生徒に見せない制御は publisher 側のトラック購読許可（docs/livekit-notes.md）
 router.post(
   '/lessons/:id/token',
   requireLogin,
   requireLessonAccess('id'),
   asyncHandler(async (req, res) => {
-    const result = await livekit.issueToken(req.session.user, req.lessonAccess.lesson);
+    const { lesson, isTeacher } = req.lessonAccess;
+    const result = await livekit.issueToken(req.session.user, lesson, isTeacher);
     res.json(result);
   })
 );

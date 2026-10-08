@@ -78,8 +78,8 @@
   background: var(--color-surface);
 }
 .lk-grid__cell--offline { opacity: 0.5; }
-.lk-grid__cell--highlight { border-color: var(--color-process-yellow); }
-.lk-grid__cell--spotlight { border-color: var(--color-accent-2); }
+.lk-grid__cell--highlight { border-color: var(--color-accent); }
+.lk-grid__cell--spotlight { border-color: var(--color-accent-600); }
 .lk-grid__video { aspect-ratio: 4 / 3; height: auto; }
 .lk-grid__footer {
   display: flex;

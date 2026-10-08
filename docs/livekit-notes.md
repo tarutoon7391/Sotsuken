@@ -9,8 +9,9 @@
 | `client/src/livekit/` | 接続 hook と表示部品。props は `docs/requests/w3-components.md` |
 
 - APIキー・シークレットは `.env`（`LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET`）だけに置く。フロントに渡すのは JWT と URL のみ
-- 未設定のときは token API が `{ token:"", url:"" }` を返し、クライアントは `status='unconfigured'`（「配信サーバーが未設定です」）で止まる
-- identity は `"user:{id}"`、表示名は `users.name`、属性 `attributes.role`（`teacher`/`student`）をサーバーが入れる。`canUpdateOwnMetadata=false` なので本人は書き換えられない
+- 未設定のときは token API が `{ token:null, url:null, room_name, identity }`（200）を返し、クライアントは `status='unconfigured'`（「配信サーバーが未設定です」）で止まる
+- トークンの有効期限は 6時間
+- identity は `LIVEKIT_IDENTITY_PREFIX + id`（`"user:{id}"`。shared/constants）、表示名は `users.name`、属性 `attributes.role`（`teacher`/`student`）と `attributes.user_id` をサーバーが入れる。**role はその授業のクラスの先生（`classes.teacher_id`）かどうかで決める**（`users.role` では決めない）。`canUpdateOwnMetadata=false` なので本人は書き換えられない
 - ルーム名は `lessons.room_name`（授業と1対1）
 
 ## 生徒映像の購読制御（「生徒の映像は先生にだけ届く」）
@@ -28,6 +29,12 @@ LiveKit は2段で制御できる。
 - 生徒 A のトークンで生徒 B の映像を購読しようとしても、B 側の許可に A が無いので SFU が配らない（フロントの表示制御ではない）。04 §5「生徒のトークンで他生徒の映像が購読できないこと／スポットライト指定後は購読できること」はこれで満たす
 - スポットライトの流れ：先生が `PUT /spotlight` → サーバーが `lessons.spotlight_user_id` 更新＋`spotlight:update` を全員に → 指定された生徒の `StudentCamera` が `spotlightUserId === myUserId` を検知して全員に許可 → 他の生徒は自動購読（autoSubscribe）され `RemoteVideo` に映る。解除で先生のみに戻り、他の生徒の購読は SFU が外す
 - 再接続（`RoomEvent.Reconnected`）後は許可を設定し直す
+- LiveKit 自身の再接続で戻れず切断されたら、`useLiveKitRoom` がトークンを取り直して新しい Room で入り直す（最大3回、1秒・2秒・4秒待つ）。自分で抜けた・同じ人が別タブで入った・追い出された・ルームが消えた場合は入り直さない。新しい Room では `StudentCamera` がカメラを取り直して publish し、購読許可も最初から設定する
+
+## 音声
+
+- 生徒もマイクを publish できる（トークンで許可）。ただし `RoomAudio` が鳴らすのは**先生とスポットライト中の生徒の音声だけ**（先生画面でも同じ）
+- 生徒のマイクのトラックもカメラと同じ購読許可がかかるので、他の生徒には SFU から届かない
 
 ### この方式の限界（発表で聞かれたら）
 
