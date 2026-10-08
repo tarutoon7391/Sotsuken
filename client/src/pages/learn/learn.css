@@ -164,12 +164,6 @@
 .lr-pages-nav.is-prev:hover:not(:disabled) { opacity: 1; background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent); }
 .lr-pages-nav.is-next:hover:not(:disabled) { opacity: 1; background: linear-gradient(270deg, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent); }
 .lr-pages-nav:disabled { cursor: default; }
-.lr-post-file {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px var(--space-2);
-  background: var(--color-bg); border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md);
-  font-size: 12px; color: var(--color-text); text-decoration: none;
-}
-.lr-post-file svg { color: var(--color-accent-2); }
 
 /* 画像の拡大 */
 .lr-zoom { position: fixed; inset: 0; z-index: 18; background: color-mix(in srgb, var(--color-neutral-900) 70%, transparent); display: flex; flex-direction: column; cursor: zoom-out; }
@@ -376,3 +370,11 @@
 .lr-cam-denied-sub { font-size: 12px; line-height: 1.5; color: var(--color-neutral-400); max-width: 360px; }
 .lr-cam-retry { margin-top: var(--space-2); color: var(--color-neutral-100); border-color: var(--color-neutral-600); }
 .lr-wait-page.is-mobile .lr-cam-denied-sub { display: none; }
+
+/* 資料：選択中の資料名＋元ファイルのダウンロード（v4.4・ビューアの外に置く） */
+.lr-mat-bar { display: flex; align-items: center; gap: var(--space-2); flex: none; min-width: 0; }
+.lr-mat-bar-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-mat-download { font-size: 12px; padding: var(--space-1) var(--space-2); flex: none; }
+.lr-m .lr-mat-download { min-height: 36px; }
+.lr-no-preview { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); color: var(--color-neutral-600); }
+.lr-no-preview svg { color: var(--color-accent-2); }

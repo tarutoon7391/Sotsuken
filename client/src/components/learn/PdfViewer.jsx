@@ -137,12 +137,8 @@ export default function PdfViewer({ url, fileName, mobile = false }) {
   if (error || !doc) {
     return (
       <div className="lr-pages is-empty">
-        <div>
-          <p className="lr-hint">{error || 'PDF を表示できません'}</p>
-          <a className="btn btn-ghost" href={url} target="_blank" rel="noopener noreferrer" download={fileName}>
-            ダウンロード
-          </a>
-        </div>
+        {/* 元ファイルのダウンロードは MaterialPanel がビューアの外に出している */}
+        <p className="lr-hint">{error || 'PDF を表示できません'}</p>
       </div>
     );
   }
