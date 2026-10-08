@@ -7,8 +7,9 @@
 //   mobile?:   boolean       スマホは一覧を横スクロールのチップにし、左右スワイプでページ送り
 //
 // 表示方法：PDF は PdfViewer（pdf.js・総ページ数・1/2/4 ページ同時表示・拡大。PDF を開いたときだけ読み込む）、
-// 画像は <img>（タップで拡大）、Office 文書はダウンロードリンク。
-// 画像・文書は1枚＝1ページとして、ページ送り（ボタン・スマホのスワイプ）で前後の資料へ移る。
+// Office 文書はサーバーが変換した preview_url（PDF）があれば同じ PdfViewer で、無ければ「プレビューできません」、
+// 画像は <img>（タップで拡大）。どの資料にも、ビューアの外に元ファイル（url）のダウンロードボタンを置く（v4.4）。
+// PDF 以外（プレビューの無い資料）は1枚＝1ページとして、ページ送り（ボタン・スマホのスワイプ）で前後の資料へ移る。
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { fileKindLabel } from './format.js';
@@ -58,8 +59,9 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
   if (!selected) return <div className="lr-pages is-empty">資料はまだありません</div>;
 
   const kind = fileKindLabel(selected.mime);
-  const url = safeUrl(selected.url);
-  const isPdf = kind === 'PDF' && Boolean(url);
+  const url = safeUrl(selected.url); // 元ファイル（ダウンロード用）
+  // PdfViewer に渡す PDF：PDF はそのもの、Office は変換済みのプレビュー（無ければ null）
+  const pdfUrl = kind === 'PDF' ? url : kind === 'DOC' ? safeUrl(selected.preview_url) : null;
 
   function step(dir) {
     const next = materials[index + dir];
@@ -112,10 +114,23 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
     </div>
   );
 
-  if (isPdf) {
+  // 選択中の資料名＋元ファイルのダウンロード（ビューアの外。PDF・画像・Office のどれにも出す）
+  const downloadBar = (
+    <div className="lr-mat-bar">
+      <span className="lr-mat-bar-name">{selected.file_name}</span>
+      {url && (
+        <a className="btn btn-secondary lr-mat-download" href={url} download={selected.file_name}>
+          ダウンロード
+        </a>
+      )}
+    </div>
+  );
+
+  if (pdfUrl) {
     return (
       <>
         {list}
+        {downloadBar}
         <Suspense
           fallback={
             <div className="lr-pages is-empty">
@@ -123,7 +138,7 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
             </div>
           }
         >
-          <PdfViewer key={selected.id} url={url} fileName={selected.file_name} mobile={mobile} />
+          <PdfViewer key={`${selected.id}:${pdfUrl}`} url={pdfUrl} fileName={selected.file_name} mobile={mobile} />
         </Suspense>
       </>
     );
@@ -145,12 +160,16 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
       </div>
     );
   } else {
+    // Office 文書で preview_url が無い（変換していない・失敗した）
     viewer = (
       <div className="lr-pages is-empty" {...swipeProps}>
-        <a className="lr-post-file" href={url} target="_blank" rel="noopener noreferrer" download={selected.file_name}>
-          <Icon name="pdf" />
-          {selected.file_name} をダウンロード
-        </a>
+        <div className="lr-no-preview">
+          <Icon name="pdf" size={32} />
+          <p className="lr-hint">この資料はプレビューできません</p>
+          <a className="btn btn-primary" href={url} download={selected.file_name}>
+            ダウンロード
+          </a>
+        </div>
       </div>
     );
   }
@@ -158,6 +177,7 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
   return (
     <>
       {list}
+      {downloadBar}
       {viewer}
       {/* 画像・文書のページ送り：「何枚目 / 資料数」 */}
       <div className={mobile ? 'lr-m-pager' : 'lr-pager'}>
