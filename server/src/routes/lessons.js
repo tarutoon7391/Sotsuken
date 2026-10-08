@@ -1,17 +1,16 @@
 // 授業 API（docs/04 §2「授業」）— 担当：W1（認証・クラス・授業・資料）
 // ※ token / spotlight は routes/token.js（W3）、attendance 以下は routes/attendance.js（W2）
 const express = require('express');
-const { ERROR_CODES } = require('@sotsuken/shared/constants');
+const { ERROR_CODES, LIMITS } = require('@sotsuken/shared/constants');
 const { requireLogin } = require('../middleware/auth');
+const { requireTeacher } = require('../middleware/role');
 const { requireClassAccess, requireLessonAccess } = require('../middleware/class-member');
 const { ApiError, asyncHandler } = require('../middleware/error');
 const lessonService = require('../services/lessons');
 
 const router = express.Router();
 
-const TITLE_MAX = 100;
-const TAG_NAME_MAX = 30;
-const TAGS_MAX = 10;
+// away_timeout_min の範囲（docs/04 §6。LIMITS には無い値）
 const AWAY_TIMEOUT_MIN_RANGE = [1, 180];
 
 function badRequest(message) {
@@ -20,8 +19,8 @@ function badRequest(message) {
 
 /** タイトル（前後空白を除いて 1〜100 文字） */
 function parseTitle(raw) {
-  if (typeof raw !== 'string' || !raw.trim() || raw.trim().length > TITLE_MAX) {
-    throw badRequest(`タイトルは1〜${TITLE_MAX}文字で入力してください`);
+  if (typeof raw !== 'string' || !raw.trim() || raw.trim().length > LIMITS.LESSON_TITLE_MAX) {
+    throw badRequest(`タイトルは1〜${LIMITS.LESSON_TITLE_MAX}文字で入力してください`);
   }
   return raw.trim();
 }
@@ -32,8 +31,8 @@ function parseTags(raw) {
     throw badRequest('tags は文字列の配列で指定してください');
   }
   const tags = [...new Set(raw.map((t) => t.trim()).filter(Boolean))];
-  if (tags.some((t) => t.length > TAG_NAME_MAX)) throw badRequest(`タグは${TAG_NAME_MAX}文字以内にしてください`);
-  if (tags.length > TAGS_MAX) throw badRequest(`タグは${TAGS_MAX}個までです`);
+  if (tags.some((t) => t.length > LIMITS.TAG_NAME_MAX)) throw badRequest(`タグは${LIMITS.TAG_NAME_MAX}文字以内にしてください`);
+  if (tags.length > LIMITS.TAGS_PER_LESSON_MAX) throw badRequest(`タグは${LIMITS.TAGS_PER_LESSON_MAX}個までです`);
   return tags;
 }
 
@@ -49,7 +48,7 @@ function parseAwayTimeout(raw) {
 // POST /api/classes/:id/lessons（先生）{title, tags?} → {id, room_name}
 router.post(
   '/classes/:id/lessons',
-  requireLogin,
+  requireTeacher,
   requireClassAccess('id', { teacherOnly: true }),
   asyncHandler(async (req, res) => {
     const body = req.body || {};
@@ -84,7 +83,7 @@ router.get(
 // POST /api/lessons/:id/start（先生）同一クラスに live があれば 409 ALREADY_LIVE。全員に lesson:started → LessonDetail
 router.post(
   '/lessons/:id/start',
-  requireLogin,
+  requireTeacher,
   requireLessonAccess('id', { teacherOnly: true }),
   asyncHandler(async (req, res) => {
     const { lesson } = req.lessonAccess;
@@ -92,10 +91,10 @@ router.post(
   })
 );
 
-// POST /api/lessons/:id/end（先生）ended_at 記録・出席を2値に確定（services/attendance.js の関数を呼ぶ）。全員に lesson:ended → LessonDetail
+// POST /api/lessons/:id/end（先生）ended_at 記録・出席を2値に確定（services/attendance.js）。先生に attendance:update、全員に lesson:ended → LessonDetail
 router.post(
   '/lessons/:id/end',
-  requireLogin,
+  requireTeacher,
   requireLessonAccess('id', { teacherOnly: true }),
   asyncHandler(async (req, res) => {
     res.json(await lessonService.endLesson(req.lessonAccess.lesson.id));
@@ -105,7 +104,7 @@ router.post(
 // PATCH /api/lessons/:id（先生）{away_timeout_min?, title?, tags?} → LessonDetail
 router.patch(
   '/lessons/:id',
-  requireLogin,
+  requireTeacher,
   requireLessonAccess('id', { teacherOnly: true }),
   asyncHandler(async (req, res) => {
     const body = req.body || {};

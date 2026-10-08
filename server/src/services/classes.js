@@ -18,9 +18,12 @@ function generateJoinCode() {
   return code;
 }
 
-/** 入力された参加コードを比較用にそろえる（前後空白除去・大文字化） */
+/**
+ * 入力された参加コードを比較用にそろえる（空白・ハイフン除去・大文字化）
+ * 画面では XXXX-XXXX と区切って表示するので、ハイフン付きで入力されても通す（v4.3 裁定）
+ */
 function normalizeJoinCode(raw) {
-  return String(raw).trim().toUpperCase();
+  return String(raw).replace(/[\s-]/g, '').toUpperCase();
 }
 
 // クラス一覧・詳細で共通の SELECT（先生の情報と開催中の授業 id を付ける）
@@ -65,7 +68,7 @@ async function createClass(teacherId, name) {
       if (err.code !== 'ER_DUP_ENTRY') throw err;
     }
   }
-  throw new Error('参加コードの生成に失敗しました');
+  throw new ApiError(500, ERROR_CODES.INTERNAL_ERROR, '参加コードの生成に失敗しました');
 }
 
 /** 自分が作った（先生）／参加している（生徒）クラス一覧。新しい順 */

@@ -2,7 +2,7 @@
 // register / login / logout / me / me(PUT) / me/icon
 // 実装は services/auth.js に置き、ここは入力チェックと呼び出しだけにする。
 const express = require('express');
-const { ERROR_CODES, ROLES } = require('@sotsuken/shared/constants');
+const { ERROR_CODES, ROLES, LIMITS } = require('@sotsuken/shared/constants');
 const { requireLogin } = require('../middleware/auth');
 const { ApiError, asyncHandler } = require('../middleware/error');
 const authService = require('../services/auth');
@@ -10,20 +10,17 @@ const { uploadIcon, urlOf, removeUploadedFile } = require('../services/files');
 
 const router = express.Router();
 
-const LOGIN_ID_PATTERN = /^[A-Za-z0-9_.-]{3,50}$/;
-const PASSWORD_MIN = 8;
-const PASSWORD_MAX = 72; // bcrypt は 72 バイトまでしか見ない
-const NAME_MAX = 30;
+const LOGIN_ID_PATTERN = new RegExp(LIMITS.LOGIN_ID_PATTERN);
 
 function badRequest(message) {
   return new ApiError(400, ERROR_CODES.BAD_REQUEST, message);
 }
 
-/** 表示名（前後空白を除いて 1〜30 文字） */
+/** 表示名（前後空白を除いて 1〜LIMITS.NAME_MAX 文字） */
 function parseName(raw) {
   if (typeof raw !== 'string' || !raw.trim()) throw badRequest('表示名を入力してください');
   const name = raw.trim();
-  if (name.length > NAME_MAX) throw badRequest(`表示名は${NAME_MAX}文字以内にしてください`);
+  if (name.length > LIMITS.NAME_MAX) throw badRequest(`表示名は${LIMITS.NAME_MAX}文字以内にしてください`);
   return name;
 }
 
@@ -42,18 +39,20 @@ function startSession(req, me) {
 router.post('/register', asyncHandler(async (req, res) => {
   const body = req.body || {};
   const name = parseName(body.name);
-  if (typeof body.login_id !== 'string' || !LOGIN_ID_PATTERN.test(body.login_id)) {
-    throw badRequest('ログインIDは半角英数字と _ . - の3〜50文字にしてください');
+  const loginId = body.login_id;
+  if (typeof loginId !== 'string' || !LOGIN_ID_PATTERN.test(loginId)
+    || loginId.length < LIMITS.LOGIN_ID_MIN || loginId.length > LIMITS.LOGIN_ID_MAX) {
+    throw badRequest(`ログインIDは半角英数字と _ . - の${LIMITS.LOGIN_ID_MIN}〜${LIMITS.LOGIN_ID_MAX}文字にしてください`);
   }
   if (typeof body.password !== 'string'
-    || body.password.length < PASSWORD_MIN
-    || Buffer.byteLength(body.password) > PASSWORD_MAX) {
-    throw badRequest(`パスワードは${PASSWORD_MIN}文字以上・${PASSWORD_MAX}バイト以内にしてください`);
+    || body.password.length < LIMITS.PASSWORD_MIN
+    || Buffer.byteLength(body.password) > LIMITS.PASSWORD_MAX_BYTES) { // bcrypt は 72 バイトまでしか見ない
+    throw badRequest(`パスワードは${LIMITS.PASSWORD_MIN}文字以上・${LIMITS.PASSWORD_MAX_BYTES}バイト以内にしてください`);
   }
   if (!Object.values(ROLES).includes(body.role)) throw badRequest('ロールが不正です');
 
   const me = await authService.register({
-    name, login_id: body.login_id, password: body.password, role: body.role,
+    name, login_id: loginId, password: body.password, role: body.role,
   });
   await startSession(req, me);
   res.status(201).json(me);
@@ -93,7 +92,7 @@ router.put('/me', requireLogin, asyncHandler(async (req, res) => {
   res.json(me);
 }));
 
-// POST /api/me/icon  multipart(icon) → {icon_url}（画像のみ）
+// POST /api/me/icon  multipart(icon) → {icon_url}（PNG・JPEG、LIMITS.ICON_MAX_BYTES まで）
 router.post('/me/icon', requireLogin, uploadIcon, asyncHandler(async (req, res) => {
   if (!req.file) throw badRequest('アイコン画像を選択してください');
   const iconUrl = urlOf(req.file);

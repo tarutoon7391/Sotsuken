@@ -81,7 +81,10 @@ CLASS_ID="$(json_num id)"
 JOIN_CODE="$(json_str join_code)"
 echo "     class_id=$CLASS_ID join_code=$JOIN_CODE"
 check 404 "存在しない参加コードは 404" -b "$S_JAR" "${JSON[@]}" -X POST "$API/classes/join" --data-binary "$(jbody '{"join_code":"ZZZZZZZZ"}')"
-check 200 "生徒 join" -b "$S_JAR" "${JSON[@]}" -X POST "$API/classes/join" --data-binary "$(jbody "{\"join_code\":\"$JOIN_CODE\"}")"
+# 画面の表示どおり XXXX-XXXX（小文字）で入力しても加入できる（v4.3 裁定）
+HYPHEN_CODE="$(printf '%s' "${JOIN_CODE:0:4}-${JOIN_CODE:4:4}" | tr 'A-Z' 'a-z')"
+check 200 "生徒 join（ハイフン付き・小文字）" -b "$S_JAR" "${JSON[@]}" -X POST "$API/classes/join" --data-binary "$(jbody "{\"join_code\":\"$HYPHEN_CODE\"}")"
+check 200 "生徒 join（加入済みでも成功）" -b "$S_JAR" "${JSON[@]}" -X POST "$API/classes/join" --data-binary "$(jbody "{\"join_code\":\"$JOIN_CODE\"}")"
 check 200 "生徒 クラス一覧" -b "$S_JAR" "$API/classes"
 check 200 "先生 クラス詳細（join_code あり）" -b "$T_JAR" "$API/classes/$CLASS_ID"
 [ -n "$(json_str join_code)" ] && echo "     join_code 含む: OK" || { echo "     NG join_code が無い"; FAIL=$((FAIL + 1)); }
