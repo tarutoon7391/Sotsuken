@@ -6,19 +6,19 @@
 //   onRetry:   () => void    読み込み失敗時の「再読み込み」
 //   mobile?:   boolean       スマホは一覧を横スクロールのチップにし、左右スワイプでページ送り
 //
-// 表示方法：画像は <img>、PDF はブラウザ内蔵ビューア（iframe の #page=N でページ送り）、
-// Office 文書はダウンロードリンク。PDF のページ数は取れないので「p.N」だけ表示する。
-// ページ送り：PDF はページ、画像・文書は1枚＝1ページなので前後の資料へ。
-import { useEffect, useRef, useState } from 'react';
+// 表示方法：PDF は PdfViewer（pdf.js・総ページ数・1/2/4 ページ同時表示・拡大。PDF を開いたときだけ読み込む）、
+// 画像は <img>（タップで拡大）、Office 文書はダウンロードリンク。
+// 画像・文書は1枚＝1ページとして、ページ送り（ボタン・スマホのスワイプ）で前後の資料へ移る。
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { fileKindLabel } from './format.js';
 import { safeUrl } from '../../lib/safe-url.js';
 
 const SWIPE_PX = 50; // これ以上横に動いたらページ送り
+const PdfViewer = lazy(() => import('./PdfViewer.jsx'));
 
 export default function MaterialPanel({ materials, loading, error, onRetry, mobile = false }) {
   const [selectedId, setSelectedId] = useState(null);
-  const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(false);
   const swipeX = useRef(null);
 
@@ -26,7 +26,6 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
   const index = Math.max(0, materials.findIndex((m) => m.id === selectedId));
   const selected = materials[index] || null;
   useEffect(() => {
-    setPage(1);
     setZoom(false);
   }, [selected && selected.id]);
 
@@ -60,18 +59,14 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
 
   const kind = fileKindLabel(selected.mime);
   const url = safeUrl(selected.url);
-  const isPdf = kind === 'PDF';
+  const isPdf = kind === 'PDF' && Boolean(url);
 
   function step(dir) {
-    if (isPdf && url) {
-      setPage((p) => Math.max(1, p + dir));
-      return;
-    }
     const next = materials[index + dir];
     if (next) setSelectedId(next.id);
   }
 
-  // スマホ：左右スワイプでページ送り（PDF の上は iframe がタッチを取るので、透明な面を重ねて受ける）
+  // スマホ：左右スワイプで前後の資料へ（PDF のページ送りは PdfViewer が受け持つ）
   const swipeProps = mobile
     ? {
         onTouchStart: (e) => {
@@ -117,6 +112,23 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
     </div>
   );
 
+  if (isPdf) {
+    return (
+      <>
+        {list}
+        <Suspense
+          fallback={
+            <div className="lr-pages is-empty">
+              <span className="lr-spinner" />
+            </div>
+          }
+        >
+          <PdfViewer key={selected.id} url={url} fileName={selected.file_name} mobile={mobile} />
+        </Suspense>
+      </>
+    );
+  }
+
   let viewer;
   if (!url) {
     viewer = (
@@ -132,14 +144,6 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
         </button>
       </div>
     );
-  } else if (isPdf) {
-    viewer = (
-      <div className="lr-pages">
-        {/* key でページ移動ごとに読み直す（#page の変更だけでは反映されないブラウザがある） */}
-        <iframe key={`${selected.id}-${page}`} className="lr-pdf" src={`${url}#page=${page}`} title={selected.file_name} />
-        {mobile && <div className="lr-swipe-layer" {...swipeProps} aria-hidden="true" />}
-      </div>
-    );
   } else {
     viewer = (
       <div className="lr-pages is-empty" {...swipeProps}>
@@ -151,28 +155,29 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
     );
   }
 
-  // ページ表示：PDF は「p.N」、それ以外は「何枚目 / 資料数」
-  const range = isPdf && url ? `p.${page}` : `${index + 1} / ${materials.length}`;
-  const canPrev = isPdf && url ? page > 1 : index > 0;
-  const canNext = isPdf && url ? true : index < materials.length - 1;
-
   return (
     <>
       {list}
       {viewer}
+      {/* 画像・文書のページ送り：「何枚目 / 資料数」 */}
       <div className={mobile ? 'lr-m-pager' : 'lr-pager'}>
-        <button type="button" className="btn btn-secondary btn-icon" aria-label="前のページ" disabled={!canPrev} onClick={() => step(-1)}>
-          ‹
-        </button>
-        <span className="lr-pager-range">{range}</span>
-        <button type="button" className="btn btn-secondary btn-icon" aria-label="次のページ" disabled={!canNext} onClick={() => step(1)}>
-          ›
-        </button>
-        {!mobile && isPdf && url && (
-          <a className="btn btn-ghost lr-pager-open" href={url} target="_blank" rel="noopener noreferrer">
-            別タブで開く
-          </a>
-        )}
+        <div className="lr-pager-right">
+          <button type="button" className="btn btn-secondary btn-icon" aria-label="前の資料" disabled={index <= 0} onClick={() => step(-1)}>
+            ‹
+          </button>
+          <span className="lr-pager-range">
+            {index + 1} / {materials.length}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-icon"
+            aria-label="次の資料"
+            disabled={index >= materials.length - 1}
+            onClick={() => step(1)}
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {zoom && url && (
@@ -183,8 +188,12 @@ export default function MaterialPanel({ materials, loading, error, onRetry, mobi
               <Icon name="close" size={28} />
             </button>
           </div>
-          <div className="lr-zoom-stage" onClick={(e) => e.stopPropagation()}>
-            <img src={url} alt={selected.file_name} />
+          <div className="lr-zoom-body">
+            <span />
+            <div className="lr-zoom-stage" onClick={(e) => e.stopPropagation()}>
+              <img src={url} alt={selected.file_name} />
+            </div>
+            <span />
           </div>
         </div>
       )}

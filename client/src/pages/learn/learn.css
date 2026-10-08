@@ -65,7 +65,7 @@
   display: grid; place-items: center; font-size: 36px; font-weight: 600;
 }
 .lr-video-labels { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.lr-video-label { background: var(--color-overlay); color: var(--color-surface); font-size: 12px; padding: 4px var(--space-2); border-radius: var(--radius-md); }
+.lr-video-label { background: color-mix(in srgb, var(--color-neutral-900) 70%, transparent); color: var(--color-surface); font-size: 12px; padding: 4px var(--space-2); border-radius: var(--radius-md); }
 .lr-video-label.is-spot { background: var(--color-accent-2); color: var(--color-bg); font-weight: 600; }
 .lr-video-toast {
   position: absolute; top: 12px; right: 12px; z-index: 2;
@@ -85,7 +85,7 @@
 }
 .lr-video-pip:hover { border-color: var(--color-accent-400); }
 .lr-pip-face { width: 40px; height: 40px; border-radius: 50%; background: var(--color-neutral-700); display: grid; place-items: center; font-size: 16px; color: var(--color-surface); font-weight: 600; margin-bottom: 22px; }
-.lr-pip-label { position: absolute; bottom: 6px; left: 8px; background: var(--color-overlay); color: var(--color-surface); padding: 2px 6px; border-radius: var(--radius-md); }
+.lr-pip-label { position: absolute; bottom: 6px; left: 8px; background: color-mix(in srgb, var(--color-neutral-900) 70%, transparent); color: var(--color-surface); padding: 2px 6px; border-radius: var(--radius-md); }
 .lr-video-foot { position: absolute; bottom: 12px; left: 12px; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .lr-video-note { font-size: 11px; color: var(--color-neutral-400); }
 .lr-cam-ctl { display: flex; align-items: center; gap: 8px; color: var(--color-surface); font-size: 12px; }
@@ -136,11 +136,34 @@
 .lr-pages.is-empty { display: grid; place-items: center; font-size: 13px; color: var(--color-neutral-600); padding: var(--space-3); text-align: center; }
 .lr-page { position: absolute; inset: 12px; border: 0; padding: 0; background: transparent; cursor: zoom-in; }
 .lr-page img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(var(--shadow-sm)); }
-.lr-pdf { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--color-bg); }
 .lr-pager { display: flex; align-items: center; gap: 8px; font-size: 13px; flex: none; }
 .lr-pager .btn-icon { width: 30px; height: 30px; }
 .lr-pager-range { min-width: 56px; text-align: center; }
-.lr-pager-open { margin-left: auto; font-size: 12px; }
+.lr-pager-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.lr-pager-note { font-size: 11px; color: var(--color-neutral-600); }
+.lr-cols { display: inline-flex; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md); overflow: hidden; }
+.lr-cols button { font: inherit; font-size: 12px; padding: var(--space-1) var(--space-2); border: 0; cursor: pointer; background: transparent; color: var(--color-text); }
+.lr-cols button + button { border-left: 1px solid var(--color-neutral-300); }
+.lr-cols button.is-active { background: var(--color-accent); color: var(--color-bg); }
+.lr-cols button:disabled { background: var(--color-surface); color: var(--color-neutral-400); cursor: not-allowed; }
+.lr-m-pager .lr-pager-right { margin: 0 auto; gap: 16px; }
+
+/* PDF（pdf.js で canvas に描く。PC は 1/2/4 ページ同時表示） */
+.lr-pages-grid { position: absolute; inset: 12px; display: grid; grid-auto-rows: minmax(0, 1fr); gap: var(--space-2); }
+.lr-pdf-cell { position: relative; min-width: 0; min-height: 0; border: 0; padding: 0; background: transparent; cursor: zoom-in; }
+.lr-pdf-page { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; }
+.lr-pdf-page canvas { display: block; filter: drop-shadow(var(--shadow-sm)); }
+.lr-pdf-spin { position: absolute; inset: 0; display: grid; place-items: center; }
+.lr-page-label { position: absolute; bottom: 6px; right: 6px; background: color-mix(in srgb, var(--color-neutral-900) 70%, transparent); color: var(--color-surface); font-size: 11px; padding: 2px 6px; border-radius: var(--radius-md); }
+.lr-pages-nav {
+  position: absolute; top: 0; bottom: 0; width: 20%; border: 0; padding: 0; background: transparent;
+  cursor: pointer; display: grid; color: var(--color-accent); opacity: 0;
+}
+.lr-pages-nav.is-prev { left: 0; place-items: center start; padding-left: 8px; }
+.lr-pages-nav.is-next { right: 0; place-items: center end; padding-right: 8px; }
+.lr-pages-nav.is-prev:hover:not(:disabled) { opacity: 1; background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent); }
+.lr-pages-nav.is-next:hover:not(:disabled) { opacity: 1; background: linear-gradient(270deg, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent); }
+.lr-pages-nav:disabled { cursor: default; }
 .lr-post-file {
   display: inline-flex; align-items: center; gap: 8px; padding: 6px var(--space-2);
   background: var(--color-bg); border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md);
@@ -154,7 +177,15 @@
 .lr-zoom-name { font-weight: 600; }
 .lr-zoom-close { margin-left: auto; width: 48px; height: 48px; border: 0; background: transparent; color: var(--color-surface); cursor: pointer; display: grid; place-items: center; }
 .lr-zoom-close:hover { color: var(--color-accent-400); }
-.lr-zoom-stage { position: relative; flex: 1; min-height: 0; margin: 0 24px 24px; cursor: default; }
+.lr-zoom-pos { color: var(--color-neutral-400); }
+.lr-zoom-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 120px minmax(0, 1fr) 120px; margin: 0 0 var(--space-6); }
+.lr-m .lr-zoom-body { grid-template-columns: 56px minmax(0, 1fr) 56px; }
+.lr-zoom-arrow { align-self: center; justify-self: center; width: 96px; height: 160px; border: 0; background: transparent; color: var(--color-surface); cursor: pointer; display: grid; place-items: center; }
+.lr-m .lr-zoom-arrow { width: 56px; }
+.lr-zoom-arrow:hover:not(:disabled) { color: var(--color-accent-400); }
+.lr-zoom-arrow:disabled { opacity: .25; cursor: default; }
+.lr-zoom-stage { position: relative; min-height: 0; cursor: default; }
+.lr-zoom-stage .lr-pdf-page canvas { filter: drop-shadow(var(--shadow-lg)); }
 .lr-zoom-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(var(--shadow-lg)); }
 
 /* ---- 質問箱／チャットのタブ ---- */
@@ -202,7 +233,7 @@
 .lr-m-pager .btn-icon { width: 44px; height: 44px; font-size: 20px; }
 .lr-dock {
   position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-2) 14px 14px;
-  background: var(--color-bg); box-shadow: 0 -8px 24px var(--color-surface-glass);
+  background: var(--color-bg); box-shadow: 0 -8px 24px color-mix(in srgb, var(--color-bg) 90%, transparent);
   display: flex; flex-direction: column; gap: 8px;
 }
 .lr-dock .lr-reactions { grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -334,8 +365,6 @@
 }
 .lr-load-error .btn { margin-left: auto; font-size: 12px; padding-block: 2px; }
 
-/* スマホの PDF：iframe の上に透明な面を重ねてスワイプを受ける（監査 A-6） */
-.lr-swipe-layer { position: absolute; inset: 0; touch-action: pan-y; }
 
 /* 待機画面：カメラが拒否されているとき（監査 A-5・docs/design/09 の camDenied） */
 .lr-cam-denied {
