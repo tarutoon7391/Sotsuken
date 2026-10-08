@@ -13,6 +13,7 @@ import {
   DEFAULTS,
   ERROR_CODES,
   FILE_KINDS,
+  LIMITS,
   LESSON_STATUS,
   QUESTION_STATUS,
   ROLES,
@@ -26,6 +27,7 @@ import RoleBadge from '../../components/shared/RoleBadge.jsx';
 import ChatPanel from '../../components/shared/ChatPanel.jsx';
 import QuestionBox from '../../components/shared/QuestionBox.jsx';
 import useToast from '../../components/shared/useToast.jsx';
+import useEscape from '../../components/shared/useEscape.js';
 import { formatBytes, formatDuration } from '../../components/shared/format.js';
 import {
   useLiveKitRoom,
@@ -71,7 +73,8 @@ function TeachBody() {
   const [lesson, setLesson] = useState(null);
   const [cls, setCls] = useState(null);
   const [members, setMembers] = useState([]);
-  const [attendance, setAttendance] = useState({}); // user_id → { status, away_total_sec }
+  const [attendance, setAttendance] = useState({}); // user_id → { status, away_total_sec, away_since }
+  const [loadError, setLoadError] = useState('');
   const [understanding, setUnderstanding] = useState(EMPTY_UNDERSTANDING);
   const [resetAt, setResetAt] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -89,6 +92,8 @@ function TeachBody() {
   const [unread, setUnread] = useState({ qa: 0, chat: 0 });
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState('');
+  const closeEnd = useCallback(() => setConfirmEnd(false), []);
+  useEscape(confirmEnd ? closeEnd : null); // 終了確認ダイアログは Esc で閉じる
   const rightTabRef = useRef(rightTab);
   const collapsedRef = useRef(collapsed);
   rightTabRef.current = rightTab;
@@ -98,48 +103,65 @@ function TeachBody() {
   const { room, status: lkStatus } = useLiveKitRoom(lessonId, { enabled: !!lesson });
 
   // ---------------------------------------------------------------- 初期読み込み
+  // 補助データの読み込み失敗はトーストで知らせる（401/403/404 は client.js が遷移させる）
+  const warn = useCallback((err) => showToast(err.message), [showToast]);
   const loadAttendance = useCallback(() => {
-    get(`/lessons/${lessonId}/attendance`).then((rows) => {
-      const map = {};
-      (rows || []).forEach((r) => {
-        map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec };
-      });
-      setAttendance(map);
-    });
-  }, [lessonId]);
+    get(`/lessons/${lessonId}/attendance`)
+      .then((rows) => {
+        const map = {};
+        (rows || []).forEach((r) => {
+          map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec, away_since: r.away_since };
+        });
+        setAttendance(map);
+      })
+      .catch(warn);
+  }, [lessonId, warn]);
   const loadQuestions = useCallback(() => {
-    get(`/lessons/${lessonId}/questions`).then((rows) => setQuestions(rows || []));
-  }, [lessonId]);
+    get(`/lessons/${lessonId}/questions`)
+      .then((rows) => setQuestions(rows || []))
+      .catch(warn);
+  }, [lessonId, warn]);
   const loadMaterials = useCallback(() => {
-    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL }).then((rows) => setMaterials(rows || []));
-  }, [lessonId]);
+    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL })
+      .then((rows) => setMaterials(rows || []))
+      .catch(warn);
+  }, [lessonId, warn]);
 
   useEffect(() => {
     let alive = true;
-    get(`/lessons/${lessonId}`).then((l) => {
-      if (!alive) return;
-      if (l.status === LESSON_STATUS.ENDED) {
-        navigate(`/lessons/${lessonId}/result`, { replace: true });
-        return;
-      }
-      setLesson(l);
-      setSpotlightUserId(l.spotlight_user_id);
-      get(`/classes/${l.class_id}`).then((c) => alive && setCls(c));
-      get(`/classes/${l.class_id}/members`).then((rows) => alive && setMembers(rows || []));
-    });
-    get(`/lessons/${lessonId}/understanding`).then((u) => alive && u && setUnderstanding(u.current));
-    get(`/lessons/${lessonId}/chat`, { limit: DEFAULTS.CHAT_PAGE_LIMIT }).then((rows) => {
-      if (!alive) return;
-      setMessages(rows || []);
-      setHasOlder((rows || []).length >= DEFAULTS.CHAT_PAGE_LIMIT);
-    });
+    get(`/lessons/${lessonId}`)
+      .then((l) => {
+        if (!alive) return;
+        if (l.status === LESSON_STATUS.ENDED) {
+          navigate(`/lessons/${lessonId}/result`, { replace: true });
+          return;
+        }
+        setLesson(l);
+        setSpotlightUserId(l.spotlight_user_id);
+        get(`/classes/${l.class_id}`).then((c) => alive && setCls(c)).catch(warn);
+        get(`/classes/${l.class_id}/members`).then((rows) => alive && setMembers(rows || [])).catch(warn);
+      })
+      .catch((err) => alive && setLoadError(err.message)); // 授業が取れないと画面を出せない
+    get(`/lessons/${lessonId}/understanding`)
+      .then((u) => alive && u && setUnderstanding(u.current))
+      .catch(warn);
+    get(`/lessons/${lessonId}/attention/auto`)
+      .then((a) => alive && a && setAutoInterval(a.interval_min))
+      .catch(warn);
+    get(`/lessons/${lessonId}/chat`, { limit: DEFAULTS.CHAT_PAGE_LIMIT })
+      .then((rows) => {
+        if (!alive) return;
+        setMessages(rows || []);
+        setHasOlder((rows || []).length >= DEFAULTS.CHAT_PAGE_LIMIT);
+      })
+      .catch(warn);
     loadAttendance();
     loadQuestions();
     loadMaterials();
     return () => {
       alive = false;
     };
-  }, [lessonId, navigate, loadAttendance, loadQuestions, loadMaterials]);
+  }, [lessonId, navigate, warn, loadAttendance, loadQuestions, loadMaterials]);
 
   // ---------------------------------------------------------------- Socket
   useEffect(() => {
@@ -166,7 +188,8 @@ function TeachBody() {
 
     socket.on(SERVER_EVENTS.UNDERSTANDING_UPDATE, (data) => setUnderstanding(data));
     socket.on(SERVER_EVENTS.UNDERSTANDING_RESET, () => {
-      setUnderstanding((u) => ({ ...EMPTY_UNDERSTANDING, total: u.total }));
+      // 人数も含めて 0 に戻す（直後にサーバーから 0 件の understanding:update も届く）
+      setUnderstanding(EMPTY_UNDERSTANDING);
       setResetAt(Date.now());
     });
     socket.on(SERVER_EVENTS.QUESTION_NEW, (q) => {
@@ -180,9 +203,25 @@ function TeachBody() {
       showToast(`✋ ${u.name} さんが挙手しました`);
       loadQuestions(); // 挙手は質問（body なし）として記録されるので一覧を取り直す
     });
+    // 確認：手動・自動とも attention:check（全員宛）で始まり、直後の attention:update が応答状況の初期値になる
+    socket.on(SERVER_EVENTS.ATTENTION_CHECK, ({ check_id, issued_at, deadline_at, auto }) => {
+      setCheck({ check_id, issued_at, deadline_at, auto });
+      setCheckResult(null);
+    });
     socket.on(SERVER_EVENTS.ATTENTION_UPDATE, (data) => setCheckResult(data));
     socket.on(SERVER_EVENTS.ATTENDANCE_UPDATE, ({ user_id, status, away_total_sec }) => {
-      setAttendance((m) => ({ ...m, [user_id]: { status, away_total_sec } }));
+      setAttendance((m) => {
+        const prev = m[user_id];
+        // 退出開始時刻はイベントに無いので、away になった時点を手元で記録する
+        let awaySince = null;
+        if (status === ATTENDANCE_STATUS.AWAY) {
+          awaySince = prev && prev.status === ATTENDANCE_STATUS.AWAY && prev.away_since ? prev.away_since : new Date().toISOString();
+        }
+        return { ...m, [user_id]: { status, away_total_sec, away_since: awaySince } };
+      });
+    });
+    socket.on(SERVER_EVENTS.MATERIAL_ADDED, ({ file }) => {
+      if (file) setMaterials((list) => mergeById(list, [file]));
     });
     socket.on(SERVER_EVENTS.SPOTLIGHT_UPDATE, ({ user_id }) => setSpotlightUserId(user_id));
     socket.on(SERVER_EVENTS.CHAT_MESSAGE, (m) => {
@@ -193,7 +232,8 @@ function TeachBody() {
       setLesson((l) => (l ? { ...l, status: LESSON_STATUS.LIVE, started_at: l.started_at || new Date().toISOString() } : l));
       loadAttendance();
     });
-    socket.on(SERVER_EVENTS.LESSON_ENDED, () => navigate(`/lessons/${lessonId}/ended`, { replace: true }));
+    // 先生は授業結果へ直行する（/ended を経由しない）
+    socket.on(SERVER_EVENTS.LESSON_ENDED, () => navigate(`/lessons/${lessonId}/result`, { replace: true }));
 
     return () => disconnectLesson();
   }, [lessonId, navigate, showToast, loadAttendance, loadQuestions]);
@@ -203,10 +243,12 @@ function TeachBody() {
     if (!check) return undefined;
     const wait = new Date(check.deadline_at).getTime() - Date.now() + 500;
     const t = setTimeout(() => {
-      get(`/attention/${check.check_id}`).then((r) => r && setCheckResult({ responded: r.responded, pending: r.pending }));
+      get(`/attention/${check.check_id}`)
+        .then((r) => r && setCheckResult({ responded: r.responded, pending: r.pending }))
+        .catch(warn);
     }, Math.max(0, wait));
     return () => clearTimeout(t);
-  }, [check]);
+  }, [check, warn]);
 
   // ---------------------------------------------------------------- 経過時間
   const [now, setNow] = useState(Date.now());
@@ -251,7 +293,7 @@ function TeachBody() {
     setBusy('end');
     try {
       await post(`/lessons/${lessonId}/end`, undefined, { redirect: false });
-      navigate(`/lessons/${lessonId}/ended`, { replace: true });
+      navigate(`/lessons/${lessonId}/result`, { replace: true }); // 先生は授業結果へ直行
     } catch (err) {
       showToast(err.message);
       setBusy('');
@@ -262,9 +304,9 @@ function TeachBody() {
   async function issueCheck() {
     setBusy('check');
     try {
+      // 応答状況は attention:check → attention:update（サーバーが算出）で受け取る。ここでは締切だけ先に反映
       const res = await post(`/lessons/${lessonId}/attention`, { timeout_sec: DEFAULTS.ATTENTION_TIMEOUT_SEC });
-      setCheck({ ...res, timeout_sec: DEFAULTS.ATTENTION_TIMEOUT_SEC });
-      setCheckResult({ responded: [], pending: students.filter((s) => attendance[s.id]?.status === ATTENDANCE_STATUS.PRESENT) });
+      setCheck((c) => (c && c.check_id === res.check_id ? c : { ...res, issued_at: new Date().toISOString() }));
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -310,7 +352,7 @@ function TeachBody() {
   async function uploadMaterial(file) {
     setMaterialError('');
     if (!ALLOWED_UPLOAD_MIMES.includes(file.type)) return setMaterialError('画像・PDF・Office 文書のみアップロードできます');
-    if (file.size > DEFAULTS.FILE_MAX_BYTES) return setMaterialError(`${formatBytes(DEFAULTS.FILE_MAX_BYTES)}までのファイルにしてください`);
+    if (file.size > LIMITS.MATERIAL_MAX_BYTES) return setMaterialError(`${formatBytes(LIMITS.MATERIAL_MAX_BYTES)}までのファイルにしてください`);
     const fd = new FormData();
     fd.append('kind', FILE_KINDS.MATERIAL);
     fd.append('file', file);
@@ -363,14 +405,27 @@ function TeachBody() {
   }
 
   // ---------------------------------------------------------------- 表示
-  if (!lesson) return <p className="page-loading">読み込み中…</p>;
+  if (!lesson) {
+    if (loadError) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
+    return <p className="page-loading">読み込み中…</p>;
+  }
 
   const elapsed = lesson.started_at ? formatDuration((now - new Date(lesson.started_at).getTime()) / 1000) : '';
   const reconnecting = socketDown || lkStatus === 'reconnecting';
 
+  /** 欠課までの残り秒数（閾値 − 累積 − 今回の経過） */
+  function remainingSec(a) {
+    const current = a.away_since ? Math.max(0, (now - new Date(a.away_since).getTime()) / 1000) : 0;
+    return Math.max(0, lesson.away_timeout_min * 60 - a.away_total_sec - current);
+  }
+
+  // セルの下部（W3 StudentGrid の renderCellFooter）。一時退出中のセルは teach.css の :has() で減光する
   function cellFooter(s) {
-    const st = attendance[s.id] && attendance[s.id].status;
-    if (st === ATTENDANCE_STATUS.AWAY) return <span className="cell-foot is-away">一時退出中</span>;
+    const a = attendance[s.id];
+    const st = a && a.status;
+    if (st === ATTENDANCE_STATUS.AWAY) {
+      return <span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span>;
+    }
     if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <span className="cell-foot is-absent">欠課</span>;
     return null;
   }
@@ -448,7 +503,9 @@ function TeachBody() {
           )}
 
           <div className="grid-head">
-            <h6 className="section-label" style={{ margin: 0 }}>生徒 <span className="count">{students.length}人</span></h6>
+            <h6 className="section-label" style={{ margin: 0 }}>
+              生徒 <span className="count">入室 {counts.present}人 / {students.length}人</span>
+            </h6>
             <div className="legend">
               <span><i className="sw sw-hand" />挙手中</span>
               <span><i className="sw sw-away" />一時退出中</span>
@@ -505,7 +562,7 @@ function TeachBody() {
         </aside>
       </main>
 
-      <RoomAudio room={room} />
+      <RoomAudio room={room} spotlightUserId={spotlightUserId} />
 
       {confirmEnd && (
         <div className="dialog-backdrop">

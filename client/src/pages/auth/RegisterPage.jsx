@@ -1,29 +1,38 @@
 // 会員登録（ロール選択） — 担当：W5（デザイン：docs/design/02_会員登録）
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ERROR_CODES, ROLES } from '@sotsuken/shared/constants';
+import { ERROR_CODES, LIMITS, ROLES } from '@sotsuken/shared/constants';
 import { post } from '../../api/client.js';
 import PasswordInput, { APP_NAME } from './PasswordInput.jsx';
 import './auth.css';
 
-// 長さの上限は docs/03_DB設計.md の users（name 30 / login_id 50）
-const NAME_MAX = 30;
-const LOGIN_ID_MAX = 50;
+// 上限は LIMITS（docs/04 §6）から読む
+const LOGIN_ID_RE = new RegExp(LIMITS.LOGIN_ID_PATTERN);
 
 const ROLE_CARDS = [
   { role: ROLES.TEACHER, title: '先生', desc: ['クラスを作って', '授業を配信する'], icon: '🧑‍🏫' },
   { role: ROLES.STUDENT, title: '生徒', desc: ['参加コードでクラスに入って', '授業を受ける'], icon: '🎓' },
 ];
 
+/** UTF-8 のバイト数（bcrypt の上限 72 バイトの確認用） */
+function byteLength(s) {
+  return new TextEncoder().encode(s).length;
+}
+
 function validate({ name, loginId, password, passwordConfirm }) {
   const errors = {};
+  const id = loginId.trim();
   if (!name.trim()) errors.name = '表示名を入力してください';
-  else if (name.trim().length > NAME_MAX) errors.name = `表示名は${NAME_MAX}文字以内にしてください`;
-  if (!loginId.trim()) errors.loginId = 'ログインIDを入力してください';
-  else if (!/^[A-Za-z0-9_-]+$/.test(loginId.trim())) errors.loginId = 'ログインIDは半角英数字で入力してください';
-  else if (loginId.trim().length > LOGIN_ID_MAX) errors.loginId = `ログインIDは${LOGIN_ID_MAX}文字以内にしてください`;
+  else if (name.trim().length > LIMITS.NAME_MAX) errors.name = `表示名は${LIMITS.NAME_MAX}文字以内にしてください`;
+  if (!id) errors.loginId = 'ログインIDを入力してください';
+  else if (!LOGIN_ID_RE.test(id)) errors.loginId = 'ログインIDは半角英数字と _ . - で入力してください';
+  else if (id.length < LIMITS.LOGIN_ID_MIN || id.length > LIMITS.LOGIN_ID_MAX)
+    errors.loginId = `ログインIDは${LIMITS.LOGIN_ID_MIN}〜${LIMITS.LOGIN_ID_MAX}文字にしてください`;
   if (!password) errors.password = 'パスワードを入力してください';
-  if (password && passwordConfirm !== password) errors.passwordConfirm = 'パスワードが一致しません';
+  else if (password.length < LIMITS.PASSWORD_MIN) errors.password = `パスワードは${LIMITS.PASSWORD_MIN}文字以上にしてください`;
+  else if (byteLength(password) > LIMITS.PASSWORD_MAX_BYTES) errors.password = 'パスワードが長すぎます';
+  if (!passwordConfirm) errors.passwordConfirm = '確認用のパスワードを入力してください';
+  else if (passwordConfirm !== password) errors.passwordConfirm = 'パスワードが一致しません';
   return errors;
 }
 

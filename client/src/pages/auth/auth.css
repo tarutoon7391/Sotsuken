@@ -140,7 +140,7 @@
   .icon-actions { align-items: center; }
   .icon-actions .btn { align-self: center; }
   .app-header .header-title { font-size: 16px; }
-  .app-header .user-name { display: none; }
+  .app-header .person-name { display: none; }
   .back-link { padding: 0; width: 36px; height: 36px; }
   .back-link .back-text { display: none; }
 }
