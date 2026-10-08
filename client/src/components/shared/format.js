@@ -40,3 +40,9 @@ export function formatBytes(n) {
   if (b >= 1024) return `${Math.round(b / 1024)}KB`;
   return `${b}B`;
 }
+
+/** 参加コード "ABCD2345" → "ABCD-2345"（表示用。入力のハイフンはサーバーが取り除く） */
+export function formatJoinCode(code) {
+  const s = String(code || '');
+  return s.length === 8 ? `${s.slice(0, 4)}-${s.slice(4)}` : s;
+}

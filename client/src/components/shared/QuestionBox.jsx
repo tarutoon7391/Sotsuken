@@ -11,7 +11,7 @@
 // - 匿名の質問：生徒には「匿名」、先生には「匿名（本名）」を薄く出す（user はサーバーが先生にだけ含める）
 // - 先生のときは投稿フォームを出さない
 import { useMemo, useState } from 'react';
-import { QUESTION_STATUS } from '@sotsuken/shared/constants';
+import { LIMITS, QUESTION_STATUS } from '@sotsuken/shared/constants';
 import Avatar from './Avatar.jsx';
 import { formatTime } from './format.js';
 
@@ -75,6 +75,8 @@ export default function QuestionBox({ questions = [], onPost, onMarkAnswered, is
                 <span>
                   {showUser ? q.user.name : '匿名'}
                   {q.is_anonymous && isTeacher && q.user && <span className="real">（{q.user.name}）</span>}
+                  {/* 生徒側で匿名なのに user があるのは自分の投稿だけ（POST のレスポンスは本人に user を含む） */}
+                  {q.is_anonymous && !isTeacher && q.user && <span className="real">（自分）</span>}
                 </span>
                 <time className="time" dateTime={q.created_at}>{formatTime(q.created_at)}</time>
                 {answered && <span className="tag tag-accent">回答済み</span>}
@@ -97,6 +99,7 @@ export default function QuestionBox({ questions = [], onPost, onMarkAnswered, is
           <textarea
             className="input"
             placeholder="先生に質問する"
+            maxLength={LIMITS.BODY_MAX}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />

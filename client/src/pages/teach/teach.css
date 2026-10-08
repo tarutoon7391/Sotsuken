@@ -124,3 +124,6 @@
 .teach-app .before-band { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 13px; flex: none; }
 .teach-app .before-band .btn { margin-left: auto; }
 .teach-app .auto-note { font-size: 11px; color: var(--color-neutral-600); }
+
+/* 一時退出中のセルを減光（W3 StudentGrid のセルに、こちらの cellFooter が入っているかで判定） */
+.teach-app .lk-grid__cell:has(.cell-foot.is-away) { opacity: .45; }

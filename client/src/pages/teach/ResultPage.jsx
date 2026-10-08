@@ -1,16 +1,17 @@
 // 授業結果 — 担当：W5（デザイン：docs/design/08_授業結果）
 // API：GET /lessons/:id, /classes/:id, /lessons/:id/attendance, /lessons/:id/understanding（totals）,
-//      /lessons/:id/questions, /lessons/:id/files?kind=material, PATCH /questions/:id
-// 確認ボタンの応答率は、授業の確認一覧を取る API が docs/04 に無いため未表示（manager に確認中）
-import { useEffect, useMemo, useState } from 'react';
+//      /lessons/:id/questions, /lessons/:id/files?kind=material, /lessons/:id/attention（応答率）,
+//      PATCH /questions/:id（ended でも可・v4.3）
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ATTENDANCE_STATUS, FILE_KINDS, LESSON_STATUS, QUESTION_STATUS, ROLES } from '@sotsuken/shared/constants';
 import { get, patch } from '../../api/client.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
+import useToast from '../../components/shared/useToast.jsx';
 import { formatBytes, formatDateTime, formatTime } from '../../components/shared/format.js';
-import { fileKindLabel } from '../classes/ClassDetailPage.jsx';
+import { FileLink, fileKindLabel } from '../classes/ClassDetailPage.jsx';
 import './result.css';
 
 export default function ResultPage() {
@@ -31,17 +32,25 @@ function ResultBody() {
   const [totals, setTotals] = useState({ understood: 0, confused: 0, again: 0 });
   const [questions, setQuestions] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [checks, setChecks] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const [toast, showToast] = useToast(3000);
+  // 補助データの失敗はトーストで知らせる（401/403/404 は client.js が遷移させる）
+  const warn = useCallback((err) => showToast(err.message), [showToast]);
 
   useEffect(() => {
-    get(`/lessons/${lessonId}`).then((l) => {
-      setLesson(l);
-      get(`/classes/${l.class_id}`).then(setCls);
-    });
-    get(`/lessons/${lessonId}/attendance`).then((r) => setAttendance(r || []));
-    get(`/lessons/${lessonId}/understanding`).then((u) => u && setTotals(u.totals));
-    get(`/lessons/${lessonId}/questions`).then((r) => setQuestions(r || []));
-    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL }).then((r) => setMaterials(r || []));
-  }, [lessonId]);
+    get(`/lessons/${lessonId}`)
+      .then((l) => {
+        setLesson(l);
+        get(`/classes/${l.class_id}`).then(setCls).catch(warn);
+      })
+      .catch((err) => setLoadError(err.message));
+    get(`/lessons/${lessonId}/attendance`).then((r) => setAttendance(r || [])).catch(warn);
+    get(`/lessons/${lessonId}/understanding`).then((u) => u && setTotals(u.totals)).catch(warn);
+    get(`/lessons/${lessonId}/questions`).then((r) => setQuestions(r || [])).catch(warn);
+    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL }).then((r) => setMaterials(r || [])).catch(warn);
+    get(`/lessons/${lessonId}/attention`).then((r) => setChecks(r || [])).catch(warn);
+  }, [lessonId, warn]);
 
   // 挙手のみ（body なし）は質問一覧に含めない。未回答を先に
   const posts = useMemo(
@@ -56,7 +65,10 @@ function ResultBody() {
     [questions]
   );
 
-  if (!lesson) return <p className="page-loading">読み込み中…</p>;
+  if (!lesson) {
+    if (loadError) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
+    return <p className="page-loading">読み込み中…</p>;
+  }
 
   const isEnded = lesson.status === LESSON_STATUS.ENDED;
   const present = attendance.filter((r) => r.status === ATTENDANCE_STATUS.PRESENT).length;
@@ -70,9 +82,18 @@ function ResultBody() {
       ? Math.round((new Date(lesson.ended_at) - new Date(lesson.started_at)) / 60000)
       : null;
 
+  // 確認ボタンの応答率：全確認の応答数の合計 ÷ 対象者数の合計
+  const ackResponded = checks.reduce((n, c) => n + c.responded_count, 0);
+  const ackTotal = checks.reduce((n, c) => n + c.responded_count + c.pending_count, 0);
+  const ackRate = ackTotal ? Math.round((ackResponded / ackTotal) * 100) : null;
+
   async function markAnswered(qid) {
-    await patch(`/questions/${qid}`, { status: QUESTION_STATUS.ANSWERED });
-    setQuestions((list) => list.map((q) => (q.id === qid ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
+    try {
+      await patch(`/questions/${qid}`, { status: QUESTION_STATUS.ANSWERED });
+      setQuestions((list) => list.map((q) => (q.id === qid ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
+    } catch (err) {
+      showToast(err.message);
+    }
   }
 
   const bars = [
@@ -118,12 +139,18 @@ function ResultBody() {
                 <div className="stat-sub">出席率 ・ {present} / {attendance.length} 人</div>
               </div>
               <div className="stat">
-                <div className="stat-value">—</div>
-                <div className="stat-sub">確認ボタンの応答率（集計 API 未定）</div>
+                <div className="stat-value">
+                  {ackRate === null ? '—' : <>{ackRate}<span className="stat-unit">%</span></>}
+                </div>
+                <div className="stat-sub">
+                  確認ボタンの応答率 ・ {ackTotal ? `${ackResponded} / ${ackTotal} 回` : '確認なし'}
+                </div>
               </div>
               <div className="stat">
                 <div className="stat-value">{posts.length}</div>
-                <div className="stat-sub">質問 ・ <span className={unanswered ? 'unanswered' : ''}>未回答 {unanswered}</span></div>
+                <div className="stat-sub">
+                  質問 ・ {unanswered ? <span className="unanswered">未回答 {unanswered}</span> : '未回答なし'}
+                </div>
               </div>
               <div className="stat">
                 <div className="stat-value">{totals.confused}</div>
@@ -210,11 +237,11 @@ function ResultBody() {
                   const kind = fileKindLabel(f.mime);
                   return (
                     <li key={f.id}>
-                      <a className="mat-item" href={f.url} target="_blank" rel="noopener noreferrer">
-                        <span className={`mat-kind ${kind === 'IMG' ? 'mat-kind-img' : 'mat-kind-pdf'}`}>{kind}</span>
+                      <FileLink className="mat-item" file={f}>
+                        <span className={`mat-kind ${kind === '画像' ? 'mat-kind-img' : 'mat-kind-pdf'}`}>{kind}</span>
                         <span className="mat-name">{f.file_name}</span>
                         <span className="mat-pages">{formatBytes(f.size)}</span>
-                      </a>
+                      </FileLink>
                     </li>
                   );
                 })}
@@ -223,6 +250,7 @@ function ResultBody() {
           </section>
         </aside>
       </main>
+      {toast}
     </div>
   );
 }

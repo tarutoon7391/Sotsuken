@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { ALLOWED_UPLOAD_MIMES, DEFAULTS, LESSON_STATUS } from '@sotsuken/shared/constants';
 import Avatar from '../../components/shared/Avatar.jsx';
 import { formatBytes, formatDuration } from '../../components/shared/format.js';
-import { fileKindLabel } from '../classes/ClassDetailPage.jsx';
+import { FileLink, fileKindLabel, useArmed } from '../classes/ClassDetailPage.jsx';
 
 /** 見出しを押すと折りたためるパネル */
 export function Panel({ label, right, children, className = '', defaultOpen = true }) {
@@ -60,7 +60,9 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
   const responded = result ? result.responded.length : 0;
   const total = result ? result.responded.length + result.pending.length : 0;
   const remainSec = Math.max(0, Math.ceil((deadline - now) / 1000));
-  const totalSec = check && check.timeout_sec ? check.timeout_sec : DEFAULTS.ATTENTION_TIMEOUT_SEC;
+  // 全体の秒数は issued_at〜deadline_at（自動発動の分も同じ）
+  const issued = check && check.issued_at ? new Date(check.issued_at).getTime() : 0;
+  const totalSec = issued && deadline > issued ? (deadline - issued) / 1000 : DEFAULTS.ATTENTION_TIMEOUT_SEC;
 
   return (
     <Panel label="確認">
@@ -76,6 +78,7 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
       )}
       {running && (
         <div>
+          {check.auto && <span className="tag tag-neutral" style={{ marginBottom: 6 }}>自動で送信</span>}
           <div className="check-run">
             <span className={`countdown${remainSec <= 10 ? ' is-low' : ''}`}>{remainSec}</span>
             <div className="stat">
@@ -135,7 +138,7 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
 /** 資料：一覧＋アップロード＋削除（2回押し） */
 export function MaterialPanel({ files, onUpload, onDelete, error }) {
   const fileRef = useRef(null);
-  const [armed, setArmed] = useState(null);
+  const [armed, setArmed] = useArmed(); // 3秒押さなければ元に戻る
 
   function pick(e) {
     const file = e.target.files && e.target.files[0];
@@ -157,13 +160,12 @@ export function MaterialPanel({ files, onUpload, onDelete, error }) {
         {files.map((f) => (
           <div key={f.id} className={`mat-item${f.mime && f.mime.startsWith('image/') ? ' is-img' : ''}`}>
             <span className="tiny strong">{fileKindLabel(f.mime)}</span>
-            <a className="name" href={f.url} target="_blank" rel="noopener noreferrer" title={f.file_name}>{f.file_name}</a>
+            <FileLink className="name" file={f} title={f.file_name} />
             <span className="pages">{formatBytes(f.size)}</span>
             <button
               type="button"
               className={`mat-del${armed === f.id ? ' is-armed' : ''}`}
               aria-label={`${f.file_name} を削除`}
-              onBlur={() => setArmed(null)}
               onClick={() => {
                 if (armed !== f.id) return setArmed(f.id);
                 setArmed(null);

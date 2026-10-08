@@ -8,10 +8,11 @@
 //   onLoadMore?: () => void                        過去分の読み込み（GET /chat?before=）
 //
 // - messages の並び順は問わない（id の昇順に並べ替えて表示する）
-// - 添付は ALLOWED_UPLOAD_MIMES・FILE_MAX_BYTES をここで事前チェックし、通ったものだけ onAttach に渡す
+// - 添付は ALLOWED_UPLOAD_MIMES・LIMITS.MATERIAL_MAX_BYTES をここで事前チェックし、通ったものだけ onAttach に渡す
 // - 本文は React のテキストとして描画する（HTML として解釈しない）
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_UPLOAD_MIMES, DEFAULTS, ROLES } from '@sotsuken/shared/constants';
+import { ALLOWED_UPLOAD_MIMES, LIMITS, ROLES } from '@sotsuken/shared/constants';
+import { safeUrl } from '../../lib/safe-url.js';
 import Avatar from './Avatar.jsx';
 import RoleBadge from './RoleBadge.jsx';
 import { formatTime, formatBytes } from './format.js';
@@ -20,15 +21,17 @@ const ACCEPT = ALLOWED_UPLOAD_MIMES.join(',');
 
 function FileView({ file }) {
   if (!file) return null;
+  const url = safeUrl(file.url);
+  if (!url) return <span className="msg-file">{file.file_name}</span>; // 安全でない URL はリンクにしない
   if (file.mime && file.mime.startsWith('image/')) {
     return (
-      <a className="msg-thumb-link" href={file.url} target="_blank" rel="noopener noreferrer">
-        <img className="msg-thumb" src={file.url} alt={file.file_name} loading="lazy" />
+      <a className="msg-thumb-link" href={url} target="_blank" rel="noopener noreferrer">
+        <img className="msg-thumb" src={url} alt={file.file_name} loading="lazy" />
       </a>
     );
   }
   return (
-    <a className="msg-file" href={file.url} target="_blank" rel="noopener noreferrer">
+    <a className="msg-file" href={url} target="_blank" rel="noopener noreferrer">
       <span className="msg-file-icon" aria-hidden="true">📄</span>
       <span className="msg-file-name">{file.file_name}</span>
       {file.size ? <span className="msg-file-size">{formatBytes(file.size)}</span> : null}
@@ -97,8 +100,8 @@ export default function ChatPanel({ messages = [], onSend, onAttach, currentUser
       setError('画像・PDF・Office 文書のみ添付できます');
       return;
     }
-    if (file.size > DEFAULTS.FILE_MAX_BYTES) {
-      setError(`ファイルが大きすぎます（${formatBytes(DEFAULTS.FILE_MAX_BYTES)}まで）`);
+    if (file.size > LIMITS.MATERIAL_MAX_BYTES) {
+      setError(`ファイルが大きすぎます（${formatBytes(LIMITS.MATERIAL_MAX_BYTES)}まで）`);
       return;
     }
     stickToBottom.current = true;
@@ -156,6 +159,7 @@ export default function ChatPanel({ messages = [], onSend, onAttach, currentUser
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
+          maxLength={LIMITS.BODY_MAX}
         />
         <button type="button" className="btn btn-primary" onClick={send} disabled={!draft.trim()}>
           送信

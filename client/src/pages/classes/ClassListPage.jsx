@@ -1,16 +1,17 @@
 // クラス一覧 — 担当：W5（デザイン：docs/design/04_クラス一覧）
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DEFAULTS, ROLES } from '@sotsuken/shared/constants';
+import { DEFAULTS, LIMITS, ROLES } from '@sotsuken/shared/constants';
 import { get, post } from '../../api/client.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
 import useToast from '../../components/shared/useToast.jsx';
+import useEscape from '../../components/shared/useEscape.js';
+import { formatJoinCode } from '../../components/shared/format.js';
 import { APP_NAME } from '../auth/PasswordInput.jsx';
 import './classes.css';
 
-const CLASS_NAME_MAX = 50; // classes.name VARCHAR(50)
 
 /** 授業画面のパス（先生は teach、生徒は learn） */
 export function lessonPath(lessonId, role) {
@@ -60,7 +61,9 @@ function ClassListBody() {
           <div className="list-head">
             <div>
               <h3>クラス一覧</h3>
-              <p className="sub">授業中のクラスがあれば、ここからすぐ入れます</p>
+              <p className="sub">
+                {isTeacher ? 'クラスを作って参加コードを生徒に伝えましょう。授業中のクラスはここからすぐ入れます' : '授業中のクラスがあれば、ここからすぐ入れます'}
+              </p>
             </div>
             {isTeacher ? (
               <button className="btn btn-primary" onClick={() => setDialog('create')}>＋ クラスを作成</button>
@@ -128,7 +131,7 @@ function ClassListBody() {
             ) : (
               <div className="empty">
                 <h4>先生から参加コードをもらって参加しましょう</h4>
-                <p>参加コードは {DEFAULTS.JOIN_CODE_LENGTH} 桁の英数字です。先生に聞いてみてください。</p>
+                <p>参加コードは「ABCD-2345」のような {DEFAULTS.JOIN_CODE_LENGTH} 桁の英数字です。先生に聞いてみてください。</p>
                 <button className="btn btn-primary btn-lg" onClick={() => setDialog('join')}>参加コードで参加</button>
               </div>
             )
@@ -146,14 +149,14 @@ function ClassListBody() {
         />
       )}
       {dialog && dialog.created && (
-        <CreatedDialog created={dialog.created} onClose={() => setDialog(null)} onCopied={() => showToast('コピーしました')} />
+        <CreatedDialog created={dialog.created} onClose={() => setDialog(null)} onCopied={() => showToast('参加コードをコピーしました')} />
       )}
       {dialog === 'join' && (
         <JoinDialog
           onClose={() => setDialog(null)}
-          onJoined={() => {
+          onJoined={(joined) => {
             setDialog(null);
-            showToast('クラスに参加しました');
+            showToast(joined && joined.name ? `「${joined.name}」に参加しました` : 'クラスに参加しました');
             load();
           }}
         />
@@ -164,6 +167,7 @@ function ClassListBody() {
 }
 
 function CreateClassDialog({ onClose, onCreated }) {
+  useEscape(onClose);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -172,7 +176,7 @@ function CreateClassDialog({ onClose, onCreated }) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return setError('クラス名を入力してください');
-    if (trimmed.length > CLASS_NAME_MAX) return setError(`クラス名は${CLASS_NAME_MAX}文字以内にしてください`);
+    if (trimmed.length > LIMITS.CLASS_NAME_MAX) return setError(`クラス名は${LIMITS.CLASS_NAME_MAX}文字以内にしてください`);
     setBusy(true);
     try {
       const res = await post('/classes', { name: trimmed });
@@ -210,18 +214,19 @@ function CreateClassDialog({ onClose, onCreated }) {
 }
 
 function CreatedDialog({ created, onClose, onCopied }) {
+  useEscape(onClose);
   function copy() {
-    if (navigator.clipboard) navigator.clipboard.writeText(created.join_code).catch(() => {});
+    if (navigator.clipboard) navigator.clipboard.writeText(formatJoinCode(created.join_code)).catch(() => {});
     onCopied();
   }
   return (
-    <div className="dialog-backdrop">
+    <div className="dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-labelledby="dlgCreatedTitle">
         <h6 className="section-label" style={{ margin: 0 }}>✓ クラスを作成しました</h6>
         <div className="dialog-title" id="dlgCreatedTitle">{created.name}</div>
         <div className="dialog-body">生徒にこの参加コードを伝えてください。クラス詳細からいつでも確認できます。</div>
         <div className="join-code">
-          <span className="join-code-value">{created.join_code}</span>
+          <span className="join-code-value">{formatJoinCode(created.join_code)}</span>
           <button type="button" className="btn btn-secondary" onClick={copy}>コピー</button>
         </div>
         <div className="dialog-actions">
@@ -233,6 +238,7 @@ function CreatedDialog({ created, onClose, onCopied }) {
 }
 
 function JoinDialog({ onClose, onJoined }) {
+  useEscape(onClose);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -244,8 +250,8 @@ function JoinDialog({ onClose, onJoined }) {
     setBusy(true);
     try {
       // 404/400 はこの場でメッセージを出す（エラー画面へ飛ばさない）
-      await post('/classes/join', { join_code: value }, { redirect: false });
-      onJoined();
+      const joined = await post('/classes/join', { join_code: value }, { redirect: false });
+      onJoined(joined);
     } catch (err) {
       setError(
         err.status === 404 || err.status === 400 ? '参加コードが違います。先生に確認してください' : err.message
@@ -264,12 +270,13 @@ function JoinDialog({ onClose, onJoined }) {
           <input
             className={`input input-code${error ? ' is-error' : ''}`}
             id="joinCode"
-            maxLength={DEFAULTS.JOIN_CODE_LENGTH}
+            maxLength={DEFAULTS.JOIN_CODE_LENGTH + 1}
+            placeholder="ABCD-2345"
             autoComplete="off"
             spellCheck="false"
             autoFocus
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9]/g, ''))}
+            onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
           />
           {error && <div className="field-error">{error}</div>}
         </div>

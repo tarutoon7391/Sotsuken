@@ -82,3 +82,10 @@ function LearnPageBody() { const { user } = useCurrentUser(); /* ... */ }
 ## 日時表示
 
 `components/shared/format.js` に `formatTime(iso)`（日本時間 "14:05"）、`formatDuration(sec)`（"m:ss"）などを置いた。使ってよい。
+
+## 監査後の変更（2026-10-08・props は変更なし）
+
+- `Avatar` / `ChatPanel`：`icon_url`・`file.url` を `client/src/lib/safe-url.js` に通す。安全でない URL のときは、アイコンは頭文字、添付はリンクなしのファイル名で表示する
+- `ChatPanel` / `QuestionBox`：入力欄に `LIMITS.BODY_MAX`（1000文字）の上限を付けた。添付の上限は `LIMITS.MATERIAL_MAX_BYTES`
+- `QuestionBox`（生徒側）：匿名なのに `user` が付いている質問（＝POST のレスポンスで受け取った自分の投稿）は「匿名（自分）」と表示する。**W4 へ**：自分の投稿は POST のレスポンス（`user` 入り）で一覧に入れておくと、この表示になる。`question:new`（`user` なし）で後から上書きすると「匿名」に戻るので、id が同じなら既存の `user` を残してマージしてほしい
+- 追加：`components/shared/useEscape.js`（Esc でダイアログを閉じる）

@@ -3,18 +3,17 @@
 //      POST /classes/:id/lessons, PATCH /lessons/:id, GET /lessons/:id/files?kind=material, DELETE /files/:id
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { FILE_KINDS, LESSON_STATUS, ROLES } from '@sotsuken/shared/constants';
+import { FILE_KINDS, LESSON_STATUS, LIMITS, ROLES } from '@sotsuken/shared/constants';
 import { del, get, patch, post } from '../../api/client.js';
+import { safeUrl } from '../../lib/safe-url.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
 import useToast from '../../components/shared/useToast.jsx';
-import { formatDateTime, formatBytes } from '../../components/shared/format.js';
+import useEscape from '../../components/shared/useEscape.js';
+import { formatDateTime, formatBytes, formatJoinCode } from '../../components/shared/format.js';
 import { lessonPath } from './ClassListPage.jsx';
 import './classes.css';
-
-const TITLE_MAX = 100; // lessons.title VARCHAR(100)
-const TAG_MAX = 30; // tags.name VARCHAR(30)
 
 export default function ClassDetailPage() {
   return (
@@ -36,22 +35,33 @@ function ClassDetailBody() {
   const [tab, setTab] = useState('lessons');
   const [dialog, setDialog] = useState(null); // { lesson?: LessonSummary }（lesson があれば編集）
   const [openFiles, setOpenFiles] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [toast, showToast] = useToast();
+  const fail = useCallback((err) => setLoadError(err.message), []); // 401/403/404 は client.js が遷移させる
 
   const loadLessons = useCallback(() => {
-    get(`/classes/${classId}/lessons`, { tag: tagFilter || undefined }).then((rows) => setLessons(rows || []));
-  }, [classId, tagFilter]);
+    get(`/classes/${classId}/lessons`, { tag: tagFilter || undefined })
+      .then((rows) => setLessons(rows || []))
+      .catch(fail);
+  }, [classId, tagFilter, fail]);
   const loadTags = useCallback(() => {
-    get(`/classes/${classId}/tags`).then((rows) => setTags(rows || []));
-  }, [classId]);
+    get(`/classes/${classId}/tags`)
+      .then((rows) => setTags(rows || []))
+      .catch(fail);
+  }, [classId, fail]);
 
   useEffect(() => {
-    get(`/classes/${classId}`).then(setCls);
+    get(`/classes/${classId}`).then(setCls).catch(fail);
     loadTags();
-    if (isTeacher) get(`/classes/${classId}/members`).then((rows) => setMembers(rows || []));
-  }, [classId, isTeacher, loadTags]);
+    if (isTeacher) {
+      get(`/classes/${classId}/members`)
+        .then((rows) => setMembers(rows || []))
+        .catch(fail);
+    }
+  }, [classId, isTeacher, loadTags, fail]);
   useEffect(loadLessons, [loadLessons]);
 
+  if (loadError && (!cls || !lessons)) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
   if (!cls || !lessons) return <p className="page-loading">読み込み中…</p>;
 
   const live = lessons.find((l) => l.status === LESSON_STATUS.LIVE) || null;
@@ -61,9 +71,11 @@ function ClassDetailBody() {
   const students = members.filter((m) => m.role === ROLES.STUDENT);
 
   function copyCode() {
-    if (navigator.clipboard) navigator.clipboard.writeText(cls.join_code).catch(() => {});
-    showToast('コピーしました');
+    if (navigator.clipboard) navigator.clipboard.writeText(formatJoinCode(cls.join_code)).catch(() => {});
+    showToast('参加コードをコピーしました');
   }
+  // 絞り込みなしで授業が0件なら、見出しの「授業を作成」は出さず空状態の案内だけにする
+  const noLessons = !tagFilter && lessons.length === 0;
 
   return (
     <div className="app classes-page">
@@ -85,7 +97,9 @@ function ClassDetailBody() {
       <main className="app-main">
         <div className="tabs tabs-fill detail-tabs" role="tablist">
           <button className={`tab${tab === 'lessons' ? ' is-on' : ''}`} role="tab" onClick={() => setTab('lessons')}>授業</button>
-          <button className={`tab${tab === 'members' ? ' is-on' : ''}`} role="tab" onClick={() => setTab('members')}>メンバー</button>
+          <button className={`tab${tab === 'members' ? ' is-on' : ''}`} role="tab" onClick={() => setTab('members')}>
+            メンバー {isTeacher && <span className="count muted">{students.length + 1}</span>}
+          </button>
         </div>
 
         <div className="detail-wrap">
@@ -94,7 +108,7 @@ function ClassDetailBody() {
               <div className="code-block">
                 <h6 className="section-label">参加コード</h6>
                 <div className="join-code">
-                  <span className="join-code-value">{cls.join_code}</span>
+                  <span className="join-code-value">{formatJoinCode(cls.join_code)}</span>
                   <button type="button" className="btn btn-secondary" onClick={copyCode}>コピー</button>
                 </div>
                 <p className="hint small muted">生徒はクラス一覧の「参加コードで参加」からこのコードを入力します</p>
@@ -116,12 +130,14 @@ function ClassDetailBody() {
               </div>
             )}
 
-            <div className="lessons-head">
-              <h6 className="section-label">授業 <span className="count">{lessons.length}</span></h6>
-              {isTeacher && (
-                <button type="button" className="btn btn-secondary" onClick={() => setDialog({})}>＋ 授業を作成</button>
-              )}
-            </div>
+            {!noLessons && (
+              <div className="lessons-head">
+                <h6 className="section-label">授業 <span className="count">{lessons.length}</span></h6>
+                {isTeacher && (
+                  <button type="button" className="btn btn-secondary" onClick={() => setDialog({})}>＋ 授業を作成</button>
+                )}
+              </div>
+            )}
 
             {tags.length > 0 && (
               <div className="tag-filter" role="group" aria-label="タグで絞り込み">
@@ -171,14 +187,22 @@ function ClassDetailBody() {
                       onEdit={() => setDialog({ lesson: l })}
                     />
                     {openFiles === l.id && (
-                      <LessonFiles lessonId={l.id} user={user} onDeleted={() => { loadLessons(); showToast('資料を削除しました'); }} />
+                      <LessonFiles
+                        lessonId={l.id}
+                        user={user}
+                        onDeleted={(name) => {
+                          loadLessons();
+                          showToast(`「${name}」を削除しました`);
+                        }}
+                        onError={showToast}
+                      />
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {!tagFilter && lessons.length === 0 && (
+            {noLessons && (
               isTeacher ? (
                 <div className="empty">
                   <h4>最初の授業を作成しましょう</h4>
@@ -246,7 +270,7 @@ function ClassDetailBody() {
           onClose={() => setDialog(null)}
           onSaved={(title) => {
             setDialog(null);
-            showToast(dialog.lesson ? '授業を更新しました' : `「${title}」を作成しました`);
+            showToast(dialog.lesson ? `「${title}」を保存しました` : `「${title}」を作成しました`);
             loadLessons();
             loadTags();
           }}
@@ -319,21 +343,30 @@ function LessonRow({ lesson, user, hasLive, filesOpen, onToggleFiles, onEdit }) 
 }
 
 /** 終了済み授業の資料一覧（先生は自分がアップした資料を2回押しで削除） */
-function LessonFiles({ lessonId, user, onDeleted }) {
+function LessonFiles({ lessonId, user, onDeleted, onError }) {
   const [files, setFiles] = useState(null);
-  const [armed, setArmed] = useState(null);
+  const [armed, setArmed] = useArmed();
 
   const load = useCallback(() => {
-    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL }).then((rows) => setFiles(rows || []));
-  }, [lessonId]);
+    get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL })
+      .then((rows) => setFiles(rows || []))
+      .catch((err) => {
+        setFiles([]);
+        onError(err.message);
+      });
+  }, [lessonId, onError]);
   useEffect(load, [load]);
 
   async function remove(f) {
     if (armed !== f.id) return setArmed(f.id);
     setArmed(null);
-    await del(`/files/${f.id}`, { redirect: false });
-    load();
-    onDeleted();
+    try {
+      await del(`/files/${f.id}`, { redirect: false });
+      load();
+      onDeleted(f.file_name);
+    } catch (err) {
+      onError(err.message);
+    }
   }
 
   if (!files) return <div className="lesson-files"><p className="small muted" style={{ margin: 0 }}>読み込み中…</p></div>;
@@ -345,7 +378,7 @@ function LessonFiles({ lessonId, user, onDeleted }) {
           <span className={`file-kind${f.mime && f.mime.startsWith('image/') ? ' is-img' : ''}`}>
             {fileKindLabel(f.mime)}
           </span>
-          <a className="file-name" href={f.url} target="_blank" rel="noopener noreferrer">{f.file_name}</a>
+          <FileLink className="file-name" file={f} />
           <span className="file-pages">{formatBytes(f.size)}</span>
           {f.uploader_id === user.id && (
             <button
@@ -353,7 +386,6 @@ function LessonFiles({ lessonId, user, onDeleted }) {
               className={`file-del${armed === f.id ? ' is-armed' : ''}`}
               aria-label={`${f.file_name} を削除`}
               onClick={() => remove(f)}
-              onBlur={() => setArmed(null)}
             >
               {armed === f.id ? '削除する' : '削除'}
             </button>
@@ -367,12 +399,36 @@ function LessonFiles({ lessonId, user, onDeleted }) {
 export function fileKindLabel(mime) {
   if (!mime) return 'FILE';
   if (mime === 'application/pdf') return 'PDF';
-  if (mime.startsWith('image/')) return 'IMG';
+  if (mime.startsWith('image/')) return '画像';
   return 'DOC';
+}
+
+/** 資料へのリンク（URL は safeUrl を通す。安全でなければリンクにしない） */
+export function FileLink({ file, className, title, children }) {
+  const url = safeUrl(file.url);
+  const label = children || file.file_name;
+  if (!url) return <span className={className}>{label}</span>;
+  return (
+    <a className={className} href={url} target="_blank" rel="noopener noreferrer" title={title}>
+      {label}
+    </a>
+  );
+}
+
+/** 削除ボタンの2回押し：1回目で「削除する」に変わり、3秒押さなければ元に戻る（モックどおり） */
+export function useArmed(ms = 3000) {
+  const [armed, setArmed] = useState(null);
+  useEffect(() => {
+    if (armed === null) return undefined;
+    const t = setTimeout(() => setArmed(null), ms);
+    return () => clearTimeout(t);
+  }, [armed, ms]);
+  return [armed, setArmed];
 }
 
 /** 授業の作成／編集ダイアログ（lesson があれば編集） */
 function LessonDialog({ classId, lesson, allTags, onClose, onSaved }) {
+  useEscape(onClose);
   const [title, setTitle] = useState(lesson ? lesson.title : '');
   const [picked, setPicked] = useState(lesson ? [...lesson.tags] : []);
   const [newTag, setNewTag] = useState('');
@@ -381,14 +437,22 @@ function LessonDialog({ classId, lesson, allTags, onClose, onSaved }) {
 
   const choices = [...new Set([...allTags.map((t) => t.name), ...picked])];
 
+  const tagsFull = picked.length >= LIMITS.TAGS_PER_LESSON_MAX;
+  const tooManyTags = `タグは${LIMITS.TAGS_PER_LESSON_MAX}個までです`;
+
   function toggle(name) {
+    if (!picked.includes(name) && tagsFull) return setError(tooManyTags);
+    setError('');
     setPicked((p) => (p.includes(name) ? p.filter((t) => t !== name) : [...p, name]));
   }
   function addTag() {
     const name = newTag.trim();
     if (!name) return;
-    if (name.length > TAG_MAX) return setError(`タグは${TAG_MAX}文字以内にしてください`);
-    if (!picked.includes(name)) setPicked([...picked, name]);
+    if (name.length > LIMITS.TAG_NAME_MAX) return setError(`タグは${LIMITS.TAG_NAME_MAX}文字以内にしてください`);
+    if (!picked.includes(name)) {
+      if (tagsFull) return setError(tooManyTags);
+      setPicked([...picked, name]);
+    }
     setNewTag('');
     setError('');
   }
@@ -397,7 +461,8 @@ function LessonDialog({ classId, lesson, allTags, onClose, onSaved }) {
     e.preventDefault();
     const t = title.trim();
     if (!t) return setError('タイトルを入力してください');
-    if (t.length > TITLE_MAX) return setError(`タイトルは${TITLE_MAX}文字以内にしてください`);
+    if (t.length > LIMITS.LESSON_TITLE_MAX) return setError(`タイトルは${LIMITS.LESSON_TITLE_MAX}文字以内にしてください`);
+    if (picked.length > LIMITS.TAGS_PER_LESSON_MAX) return setError(tooManyTags);
     setBusy(true);
     try {
       if (lesson) await patch(`/lessons/${lesson.id}`, { title: t, tags: picked });
@@ -444,7 +509,7 @@ function LessonDialog({ classId, lesson, allTags, onClose, onSaved }) {
             <input
               className="input"
               id="tagInput"
-              maxLength={TAG_MAX}
+              maxLength={LIMITS.TAG_NAME_MAX}
               placeholder="新しいタグ（例：二次関数）"
               autoComplete="off"
               value={newTag}

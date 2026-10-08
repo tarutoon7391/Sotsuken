@@ -1,7 +1,7 @@
 // プロフィール設定 — 担当：W5（デザイン：docs/design/03_プロフィール設定）
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DEFAULTS } from '@sotsuken/shared/constants';
+import { LIMITS } from '@sotsuken/shared/constants';
 import { post, put, upload } from '../../api/client.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import AppHeader from '../../components/shared/AppHeader.jsx';
@@ -11,7 +11,6 @@ import { formatBytes } from '../../components/shared/format.js';
 import { APP_NAME } from './PasswordInput.jsx';
 import './auth.css';
 
-const NAME_MAX = 30;
 const ICON_MIMES = ['image/png', 'image/jpeg'];
 
 export default function ProfilePage() {
@@ -41,8 +40,8 @@ function ProfileBody() {
       setIconError('JPG か PNG の画像を選んでください');
       return;
     }
-    if (file.size > DEFAULTS.FILE_MAX_BYTES) {
-      setIconError(`画像が大きすぎます（${formatBytes(DEFAULTS.FILE_MAX_BYTES)}まで）`);
+    if (file.size > LIMITS.ICON_MAX_BYTES) {
+      setIconError(`画像が大きすぎます（${formatBytes(LIMITS.ICON_MAX_BYTES)}まで）`);
       return;
     }
     const fd = new FormData();
@@ -60,7 +59,7 @@ function ProfileBody() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return setNameError('表示名を入力してください');
-    if (trimmed.length > NAME_MAX) return setNameError(`表示名は${NAME_MAX}文字以内にしてください`);
+    if (trimmed.length > LIMITS.NAME_MAX) return setNameError(`表示名は${LIMITS.NAME_MAX}文字以内にしてください`);
     setNameError('');
     setBusy(true);
     try {
@@ -85,7 +84,7 @@ function ProfileBody() {
   return (
     <div className="app auth-app">
       <AppHeader kicker={APP_NAME} title="プロフィール設定" user={user}>
-        <Link className="btn btn-secondary back-link" to="/classes">← クラス一覧へ戻る</Link>
+        <Link className="btn btn-secondary back-link" to="/classes" title="クラス一覧へ戻る">←<span className="back-text"> クラス一覧へ戻る</span></Link>
       </AppHeader>
 
       <main className="me-main">
@@ -101,7 +100,7 @@ function ProfileBody() {
                 <button className="btn btn-secondary" type="button" onClick={() => fileRef.current.click()}>
                   画像を選ぶ
                 </button>
-                <div className="field-hint">JPG・PNG。{formatBytes(DEFAULTS.FILE_MAX_BYTES)}までです</div>
+                <div className="field-hint">JPG・PNG。{formatBytes(LIMITS.ICON_MAX_BYTES)}までです</div>
                 {iconError && <div className="field-error" role="alert">{iconError}</div>}
               </div>
             </div>

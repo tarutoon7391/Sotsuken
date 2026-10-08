@@ -74,7 +74,7 @@ a.person:hover .person-name { color: var(--color-accent-700); }
 
 /* ---- 映像エリア（暗いパネル） ---- */
 .video-panel { position: relative; background: var(--color-neutral-900); border-radius: var(--radius-lg); overflow: hidden; display: grid; place-items: center; color: var(--color-neutral-200); }
-.video-label { position: absolute; top: 10px; left: 10px; z-index: 1; background: rgba(0,0,0,.45); color: var(--color-neutral-200); font-size: 12px; padding: 3px 9px; border-radius: var(--radius-md); }
+.video-label { position: absolute; top: 10px; left: 10px; z-index: 1; background: var(--color-overlay); color: var(--color-neutral-200); font-size: 12px; padding: 3px 9px; border-radius: var(--radius-md); }
 .video-center { text-align: center; font-size: 13px; color: var(--color-neutral-400); padding: 12px; }
 
 /* ---- 空状態 ---- */

@@ -25,7 +25,9 @@ export default function LoginPage() {
       await post('/login', { login_id: loginId.trim(), password }, { redirect: false });
       navigate('/classes', { replace: true });
     } catch (err) {
-      setError(err.status === 401 || err.status === 400 ? 'ログインIDまたはパスワードが違います' : err.message);
+      if (err.status === 401) setError('ログインIDまたはパスワードが違います');
+      else if (err.status === 400) setError('入力内容を確認してください');
+      else setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,10 @@ export default function LoginPage() {
                 spellCheck="false"
                 placeholder="例：hinata"
                 value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
+                onChange={(e) => {
+                  setLoginId(e.target.value);
+                  setError(''); // 入力を直したらエラー表示を消す
+                }}
                 aria-invalid={error ? 'true' : undefined}
               />
             </div>
@@ -65,7 +70,10 @@ export default function LoginPage() {
                 id="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={setPassword}
+                onChange={(v) => {
+                  setPassword(v);
+                  setError('');
+                }}
                 invalid={!!error}
               />
             </div>

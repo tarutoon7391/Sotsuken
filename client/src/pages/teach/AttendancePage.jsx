@@ -15,7 +15,9 @@ import { formatDuration, formatTime } from '../../components/shared/format.js';
 import './attendance.css';
 
 const NOTE_MAX = 100; // attendance.note VARCHAR(100)
-const SOON_SEC = 3 * 60; // 欠課まで残り3分で強調
+const SOON_SEC = 5 * 60; // 欠課まで残り5分で強調（モックどおり）
+const SOON_TOTAL_RATIO = 2 / 3; // 累積退出が閾値の 2/3 を超えたら強調
+const TIMEOUT_MIN_RANGE = [1, 180]; // away_timeout_min の範囲（docs/04 §6。LIMITS に無いのでここに置く）
 
 export const STATUS_LABEL = {
   [ATTENDANCE_STATUS.PRESENT]: '出席',
@@ -27,7 +29,7 @@ export const STATUS_TAG = {
   [ATTENDANCE_STATUS.AWAY]: 'tag-neutral',
   [ATTENDANCE_STATUS.ABSENT]: 'tag-accent-2',
 };
-const STATUS_ORDER = [ATTENDANCE_STATUS.ABSENT, ATTENDANCE_STATUS.AWAY, ATTENDANCE_STATUS.PRESENT];
+const STATUS_ORDER = [ATTENDANCE_STATUS.AWAY, ATTENDANCE_STATUS.ABSENT, ATTENDANCE_STATUS.PRESENT]; // モックの並び
 
 export default function AttendancePage() {
   return (
@@ -52,30 +54,41 @@ function AttendanceBody() {
   const [editing, setEditing] = useState(null);
   const [timeout, setTimeoutMin] = useState('');
 
+  const [loadError, setLoadError] = useState('');
+
   const load = useCallback(() => {
-    get(`/lessons/${lessonId}/attendance`).then((r) => {
-      setRows(r || []);
-      setLoadedAt(Date.now());
-    });
+    get(`/lessons/${lessonId}/attendance`)
+      .then((r) => {
+        setRows(r || []);
+        setLoadedAt(Date.now());
+      })
+      .catch((err) => setLoadError(err.message)); // 401/403/404 は client.js が遷移させる
   }, [lessonId]);
 
   useEffect(() => {
-    get(`/lessons/${lessonId}`).then((l) => {
-      setLesson(l);
-      setTimeoutMin(String(l.away_timeout_min));
-      get(`/classes/${l.class_id}`).then(setCls);
-    });
+    get(`/lessons/${lessonId}`)
+      .then((l) => {
+        setLesson(l);
+        setTimeoutMin(String(l.away_timeout_min));
+        get(`/classes/${l.class_id}`).then(setCls).catch(() => {}); // クラス名はヘッダーの補足だけなので無くても表示する
+      })
+      .catch((err) => setLoadError(err.message));
     load();
   }, [lessonId, load]);
 
   const isLive = lesson && lesson.status === LESSON_STATUS.LIVE;
   const isEnded = lesson && lesson.status === LESSON_STATUS.ENDED;
+  const subscribe = !!lesson && !isEnded;
 
-  // 授業中だけ Socket で状態を受け取る
+  // 終了済み以外は Socket で状態を受け取る（開始前に開いても lesson:started を受けられるように）
   useEffect(() => {
-    if (!isLive) return undefined;
+    if (!subscribe) return undefined;
     const socket = connectLesson(lessonId);
     socket.on(SERVER_EVENTS.ATTENDANCE_UPDATE, () => load()); // away_since・remaining も変わるので取り直す
+    socket.on(SERVER_EVENTS.LESSON_STARTED, () => {
+      setLesson((l) => ({ ...l, status: LESSON_STATUS.LIVE }));
+      load();
+    });
     socket.on(SERVER_EVENTS.LESSON_ENDED, () => {
       setLesson((l) => ({ ...l, status: LESSON_STATUS.ENDED }));
       load();
@@ -85,7 +98,7 @@ function AttendanceBody() {
       clearInterval(t);
       disconnectLesson();
     };
-  }, [isLive, lessonId, load]);
+  }, [subscribe, lessonId, load]);
 
   // 退出中の生徒は「読み込み時からの経過」を足して表示する
   const elapsedSinceLoad = isLive ? Math.max(0, Math.floor((now - loadedAt) / 1000)) : 0;
@@ -119,8 +132,9 @@ function AttendanceBody() {
   async function saveTimeout(e) {
     e.preventDefault();
     const min = Number(timeout);
-    if (!Number.isInteger(min) || min < 1 || min > 60) {
-      showToast('1〜60 の整数で入力してください');
+    const [lo, hi] = TIMEOUT_MIN_RANGE;
+    if (!Number.isInteger(min) || min < lo || min > hi) {
+      showToast(`${lo}〜${hi} の整数で入力してください`);
       return;
     }
     try {
@@ -144,6 +158,7 @@ function AttendanceBody() {
     }
   }
 
+  if (loadError && (!lesson || !rows)) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
   if (!lesson || !rows) return <p className="page-loading">読み込み中…</p>;
 
   // 終了後は出席／欠課の2値（一時退出は残らない）
@@ -195,8 +210,8 @@ function AttendanceBody() {
               id="timeoutMin"
               className="input"
               type="number"
-              min="1"
-              max="60"
+              min={TIMEOUT_MIN_RANGE[0]}
+              max={TIMEOUT_MIN_RANGE[1]}
               step="1"
               inputMode="numeric"
               value={timeout}
@@ -247,6 +262,7 @@ function AttendanceBody() {
             <tbody>
               {view.map((r) => {
                 const soon = r.status === ATTENDANCE_STATUS.AWAY && r.remain <= SOON_SEC;
+                const longTotal = r.total >= lesson.away_timeout_min * 60 * SOON_TOTAL_RATIO;
                 const isEditing = editing === r.user.id;
                 return [
                   <tr key={r.user.id} className={isEditing ? 'is-editing' : ''}>
@@ -267,7 +283,7 @@ function AttendanceBody() {
                     </td>
                     <td className="num">{r.joined_at ? formatTime(r.joined_at) : '—'}</td>
                     <td className="num">{r.status === ATTENDANCE_STATUS.AWAY && r.away_since ? formatTime(r.away_since) : '—'}</td>
-                    <td className={`num total${soon ? ' is-soon' : ''}`}>{formatDuration(r.total)}</td>
+                    <td className={`num total${soon || longTotal ? ' is-soon' : ''}`}>{formatDuration(r.total)}</td>
                     <td className="memo" title={r.note || ''}>{r.note || ''}</td>
                     <td>
                       <button type="button" className="btn btn-ghost" onClick={() => setEditing(isEditing ? null : r.user.id)}>修正</button>
