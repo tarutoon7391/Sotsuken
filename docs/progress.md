@@ -95,3 +95,13 @@
 | w4-learn | 送信済 | | | | |
 | w5-teach | 送信済 | | | | |
 
+### ラウンド3 中断（2026-10-14 14:30 頃・トーンさん指示）
+- 状態：5 ワーカーは開始通知を読んで待機のまま。**タスク未投入・コミット 0・未保存の変更 0**（全 worktree 42d2dac）。manager が受けた本文メッセージ 0
+- 未決：pending #9（understanding_reset_at）・#10（生徒向け members）
+- 再開手順：
+  1. 本体フォルダで claude を起動（名前は manager。旧セッション名 2409009-6d は使われない）。docs/progress.md のこの節と docs/requests/pending.md を読む
+  2. 各 worktree で claude --name w1-core 〜 w5-teach を起動 → /list-agents で 5 本確認
+  3. manager が各ワーカーに開始通知（manager の実際のセッション名を書く）を送り、notify_when_idle を購読
+  4. トーンさんが各タブにタスクのプロンプトを貼る。#9・#10 の A/B を決めたら manager が docs/04 を直して周知
+  5. 完了報告が揃ったらフェーズ2（結合）は docs/10 §4 P6 のとおり manager が実施
+
