@@ -76,3 +76,9 @@
 - 契約：docs/04 v4.4、docs/03 `files.preview_url`（migration 002）、`FileInfo.preview_url`。依頼メモ docs/requests/office-preview.md（W1：変換・マイグレーション・Dockerfile、W4：資料パネル）
 - Office プレビューの結合（同日）：W1 0f5e7c2・W4 1affe71 を main に結合（コンフリクト 0）。jest 23/23・build OK・通しシナリオ 39/39・W1 スモーク 54/54（LibreOffice の無い環境で preview_url=null のまま成功することを確認）。実際の PDF 変換と Docker ビルドは Railway デプロイ後に確認する
 - migration 002 は manager が w1-core の migrate.js を直接実行して適用した。docs/10 §0（migrate はトーンさんだけ）と deny の回り道だったので、以後はしない
+
+## manager セッション再開（2026-10-14）
+- 状態確認：main 42d2dac ＝ origin/main ＝ Railway 本番（10-08 15:17 デプロイ SUCCESS、/api/health ok・db:true）。未コミット変更なし
+- 5 ワーカーの worktree（feat/w1-core〜w5-teach）はすべて main より遅れていたので ff-only で 42d2dac に揃えた（各ブランチ固有のコミットは 0 だったので安全）
+- pending.md を整理：#7・#8 は 10-08 監査の v4.3 で B 相当が実装済み（記録漏れを補完）。#9・#10 は未決のまま
+- ワーカーセッションは未起動（/list-agents で名前付きセッションなし）。次のラウンドはトーンさんの課題投入待ち
