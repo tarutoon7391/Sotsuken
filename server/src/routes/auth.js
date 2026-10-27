@@ -2,27 +2,16 @@
 // register / login / logout / me / me(PUT) / me/icon
 // 実装は services/auth.js に置き、ここは入力チェックと呼び出しだけにする。
 const express = require('express');
-const { ERROR_CODES, ROLES, LIMITS } = require('@sotsuken/shared/constants');
+const { ROLES, LIMITS } = require('@sotsuken/shared/constants');
 const { requireLogin } = require('../middleware/auth');
-const { ApiError, asyncHandler } = require('../middleware/error');
+const { asyncHandler } = require('../middleware/error');
 const authService = require('../services/auth');
 const { uploadIcon, urlOf, removeUploadedFile } = require('../services/files');
+const { badRequest, parseName, parsePassword } = require('./validators');
 
 const router = express.Router();
 
 const LOGIN_ID_PATTERN = new RegExp(LIMITS.LOGIN_ID_PATTERN);
-
-function badRequest(message) {
-  return new ApiError(400, ERROR_CODES.BAD_REQUEST, message);
-}
-
-/** 表示名（前後空白を除いて 1〜LIMITS.NAME_MAX 文字） */
-function parseName(raw) {
-  if (typeof raw !== 'string' || !raw.trim()) throw badRequest('表示名を入力してください');
-  const name = raw.trim();
-  if (name.length > LIMITS.NAME_MAX) throw badRequest(`表示名は${LIMITS.NAME_MAX}文字以内にしてください`);
-  return name;
-}
 
 /** セッションを作り直してからユーザーを入れる（セッション固定攻撃の対策） */
 function startSession(req, me) {
@@ -44,15 +33,11 @@ router.post('/register', asyncHandler(async (req, res) => {
     || loginId.length < LIMITS.LOGIN_ID_MIN || loginId.length > LIMITS.LOGIN_ID_MAX) {
     throw badRequest(`ログインIDは半角英数字と _ . - の${LIMITS.LOGIN_ID_MIN}〜${LIMITS.LOGIN_ID_MAX}文字にしてください`);
   }
-  if (typeof body.password !== 'string'
-    || body.password.length < LIMITS.PASSWORD_MIN
-    || Buffer.byteLength(body.password) > LIMITS.PASSWORD_MAX_BYTES) { // bcrypt は 72 バイトまでしか見ない
-    throw badRequest(`パスワードは${LIMITS.PASSWORD_MIN}文字以上・${LIMITS.PASSWORD_MAX_BYTES}バイト以内にしてください`);
-  }
+  const password = parsePassword(body.password);
   if (!Object.values(ROLES).includes(body.role)) throw badRequest('ロールが不正です');
 
   const me = await authService.register({
-    name, login_id: loginId, password: body.password, role: body.role,
+    name, login_id: loginId, password, role: body.role,
   });
   await startSession(req, me);
   res.status(201).json(me);

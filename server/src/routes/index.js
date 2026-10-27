@@ -38,4 +38,7 @@ router.use(require('./chat'));          // /lessons/:id/chat
 // --- W3：LiveKit
 router.use(require('./token'));         // /lessons/:id/token /lessons/:id/spotlight
 
+// --- 運用：ユーザー管理（.env の ADMIN_LOGIN_IDS に載っているユーザーだけ）
+router.use('/admin', require('./admin')); // /admin/users /admin/users/:id(/password|/password/verify)
+
 module.exports = router;

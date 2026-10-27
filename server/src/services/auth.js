@@ -2,6 +2,7 @@
 // パスワードは bcrypt でハッシュ化する。平文は保存もログ出力もしない。
 const bcrypt = require('bcrypt');
 const { ERROR_CODES } = require('@sotsuken/shared/constants');
+const config = require('../config');
 const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { removeUploadedFile } = require('./files');
@@ -10,9 +11,17 @@ const BCRYPT_ROUNDS = 10;
 // ログインIDが存在しないときも bcrypt.compare を1回走らせ、応答時間でID の有無が分からないようにする
 const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', BCRYPT_ROUNDS);
 
-/** DB の users 行 → MeResponse */
+/** ユーザー管理ページを使えるログインIDか（.env の ADMIN_LOGIN_IDS） */
+function isAdminLoginId(loginId) {
+  return config.adminLoginIds.includes(loginId);
+}
+
+/** DB の users 行 → MeResponse（is_admin はユーザー管理ページの表示可否） */
 function toMe(row) {
-  return { id: row.id, name: row.name, role: row.role, icon_url: row.icon_url };
+  return {
+    id: row.id, name: row.name, role: row.role, icon_url: row.icon_url,
+    is_admin: isAdminLoginId(row.login_id),
+  };
 }
 
 /** セッションに入れる形（req.session.user） */
@@ -32,7 +41,7 @@ async function register({ name, login_id: loginId, password, role }) {
       'INSERT INTO users (name, login_id, password_hash, role) VALUES (?, ?, ?, ?)',
       [name, loginId, passwordHash, role]
     );
-    return { id: result.insertId, name, role, icon_url: null };
+    return { id: result.insertId, name, role, icon_url: null, is_admin: isAdminLoginId(loginId) };
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       throw new ApiError(409, ERROR_CODES.CONFLICT, 'このログインIDは既に使われています');
@@ -47,7 +56,7 @@ async function register({ name, login_id: loginId, password, role }) {
  */
 async function login(loginId, password) {
   const rows = await query(
-    'SELECT id, name, role, icon_url, password_hash FROM users WHERE login_id = ?',
+    'SELECT id, name, login_id, role, icon_url, password_hash FROM users WHERE login_id = ?',
     [loginId]
   );
   const user = rows[0];
@@ -60,7 +69,7 @@ async function login(loginId, password) {
 
 /** @returns {Promise<object>} MeResponse。ユーザーが消えていれば 401 */
 async function getMe(userId) {
-  const rows = await query('SELECT id, name, role, icon_url FROM users WHERE id = ?', [userId]);
+  const rows = await query('SELECT id, name, login_id, role, icon_url FROM users WHERE id = ?', [userId]);
   if (!rows[0]) throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'ログインが必要です');
   return toMe(rows[0]);
 }
@@ -83,4 +92,10 @@ async function updateIcon(userId, iconUrl) {
   return { icon_url: iconUrl };
 }
 
-module.exports = { toSessionUser, register, login, getMe, updateName, updateIcon };
+/** ユーザー管理ページを使えるユーザーか（ログインIDを DB から引いて判定） */
+async function isAdminUser(userId) {
+  const rows = await query('SELECT login_id FROM users WHERE id = ?', [userId]);
+  return Boolean(rows[0]) && isAdminLoginId(rows[0].login_id);
+}
+
+module.exports = { toSessionUser, register, login, getMe, updateName, updateIcon, isAdminUser };

@@ -17,6 +17,9 @@ module.exports = {
     apiSecret: process.env.LIVEKIT_API_SECRET || '',
   },
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
+  // ユーザー管理ページを使えるログインID（カンマ区切り）。未設定なら誰も使えない
+  adminLoginIds: String(process.env.ADMIN_LOGIN_IDS || '')
+    .split(',').map((s) => s.trim()).filter(Boolean),
   // Office 資料を PDF に変換する LibreOffice のコマンド（v4.4。Docker では PATH にある soffice）
   sofficePath: process.env.SOFFICE_PATH || 'soffice',
   // 仮トップ（client/dist が無いときだけ配信）
