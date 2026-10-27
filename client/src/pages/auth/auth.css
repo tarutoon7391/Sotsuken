@@ -130,6 +130,7 @@
 .me-actions { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
 .me-actions .btn-logout { font-size: 13px; color: var(--color-neutral-700); }
 .me-actions .btn-logout:hover { color: var(--color-accent-2-700); background: var(--color-accent-2-100); }
+.me-actions .btn-admin { font-size: 13px; }
 
 
 

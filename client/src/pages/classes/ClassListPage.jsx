@@ -49,6 +49,7 @@ function ClassListBody() {
       <header className="app-header">
         <Link className="hdr-brand" to="/classes">{APP_NAME}</Link>
         <span className="hdr-spacer" />
+        {user.is_admin && <Link className="hdr-back" to="/admin/users">ユーザー管理</Link>}
         <Link className="person" to="/me" title="プロフィール設定">
           <Avatar user={user} />
           <span className="person-name">{user.name}</span>

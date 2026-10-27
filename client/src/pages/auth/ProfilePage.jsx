@@ -137,6 +137,9 @@ function ProfileBody() {
             <button className="btn btn-ghost btn-logout" type="button" onClick={handleLogout}>
               ログアウト
             </button>
+            {user.is_admin && (
+              <Link className="btn btn-ghost btn-admin" to="/admin/users">ユーザー管理</Link>
+            )}
           </div>
         </form>
       </main>

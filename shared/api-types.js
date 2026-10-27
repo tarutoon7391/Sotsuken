@@ -57,6 +57,7 @@
  * @property {string} name
  * @property {Role} role
  * @property {string|null} icon_url
+ * @property {boolean} is_admin  ユーザー管理ページ（/admin/users）を使えるか（.env の ADMIN_LOGIN_IDS）
  */
 
 /**
