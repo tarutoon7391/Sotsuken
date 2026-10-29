@@ -107,6 +107,8 @@ describeDb('確認ボタン・理解度・質問・チャット（DB）', () => 
       const list = await attention.listChecks(lessonId);
       const found = list.find((c) => c.check_id === auto.check_id);
       expect(found).toMatchObject({ auto: true, responded_count: 0, pending_count: 2 });
+      expect(found.pending.map((u) => u.id).sort()).toEqual([s1.id, s2.id].sort());
+      expect(found.pending[0]).toEqual({ id: expect.any(Number), name: expect.any(String) });
       expect(list[0].auto).toBe(false);
 
       expect(attention.getAuto(lessonId)).toEqual({ interval_min: 0 });
@@ -177,6 +179,31 @@ describeDb('確認ボタン・理解度・質問・チャット（DB）', () => 
       expect(toStudents.status).toBe('open');
       const toTeachers = io.emitToTeachers.mock.calls.find((c) => c[1] === SERVER_EVENTS.QUESTION_NEW)[2];
       expect(toTeachers.user.id).toBe(s1.id);
+    });
+
+    test('挙手の取り下げ：本人は削除できて全員に question:cancelled', async () => {
+      const hand = await questions.postQuestion(accS1, s1, {});
+      await expect(questions.cancelQuestion(hand.id, s1)).resolves.toBeUndefined();
+      expect(io.emitToLesson).toHaveBeenCalledWith(lessonId, SERVER_EVENTS.QUESTION_CANCELLED, { id: hand.id });
+      const rows = await query('SELECT 1 FROM questions WHERE id = ?', [hand.id]);
+      expect(rows).toHaveLength(0);
+      await expect(questions.cancelQuestion(hand.id, s1)).rejects.toMatchObject({ status: 404 });
+    });
+
+    test('挙手の取り下げ：他人は 403、質問本文あり・answered 済みは 409 で、どちらも消えない', async () => {
+      const hand = await questions.postQuestion(accS1, s1, {});
+      await expect(questions.cancelQuestion(hand.id, s2)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+      await expect(questions.cancelQuestion(hand.id, teacher)).rejects.toMatchObject({ status: 403 });
+
+      const withBody = await questions.postQuestion(accS1, s1, { body: '本文あり' });
+      await expect(questions.cancelQuestion(withBody.id, s1)).rejects.toMatchObject({ status: 409, code: 'CONFLICT' });
+
+      await questions.answerQuestion(hand.id, teacher, { status: 'answered' });
+      await expect(questions.cancelQuestion(hand.id, s1)).rejects.toMatchObject({ status: 409, code: 'CONFLICT' });
+
+      expect(io.emitToLesson).not.toHaveBeenCalledWith(lessonId, SERVER_EVENTS.QUESTION_CANCELLED, expect.anything());
+      const rows = await query('SELECT id FROM questions WHERE id IN (?, ?)', [hand.id, withBody.id]);
+      expect(rows).toHaveLength(2);
     });
 
     test('回答済み操作は終了済みの授業でも可', async () => {

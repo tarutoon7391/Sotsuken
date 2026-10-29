@@ -109,4 +109,29 @@ async function answerQuestion(questionId, user, input) {
   return toQuestion(rows[0], true);
 }
 
-module.exports = { postQuestion, listQuestions, answerQuestion };
+/**
+ * DELETE /questions/:id（生徒・v4.5）挙手の取り下げ。全員に question:cancelled
+ * 削除できるのは投稿者本人の、body NULL（挙手）かつ open のものだけ。live 以外の授業でも可
+ */
+async function cancelQuestion(questionId, user) {
+  const found = await query('SELECT lesson_id, user_id, body, status FROM questions WHERE id = ?', [questionId]);
+  if (!found.length) throw new ApiError(404, ERROR_CODES.NOT_FOUND, '質問が見つかりません');
+  const q = found[0];
+
+  if (q.user_id !== user.id) throw new ApiError(403, ERROR_CODES.FORBIDDEN, '取り下げられるのは投稿者本人だけです');
+  if (q.body !== null || q.status !== QUESTION_STATUS.OPEN) {
+    throw new ApiError(409, ERROR_CODES.CONFLICT, '取り下げられるのは未回答の挙手だけです');
+  }
+
+  // 状態の判定と削除を1文で行う（先生の回答とすれ違っても answered を消さない）
+  const result = await query(
+    'DELETE FROM questions WHERE id = ? AND user_id = ? AND body IS NULL AND status = ?',
+    [questionId, user.id, QUESTION_STATUS.OPEN]
+  );
+  if (result.affectedRows === 0) {
+    throw new ApiError(409, ERROR_CODES.CONFLICT, '取り下げられるのは未回答の挙手だけです');
+  }
+  emitToLesson(q.lesson_id, SERVER_EVENTS.QUESTION_CANCELLED, { id: questionId });
+}
+
+module.exports = { postQuestion, listQuestions, answerQuestion, cancelQuestion };

@@ -41,4 +41,17 @@ router.patch(
   })
 );
 
+// DELETE /api/questions/:id（生徒・投稿者本人）挙手の取り下げ。成功 204、全員に question:cancelled
+// ※ 本人・挙手・open の判定は services 側で行う
+router.delete(
+  '/questions/:id',
+  requireLogin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) throw new ApiError(400, ERROR_CODES.BAD_REQUEST, '質問IDが不正です');
+    await questions.cancelQuestion(id, req.session.user);
+    res.status(204).end();
+  })
+);
+
 module.exports = router;

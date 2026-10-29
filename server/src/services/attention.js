@@ -229,14 +229,21 @@ async function listChecks(lessonId) {
       ORDER BY c.issued_at, c.id`,
     [ATTENDANCE_STATUS.PRESENT, lessonId]
   );
-  return rows.map((r) => ({
-    check_id: r.id,
-    issued_at: toIso(r.issued_at),
-    deadline_at: toIso(r.deadline_at),
-    auto: autoCheckIds.has(r.id),
-    responded_count: Number(r.responded_count),
-    pending_count: Number(r.pending_count),
-  }));
+  // 未応答者の名前（GET /attention/:check_id の pending と同じ算出）
+  return Promise.all(
+    rows.map(async (r) => {
+      const { pending } = await getResponders({ id: r.id, lesson_id: lessonId });
+      return {
+        check_id: r.id,
+        issued_at: toIso(r.issued_at),
+        deadline_at: toIso(r.deadline_at),
+        auto: autoCheckIds.has(r.id),
+        responded_count: Number(r.responded_count),
+        pending_count: Number(r.pending_count),
+        pending: pending.map((u) => ({ id: u.id, name: u.name })),
+      };
+    })
+  );
 }
 
 module.exports = {
