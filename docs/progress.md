@@ -158,3 +158,8 @@
 - アプリ側：`.env` の `CODE_RUNNER_CONCURRENCY` で授業ごとの同時実行本数を上書きできるようにした（1G では 2）
 - 次：VPS 到着 → docs/infra/piston-setup.md §3〜5 → Railway の `CODE_RUNNER_URL` を VPS に向けて再デプロイ → 実行の実機確認 → 段階 2（Yjs）
 
+
+## 班員テスト1回目（2026-10-29）：フィードバック 7件・裁定済み
+- 着手順：5 → 2 → 7 → 1・3・6・4
+- 契約追加（docs/04 v4.5）：`DELETE /api/questions/:id`（挙手の取り下げ）＋`question:cancelled {id}`／`GET /lessons/:id/attention` の各要素に `pending:[{id,name}]`／shared に `QUESTION_CANCELLED`。docs/08 #18（挙手の取り下げ）をストレッチから MVP に戻した
+- 割り当て：W3 最優先「カメラが付けられない」の切り分け（docs/requests/camera-check.md）／W2 DELETE questions・question:cancelled・attention の pending／W4 挙手ボタンのトグル／W5 挙手の表示3か所・下ろす・全員下ろす・QuestionBox の Enter 送信・ヘッダーに参加コード＋コピー・結果画面に未応答者名と Top3
