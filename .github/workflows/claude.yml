@@ -50,10 +50,10 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Claude が使ってよいツール。テスト・ビルド・PR 作成だけ許可する（git の commit/push は action が管理する）
-          # モデルはラベルで切り替える：type:bug は難しい修正が多いので Opus、それ以外（見た目）は Sonnet。
+          # モデルはラベルで切り替える：type:bug・type:feature は判断や設計が要るので Opus、それ以外（見た目）は Sonnet。
           # issue / issue_comment は github.event.issue.labels、PR レビューコメントは github.event.pull_request.labels を見る
           claude_args: |
-            --model ${{ (contains(github.event.issue.labels.*.name, 'type:bug') || contains(github.event.pull_request.labels.*.name, 'type:bug')) && 'claude-opus-5-5' || 'claude-sonnet-5-5' }}
+            --model ${{ (contains(github.event.issue.labels.*.name, 'type:bug') || contains(github.event.pull_request.labels.*.name, 'type:bug') || contains(github.event.issue.labels.*.name, 'type:feature') || contains(github.event.pull_request.labels.*.name, 'type:feature')) && 'claude-opus-5-5' || 'claude-sonnet-5-5' }}
             --max-turns 60
-            --allowedTools "Bash(npm ci),Bash(npm install),Bash(npm test),Bash(npm test:*),Bash(npm run test:*),Bash(npm run build),Bash(npx jest:*),Bash(npx vitest:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr edit:*),Bash(gh issue view:*)"
-            --append-system-prompt "このリポジトリの CLAUDE.md の規約に従うこと。コメント・コミットメッセージ・PR の説明はすべて日本語で書くこと。Issue のラベルが type:style なら許可パス（client/src/styles/**, client/src/**/*.css, client/src/**/*.jsx）以外のファイルを変更してはならない。type:bug なら必ず先に失敗するテストを追加してから修正し、npm test を通すこと。作業が終わったら必ず gh pr create で PR を作り、Issue に書かれたラベルを付け、本文の先頭に Closes #<Issue番号> を書くこと。"
+            --allowedTools "Bash(npm ci),Bash(npm install),Bash(npm test),Bash(npm test:*),Bash(npm run test:*),Bash(npm run build),Bash(npx jest:*),Bash(npx vitest:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr edit:*),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"
+            --append-system-prompt "このリポジトリの CLAUDE.md の規約に従うこと。コメント・コミットメッセージ・PR の説明はすべて日本語で書くこと。Issue のラベルが type:style なら許可パス（client/src/styles/**, client/src/**/*.css, client/src/**/*.jsx）以外のファイルを変更してはならない。type:bug なら必ず先に失敗するテストを追加してから修正し、npm test を通すこと。type:feature なら client/src/ 以外のファイルを変更してはならず、server/・shared/・DB・依存追加・仕様書に無い API が要る場合や要望が曖昧・大規模な場合は、コードを変えず PR も作らず、理由を Issue にコメントして gh issue edit で needs-human ラベルを付けて終了すること。実装できる場合は作業が終わったら必ず gh pr create で PR を作り、Issue に書かれたラベルを付け、本文の先頭に Closes #<Issue番号> を書くこと。"

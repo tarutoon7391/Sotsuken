@@ -90,6 +90,7 @@ PR を出す前に、自分の AI に以下を実行させること：
 
 - `type:style`（見た目）の Issue：変更してよいのは **`client/src/styles/**`、`client/src/**/*.css`、`client/src/**/*.jsx` だけ**。server/・shared/・package.json・設定ファイル・テストは触らない。ロジック（state・API・Socket・権限）は変えない。CI（`見た目PR 許可パスチェック`）が許可パス外の変更を検出すると失敗する
 - `type:bug`（バグ）の Issue：**まずバグを再現する失敗テストを書き**（server は jest `server/src/**/*.test.js`、client は vitest `client/src/**/*.test.jsx`）、失敗を確認してから修正し `npm test` を通す。CI（`バグPR テスト`）はテストの追加が無いと失敗する
+- `type:feature`（機能追加）の Issue：変更してよいのは **`client/src/**` だけ**（新しいコンポーネント・画面の追加は可）。まず実現できるか判断し、**`server/`・`shared/`・DB・依存の追加・仕様書に無い API/イベントが必要、要望が曖昧、規模が大きい（目安：8 ファイル超／追加 300 行超）、権限・認証に関わる**場合は、コードを変えず PR も作らず、理由を Issue にコメントして `needs-human` ラベルを付けて終了する。実装できる場合は `npm run build` と `npm test` を通す。CI（`機能追加PR 許可パス・テスト`）が `client/src/` 外の変更とテスト失敗を検出する
 - 作業が終わったら `gh pr create --base main --label "type:〇〇" --label "screen:〇〇"` で PR を作り、本文の先頭に `Closes #<Issue番号>` を書く。PR のタイトル・本文は日本語
 - テストの実行：`npm test`（サーバー → クライアントの順）、`npm run test:server`、`npm run test:client`
 
