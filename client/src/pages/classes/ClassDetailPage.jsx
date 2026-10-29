@@ -210,7 +210,7 @@ function ClassDetailBody() {
               isTeacher ? (
                 <div className="empty">
                   <h4>最初の授業を作成しましょう</h4>
-                  <p>授業を作成して「開始する」を押すと、配信が始まり生徒が入室できるようになります。</p>
+                  <p className="empty-oneline">授業を作成して「開始する」を押すと、配信が始まり生徒が入室できるようになります。</p>
                   <button type="button" className="btn btn-primary btn-lg" onClick={() => setDialog({})}>＋ 授業を作成</button>
                 </div>
               ) : (
