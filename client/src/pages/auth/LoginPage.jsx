@@ -78,7 +78,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <button className="btn btn-primary btn-block btn-lg" type="submit" disabled={busy}>
+            <button className="btn btn-primary btn-block btn-lg btn-login" type="submit" disabled={busy}>
               {busy ? 'ログイン中…' : 'ログイン'}
             </button>
           </form>

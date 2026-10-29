@@ -18,6 +18,8 @@
 .pw-toggle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); color: var(--color-text); }
 .auth-app .btn-lg { min-height: 48px; font-size: 16px; padding-inline: var(--space-4); }
 .auth-app .btn-block { margin-top: 0; }
+/* ログインボタンは角を少し丸くする（radius-lg の 1.5 倍 = 6px） */
+.auth-app .btn-login { border-radius: calc(var(--radius-lg) * 1.5); }
 .avatar-xl { width: 120px; height: 120px; font-size: 44px; }
 .text-sub { color: var(--color-neutral-700); font-weight: 400; }
 .user-chip { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
