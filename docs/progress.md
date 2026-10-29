@@ -105,3 +105,8 @@
   4. トーンさんが各タブにタスクのプロンプトを貼る。#9・#10 の A/B を決めたら manager が docs/04 を直して周知
   5. 完了報告が揃ったらフェーズ2（結合）は docs/10 §4 P6 のとおり manager が実施
 
+
+## 班員テスト1回目（2026-10-29）：フィードバック 7件・裁定済み
+- 着手順：5 → 2 → 7 → 1・3・6・4
+- 契約追加（docs/04 v4.5）：`DELETE /api/questions/:id`（挙手の取り下げ）＋`question:cancelled {id}`／`GET /lessons/:id/attention` の各要素に `pending:[{id,name}]`／shared に `QUESTION_CANCELLED`。docs/08 #18（挙手の取り下げ）をストレッチから MVP に戻した
+- 割り当て：W3 最優先「カメラが付けられない」の切り分け（docs/requests/camera-check.md）／W2 DELETE questions・question:cancelled・attention の pending／W4 挙手ボタンのトグル／W5 挙手の表示3か所・下ろす・全員下ろす・QuestionBox の Enter 送信・ヘッダーに参加コード＋コピー・結果画面に未応答者名と Top3

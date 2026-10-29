@@ -37,6 +37,8 @@ const SERVER_EVENTS = Object.freeze({
   QUESTION_ANSWERED: 'question:answered',
   /** { user:{id,name} }。先生 */
   QUESTION_RAISED: 'question:raised',
+  /** { id }。全員。挙手が取り下げられた（DELETE /questions/:id）（v4.5） */
+  QUESTION_CANCELLED: 'question:cancelled',
   /** { check_id, issued_at, deadline_at, auto }。全員（生徒は応答ポップアップ、先生は応答状況の表示に使う） */
   ATTENTION_CHECK: 'attention:check',
   /** { responded[], pending[] }。先生。発動直後と応答のたびに送る */

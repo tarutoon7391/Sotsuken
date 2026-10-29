@@ -3,6 +3,7 @@
 > **この文書が分担間の「契約」。** ここに従えば各担当は独立して開発できる。
 > 変更したい場合は PM に相談 → 合意後にこの文書を更新してから実装する。
 > v4.1（2026-10-05）：クラス詳細・チャット履歴・理解度の取得 API、`lesson:started` / `understanding:reset` イベントを追加。出席の記録タイミング・復帰時の閾値判定・授業終了時の確定を明記。
+> v4.5（2026-10-29・班員テスト1回目の裁定）：挙手の取り下げ `DELETE /api/questions/:id` と `question:cancelled` を追加。`GET /lessons/:id/attention` の各要素に未応答者 `pending` を追加。
 > v4.4（2026-10-08）：Office 資料（Word・Excel・PowerPoint）をアップロード時に PDF へ変換し、`FileInfo.preview_url` で資料パネルに表示する（別タブを開かずに見られるようにする）。
 > v4.3（2026-10-08・W1〜W5 監査の裁定）：`material:added` を追加。`attention:check` を全員宛にして `issued_at`・`auto` を追加。確認ボタンの一覧・自動設定の取得 API を追加。`question:new` に `status`。入力の上限を `LIMITS` として §6 にまとめた。購読制御の文言を実装に合わせた。
 
@@ -78,7 +79,7 @@
 | メソッド | パス | ロール | 説明 |
 |---|---|---|---|
 | POST | /api/lessons/:id/attention | 先生 | 発動。`{timeout_sec:60}` → 全員に `attention:check`、直後に先生へ `attention:update`（v4.3） |
-| GET | /api/lessons/:id/attention | 先生 | 授業の確認の一覧 `[{check_id, issued_at, deadline_at, auto, responded_count, pending_count}]`（授業結果画面の応答率用）（v4.3） |
+| GET | /api/lessons/:id/attention | 先生 | 授業の確認の一覧 `[{check_id, issued_at, deadline_at, auto, responded_count, pending_count, pending:[{id,name}]}]`（授業結果画面の応答率・未応答者名用）。`pending` は `GET /attention/:check_id` と同じ算出（v4.3。`pending` は v4.5 で追加） |
 | PATCH | /api/lessons/:id/attention/auto | 先生 | `{interval_min}` 自動発動の設定（0で無効） |
 | GET | /api/lessons/:id/attention/auto | 先生 | 自動発動の現在の設定 `{interval_min}`（先生画面の再読込用）（v4.3） |
 | POST | /api/attention/:check_id/respond | 生徒 | 応答。deadline 超過は 409 `CHECK_EXPIRED`。**応答済みの再押下は締切後でも成功**（409 にしない）（v4.3） |
@@ -97,6 +98,7 @@
 | POST | /api/lessons/:id/questions | 生徒 | `{body, is_anonymous}`。**挙手のみは body 省略** |
 | GET | /api/lessons/:id/questions | 全員 | 一覧。匿名の投稿者は先生にのみ含める |
 | PATCH | /api/questions/:id | 先生 | `{status:"answered"}`。終了済み（`ended`）の授業でも可（授業結果画面から操作する）（v4.3） |
+| DELETE | /api/questions/:id | 生徒（投稿者本人） | **挙手の取り下げ**（v4.5）。削除できるのは「投稿者本人」かつ「body NULL（挙手）」かつ「status open」のときだけ。本人以外は 403 `FORBIDDEN`、質問本文あり・answered 済みは 409 `CONFLICT`。成功 204 で、全員に `question:cancelled {id}` |
 
 ### 資料・添付
 | メソッド | パス | ロール | 説明 |
@@ -139,6 +141,7 @@
 | `question:new` | `{id, user?, body, is_anonymous, status, created_at}` | 全員（匿名時 user は先生のみ） | `status` は v4.3 で追加（REST の Question と同じ形） |
 | `question:answered` | `{id}` | 全員 | |
 | `question:raised` | `{user:{id,name}}` | 先生 | 挙手通知 |
+| `question:cancelled` | `{id}` | 全員 | 挙手が取り下げられた（`DELETE /questions/:id`）。生徒は自分の挙手なら「挙手中」を解除、先生は一覧から消す（v4.5） |
 | `attention:check` | `{check_id, issued_at, deadline_at, auto}` | 全員 | 生徒はポップアップ表示（カウントダウンは `issued_at` 基準）、先生は応答状況パネルの表示に使う。`auto` は自動発動なら true（v4.3：宛先を全員に、`issued_at`・`auto` を追加） |
 | `attention:update` | `{responded[], pending[]}` | 先生 | 応答状況。発動直後と応答のたびに送る（v4.3） |
 | `attendance:update` | `{user_id, status, away_total_sec}` | 先生 | 出席状態の変化 |

@@ -266,7 +266,10 @@
  * @property {boolean} auto 自動発動なら true
  * @property {number} responded_count
  * @property {number} pending_count
+ * @property {{id:number, name:string}[]} pending 未応答の生徒（GET /attention/:check_id と同じ算出）（v4.5）
  */
+
+// DELETE /api/questions/:id（生徒・投稿者本人・v4.5）… 挙手（body NULL・open）の取り下げ。204。本人以外 403、本文あり／answered は 409 CONFLICT
 
 // GET /api/lessons/:id/attention/auto（先生・v4.3）… {interval_min}
 
