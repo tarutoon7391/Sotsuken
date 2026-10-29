@@ -4,10 +4,12 @@
 //   questions:       Question[]（shared/api-types の Question。{ id, user?, body, is_anonymous, status, created_at }）
 //   onPost:          (body: string, isAnonymous: boolean) => void   生徒の投稿（POST questions）
 //   onMarkAnswered?: (id: number) => void                          先生の「回答済み」（PATCH questions/:id）
+//   onLowerHand?:    (id: number) => void                          先生が挙手を下ろす（1人分）
+//   onLowerAll?:     (ids: number[]) => void                       先生が挙手を全員下ろす（open の挙手すべて）
 //   isTeacher:       boolean                                        先生なら回答済み操作と匿名の投稿者を表示
 //
-// - body が null の質問は「挙手のみ」。先生には上部の「挙手中」チップ（status=open のもの）で出し、
-//   チップを押すと onMarkAnswered(id) で挙手を下ろす。生徒側の一覧には出さない
+// - body が null の質問は「挙手のみ」。先生には最上段の「挙手中」セクション（status=open のもの）に一覧で出し、
+//   各行の「下ろす」で onLowerHand(id)、「全員下ろす」で onLowerAll(ids) を呼ぶ。生徒側の一覧には出さない
 // - 匿名の質問：生徒には「匿名」、先生には「匿名（本名）」を薄く出す（user はサーバーが先生にだけ含める）
 // - 先生のときは投稿フォームを出さない
 import { useMemo, useState } from 'react';
@@ -19,7 +21,7 @@ function byOldest(a, b) {
   return a.id - b.id;
 }
 
-export default function QuestionBox({ questions = [], onPost, onMarkAnswered, isTeacher = false }) {
+export default function QuestionBox({ questions = [], onPost, onMarkAnswered, onLowerHand, onLowerAll, isTeacher = false }) {
   const [draft, setDraft] = useState('');
   const [anonymous, setAnonymous] = useState(false);
 
@@ -36,30 +38,43 @@ export default function QuestionBox({ questions = [], onPost, onMarkAnswered, is
     setDraft('');
   }
 
+  function handleKeyDown(e) {
+    // Enter＝送信／Shift+Enter＝改行（ChatPanel と同じ）。日本語変換中の Enter は送信しない
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      post();
+    }
+  }
+
   return (
     <section className={`question-box${isTeacher ? ' is-teacher' : ''}`}>
       {isTeacher && (
         <div className="hands">
-          <h6 className="section-label">
-            挙手中 <span className="count">{hands.length}人</span>
-          </h6>
-          <div className="chips">
-            {hands.length === 0 && <span className="none">いま挙手している生徒はいません</span>}
-            {hands.map((q) => (
-              <button
-                key={q.id}
-                type="button"
-                className="hand-chip"
-                title="押すと挙手を下ろす"
-                onClick={() => onMarkAnswered && onMarkAnswered(q.id)}
-                disabled={!onMarkAnswered}
-              >
-                <Avatar user={q.user} size={22} />
-                {q.user ? q.user.name : '生徒'}
-                <span aria-hidden="true">✋</span>
+          <div className="hands-head">
+            <h6 className="section-label">
+              挙手中 <span className="count">{hands.length}人</span>
+            </h6>
+            {hands.length > 1 && onLowerAll && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onLowerAll(hands.map((q) => q.id))}>
+                全員下ろす
               </button>
-            ))}
+            )}
           </div>
+          <ul className="hand-list">
+            {hands.length === 0 && <li className="none">いま挙手している生徒はいません</li>}
+            {hands.map((q) => (
+              <li key={q.id} className="hand-row">
+                <Avatar user={q.user} size={22} />
+                <span className="hand-name">{q.user ? q.user.name : '生徒'}</span>
+                <span aria-hidden="true">✋</span>
+                {onLowerHand && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => onLowerHand(q.id)}>
+                    下ろす
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -102,6 +117,7 @@ export default function QuestionBox({ questions = [], onPost, onMarkAnswered, is
             maxLength={LIMITS.BODY_MAX}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <div className="compose-row">
             <label className="switch">

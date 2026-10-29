@@ -146,9 +146,10 @@ a.person:hover .person-name { color: var(--color-accent-700); }
 /* 質問箱 */
 .hands { display: flex; flex-direction: column; gap: 6px; }
 .hands .section-label { margin: 0; }
-.hands .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.hand-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 1px solid var(--color-accent-300); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 12px; cursor: pointer; }
-.hand-chip:hover { background: var(--color-accent-200); }
+.hands .hands-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hands .hand-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hands .hand-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px 3px 3px; border-radius: 999px; border: 1px solid var(--color-accent-300); background: var(--color-accent-100); color: var(--color-accent-800); font-size: 12px; }
+.hands .hand-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hands .none { font-size: 12px; color: var(--color-neutral-600); }
 .q-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 14px; }
 .q { display: flex; flex-direction: column; gap: 4px; }

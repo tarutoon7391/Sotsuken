@@ -79,6 +79,13 @@
 
 /* 出席の補足（終了後は出席／欠課の2値） */
 .result-page .att-note { margin: var(--space-2) 0 0; }
+.result-page .pending-top { margin-bottom: var(--space-4); }
+.result-page .pending-top-list { margin: var(--space-2) 0 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--space-1); font-size: 14px; }
+.result-page .pending-top-list strong { font-variant-numeric: tabular-nums; }
+.result-page .pending-name { margin-right: var(--space-2); }
+.result-page .pending-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); font-size: 14px; }
+.result-page .pending-list li { display: flex; flex-direction: column; gap: 2px; }
+.result-page .pending-time { color: var(--color-neutral-700); font-size: 12px; }
 
 /* 資料名はボタン（押すと右下のプレビュー）。リンクの見た目にしない */
 .result-page button.mat-item { width: 100%; border: 1px solid transparent; background: transparent; font: inherit; cursor: pointer; text-align: left; }
