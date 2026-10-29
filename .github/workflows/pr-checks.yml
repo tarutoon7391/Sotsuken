@@ -1,0 +1,165 @@
+# PR チェック（修正要望サイト経由の自動修正 PR 用）
+# ・style-guard：type:style の PR で許可パス以外の変更があれば失敗させる
+# ・bug-tests ：type:bug の PR で npm test（jest + vitest）が通らなければ失敗させる
+# どちらのジョブも種別が該当しない PR では「対象外」として成功する。
+# → ブランチ保護の「必須ステータスチェック」に両方を登録しておけば、
+#   見た目 PR は許可パス、バグ PR はテストが必ず守られる。
+#
+# 種別の決め方：PR のラベル（type:style / type:bug）を優先し、無ければ
+# PR 本文の "Closes #N" などで紐付く Issue のラベルを見る。
+# claude/ ブランチなのに種別が分からない PR は安全側に倒して失敗させる。
+name: PR チェック
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  # ---- 種別の判定（他のジョブが使う）----
+  kind:
+    name: 種別を判定
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.detect.outputs.kind }}
+    steps:
+      - name: PR と紐付く Issue のラベルから種別を決める
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          labels=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          kind=""
+          echo "$labels" | grep -qx 'type:style' && kind="style" || true
+          echo "$labels" | grep -qx 'type:bug'   && kind="bug"   || true
+
+          if [ -z "$kind" ]; then
+            # PR 本文から Closes #N / Fixes #N / Resolves #N を探す
+            body=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body --jq '.body')
+            issue=$(printf '%s' "$body" | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' | head -n1 | grep -oE '[0-9]+' || true)
+            # 無ければブランチ名 claude/issue-N-... から
+            if [ -z "$issue" ]; then
+              issue=$(printf '%s' "$HEAD_REF" | grep -oE '^claude/issue-[0-9]+' | grep -oE '[0-9]+' || true)
+            fi
+            if [ -n "$issue" ]; then
+              ilabels=$(gh issue view "$issue" --repo "$REPO" --json labels --jq '.labels[].name' || true)
+              echo "$ilabels" | grep -qx 'type:style' && kind="style" || true
+              echo "$ilabels" | grep -qx 'type:bug'   && kind="bug"   || true
+              echo "紐付く Issue: #$issue"
+            fi
+          fi
+
+          if [ -z "$kind" ]; then
+            case "$HEAD_REF" in
+              claude/*)
+                echo "::error::claude/ ブランチの PR ですが種別（type:style / type:bug）が判定できません。PR にラベルを付けるか、本文に Closes #<Issue番号> を書いてください。"
+                exit 1 ;;
+              *) kind="none" ;;
+            esac
+          fi
+          echo "種別: $kind"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+
+  # ---- 見た目 PR：許可パス以外の変更を禁止 ----
+  style-guard:
+    name: 見た目PR 許可パスチェック
+    needs: kind
+    runs-on: ubuntu-latest
+    steps:
+      - name: 対象外
+        if: needs.kind.outputs.kind != 'style'
+        run: echo "type:style の PR ではないため対象外（成功）"
+
+      - name: リポジトリを取得
+        if: needs.kind.outputs.kind == 'style'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 変更ファイルが許可パスだけか確認
+        if: needs.kind.outputs.kind == 'style'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # 許可パス（修正要望サイト src/issueBody.js の STYLE_ALLOWED_PATHS と揃えること）
+          # bash の case では * が / もまたぐので、client/src/*.css は client/src/pages/learn/learn.css にも一致する
+          ALLOWED_PATTERNS=(
+            'client/src/styles/*'
+            'client/src/*.css'
+            'client/src/*.jsx'
+          )
+          changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "変更ファイル:"
+          echo "$changed"
+          bad=""
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            ok=0
+            for p in "${ALLOWED_PATTERNS[@]}"; do
+              case "$f" in $p) ok=1; break ;; esac
+            done
+            # 見た目 PR でテストを書き換えるのは禁止（*.test.js / *.test.jsx）
+            case "$f" in *.test.js|*.test.jsx) ok=0 ;; esac
+            [ "$ok" = 1 ] || bad="$bad\n  $f"
+          done <<< "$changed"
+          if [ -n "$bad" ]; then
+            printf '::error::type:style の PR で許可パス以外のファイルが変更されています:%b\n' "$bad"
+            echo "許可パス: ${ALLOWED_PATTERNS[*]}"
+            exit 1
+          fi
+          echo "すべて許可パス内の変更です"
+
+  # ---- バグ PR：テスト必須 ----
+  bug-tests:
+    name: バグPR テスト
+    needs: kind
+    runs-on: ubuntu-latest
+    steps:
+      - name: 対象外
+        if: needs.kind.outputs.kind != 'bug'
+        run: echo "type:bug の PR ではないため対象外（成功）"
+
+      - name: リポジトリを取得
+        if: needs.kind.outputs.kind == 'bug'
+        uses: actions/checkout@v6
+
+      - name: Node.js を準備
+        if: needs.kind.outputs.kind == 'bug'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 依存をインストール
+        if: needs.kind.outputs.kind == 'bug'
+        run: npm ci
+
+      - name: テスト（jest + vitest）
+        if: needs.kind.outputs.kind == 'bug'
+        run: npm test
+
+      - name: バグ PR にテストの追加・変更があるか確認
+        if: needs.kind.outputs.kind == 'bug'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          files=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json files --jq '.files[].path')
+          if ! printf '%s\n' "$files" | grep -qE '\.test\.(js|jsx)$'; then
+            echo "::error::type:bug の PR ですがテストファイル（*.test.js / *.test.jsx）の追加・変更がありません。まずバグを再現する失敗テストを書いてください。"
+            exit 1
+          fi
+          echo "テストの変更あり:"
+          printf '%s\n' "$files" | grep -E '\.test\.(js|jsx)$'

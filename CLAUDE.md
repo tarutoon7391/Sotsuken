@@ -84,6 +84,15 @@ PR を出す前に、自分の AI に以下を実行させること：
 - 理解していないコードをそのままコミットすること
   （**発表で「自分の担当箇所」を説明できることがゴール**。AIの出力は必ず読んで理解する）
 
+## 自動修正 PR のルール（修正要望サイト → Issue → Claude Code Action）
+
+修正要望サイトが作る Issue（ラベル `request-site`）に対して、Claude Code Action が自動で PR を作る。手順は `docs/修正要望サイト_導入手順.md`。
+
+- `type:style`（見た目）の Issue：変更してよいのは **`client/src/styles/**`、`client/src/**/*.css`、`client/src/**/*.jsx` だけ**。server/・shared/・package.json・設定ファイル・テストは触らない。ロジック（state・API・Socket・権限）は変えない。CI（`見た目PR 許可パスチェック`）が許可パス外の変更を検出すると失敗する
+- `type:bug`（バグ）の Issue：**まずバグを再現する失敗テストを書き**（server は jest `server/src/**/*.test.js`、client は vitest `client/src/**/*.test.jsx`）、失敗を確認してから修正し `npm test` を通す。CI（`バグPR テスト`）はテストの追加が無いと失敗する
+- 作業が終わったら `gh pr create --base main --label "type:〇〇" --label "screen:〇〇"` で PR を作り、本文の先頭に `Closes #<Issue番号>` を書く。PR のタイトル・本文は日本語
+- テストの実行：`npm test`（サーバー → クライアントの順）、`npm run test:server`、`npm run test:client`
+
 ## 困ったら
 
 - 30分詰まったら抱え込まずチームチャットに投げる（エラーログ全文を添えて）
