@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { RoomEvent, Track, createLocalVideoTrack } from 'livekit-client';
 import { applyStudentPermissions } from './permissions';
 import { VideoTrackView } from './RemoteVideo';
+import { useLiveKitStatus } from './connection-status';
+import { STATUS_LABELS } from './useLiveKitRoom';
 import './livekit.css';
 
 /** 生徒映像は低画質（〜300kbps）。30人分を先生が受けても 10Mbps 前後に収める（docs/02） */
@@ -48,6 +50,8 @@ export default function StudentCamera({
   const [track, setTrack] = useState(null);
   const [error, setError] = useState(null);
   const spotlighted = Boolean(myUserId) && spotlightUserId === myUserId;
+  // 授業中なのにサーバーが LIVEKIT_* 未設定（token が null）のとき。ボタンが無反応に見えないよう知らせる
+  const unconfigured = useLiveKitStatus() === 'unconfigured';
 
   // 購読許可（publish より先に設定。再接続後にも設定し直す）
   useEffect(() => {
@@ -143,6 +147,7 @@ export default function StudentCamera({
           <span className="lk-note">{spotlighted ? '全員に表示中（スポットライト）' : '先生にだけ届きます'}</span>
         )}
       </div>
+      {!room && unconfigured && <p className="lk-error">{STATUS_LABELS.unconfigured}。映像は先生に届きません</p>}
       {error && <p className="lk-error">{error}</p>}
     </div>
   );
