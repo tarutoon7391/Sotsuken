@@ -1,11 +1,12 @@
 # PR チェック（修正要望サイト経由の自動修正 PR 用）
 # ・style-guard：type:style の PR で許可パス以外の変更があれば失敗させる
 # ・bug-tests ：type:bug の PR で npm test（jest + vitest）が通らなければ失敗させる
-# どちらのジョブも種別が該当しない PR では「対象外」として成功する。
+# ・feature-guard：type:feature の PR で client/src/ の外の変更があれば失敗、npm test が通らなければ失敗
+# どのジョブも種別が該当しない PR では「対象外」として成功する。
 # → ブランチ保護の「必須ステータスチェック」に両方を登録しておけば、
-#   見た目 PR は許可パス、バグ PR はテストが必ず守られる。
+#   見た目 PR・機能追加 PR は許可パス、バグ PR はテストが必ず守られる。
 #
-# 種別の決め方：PR のラベル（type:style / type:bug）を優先し、無ければ
+# 種別の決め方：PR のラベル（type:style / type:bug / type:feature）を優先し、無ければ
 # PR 本文の "Closes #N" などで紐付く Issue のラベルを見る。
 # claude/ ブランチなのに種別が分からない PR は安全側に倒して失敗させる。
 name: PR チェック
@@ -40,6 +41,7 @@ jobs:
           kind=""
           echo "$labels" | grep -qx 'type:style' && kind="style" || true
           echo "$labels" | grep -qx 'type:bug'   && kind="bug"   || true
+          echo "$labels" | grep -qx 'type:feature' && kind="feature" || true
 
           if [ -z "$kind" ]; then
             # PR 本文から Closes #N / Fixes #N / Resolves #N を探す
@@ -53,6 +55,7 @@ jobs:
               ilabels=$(gh issue view "$issue" --repo "$REPO" --json labels --jq '.labels[].name' || true)
               echo "$ilabels" | grep -qx 'type:style' && kind="style" || true
               echo "$ilabels" | grep -qx 'type:bug'   && kind="bug"   || true
+              echo "$ilabels" | grep -qx 'type:feature' && kind="feature" || true
               echo "紐付く Issue: #$issue"
             fi
           fi
@@ -60,7 +63,7 @@ jobs:
           if [ -z "$kind" ]; then
             case "$HEAD_REF" in
               claude/*)
-                echo "::error::claude/ ブランチの PR ですが種別（type:style / type:bug）が判定できません。PR にラベルを付けるか、本文に Closes #<Issue番号> を書いてください。"
+                echo "::error::claude/ ブランチの PR ですが種別（type:style / type:bug / type:feature）が判定できません。PR にラベルを付けるか、本文に Closes #<Issue番号> を書いてください。"
                 exit 1 ;;
               *) kind="none" ;;
             esac
@@ -118,6 +121,59 @@ jobs:
             exit 1
           fi
           echo "すべて許可パス内の変更です"
+
+  # ---- 機能追加 PR：client/src/ の外の変更を禁止し、テストが通ること ----
+  feature-guard:
+    name: 機能追加PR 許可パス・テスト
+    needs: kind
+    runs-on: ubuntu-latest
+    steps:
+      - name: 対象外
+        if: needs.kind.outputs.kind != 'feature'
+        run: echo "type:feature の PR ではないため対象外（成功）"
+
+      - name: リポジトリを取得
+        if: needs.kind.outputs.kind == 'feature'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 変更ファイルが client/src/ の中だけか確認
+        if: needs.kind.outputs.kind == 'feature'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # 許可パス（修正要望サイト src/issueBody.js の FEATURE_ALLOWED_PATHS と揃えること）
+          changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "変更ファイル:"
+          echo "$changed"
+          bad=""
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in client/src/*) ;; *) bad="$bad\n  $f" ;; esac
+          done <<< "$changed"
+          if [ -n "$bad" ]; then
+            printf '::error::type:feature の PR で client/src/ の外のファイルが変更されています:%b\n' "$bad"
+            exit 1
+          fi
+          echo "すべて client/src/ 内の変更です"
+
+      - name: Node.js を準備
+        if: needs.kind.outputs.kind == 'feature'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 依存をインストール
+        if: needs.kind.outputs.kind == 'feature'
+        run: npm ci
+
+      - name: テスト（jest + vitest）
+        if: needs.kind.outputs.kind == 'feature'
+        run: npm test
 
   # ---- バグ PR：テスト必須 ----
   bug-tests:
