@@ -26,5 +26,13 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
     },
+    // vitest（クライアントの単体テスト）。テストは client/src/**/*.test.{js,jsx}
+    test: {
+      environment: 'jsdom',
+      globals: false,
+      setupFiles: ['./vitest.setup.js'],
+      include: ['src/**/*.test.{js,jsx}'],
+      passWithNoTests: true,
+    },
   };
 });

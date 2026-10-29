@@ -16,7 +16,9 @@
     "build": "npm run build --workspace client",
     "build:shared": "node shared/build-cjs.js",
     "migrate": "node server/src/db/migrate.js",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests && npm run test --workspace client",
+    "test:server": "jest --passWithNoTests",
+    "test:client": "npm run test --workspace client"
   },
   "engines": {
     "node": ">=20.19"
