@@ -163,3 +163,4 @@
 - 着手順：5 → 2 → 7 → 1・3・6・4
 - 契約追加（docs/04 v4.5）：`DELETE /api/questions/:id`（挙手の取り下げ）＋`question:cancelled {id}`／`GET /lessons/:id/attention` の各要素に `pending:[{id,name}]`／shared に `QUESTION_CANCELLED`。docs/08 #18（挙手の取り下げ）をストレッチから MVP に戻した
 - 割り当て：W3 最優先「カメラが付けられない」の切り分け（docs/requests/camera-check.md）／W2 DELETE questions・question:cancelled・attention の pending／W4 挙手ボタンのトグル／W5 挙手の表示3か所・下ろす・全員下ろす・QuestionBox の Enter 送信・ヘッダーに参加コード＋コピー・結果画面に未応答者名と Top3
+- 結合（同日）：W2 ec4e7d9／W3 43e5a41／W5 e444f16／W4 721f117 を main に結合（3ff1ed5、コンフリクト 0。W4 が pages/teach に足した question:cancelled は W5 と重複したため W4 側を取り消し）。jest 25/25・build OK・通しシナリオ 45/45（取り下げの d' 節を含む）。未決：先生の DELETE 許可／Railway の LIVEKIT_* 確認／班員の camera-check.md 実施
