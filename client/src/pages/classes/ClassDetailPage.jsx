@@ -1,7 +1,7 @@
 // クラス詳細 — 担当：W5（デザイン：docs/design/05_クラス詳細）
 // API：GET /classes/:id, /classes/:id/lessons(?tag=), /classes/:id/tags, /classes/:id/members（先生）,
 //      POST /classes/:id/lessons, PATCH /lessons/:id, GET /lessons/:id/files?kind=material, DELETE /files/:id
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FILE_KINDS, LESSON_STATUS, LIMITS, ROLES } from '@sotsuken/shared/constants';
 import { del, get, patch, post } from '../../api/client.js';
@@ -32,7 +32,8 @@ function ClassDetailBody() {
   const [tags, setTags] = useState([]);
   const [members, setMembers] = useState([]);
   const [tagFilter, setTagFilter] = useState('');
-  const [tab, setTab] = useState('lessons');
+  const [membersOpen, setMembersOpen] = useState(false); // メンバー一覧パネルの開閉（初期は閉）
+  const membersRef = useRef(null);
   const [dialog, setDialog] = useState(null); // { lesson?: LessonSummary }（lesson があれば編集）
   const [openFiles, setOpenFiles] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -61,6 +62,15 @@ function ClassDetailBody() {
     }
   }, [classId, isTeacher, loadTags, fail]);
   useEffect(loadLessons, [loadLessons]);
+  // パネルの外側をクリックしたら閉じる
+  useEffect(() => {
+    if (!membersOpen) return undefined;
+    const onDown = (e) => {
+      if (membersRef.current && !membersRef.current.contains(e.target)) setMembersOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [membersOpen]);
 
   if (loadError && (!cls || !lessons)) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
   if (!cls || !lessons) return <p className="page-loading">読み込み中…</p>;
@@ -96,15 +106,62 @@ function ClassDetailBody() {
       </header>
 
       <main className="app-main">
-        <div className="tabs tabs-fill detail-tabs" role="tablist">
-          <button className={`tab${tab === 'lessons' ? ' is-on' : ''}`} role="tab" onClick={() => setTab('lessons')}>授業</button>
-          <button className={`tab${tab === 'members' ? ' is-on' : ''}`} role="tab" onClick={() => setTab('members')}>
-            メンバー {isTeacher && <span className="count muted">{students.length + 1}</span>}
+        <div className="members-dropdown" ref={membersRef}>
+          <button
+            type="button"
+            className="btn btn-secondary members-toggle"
+            aria-expanded={membersOpen}
+            aria-controls="membersPanel"
+            onClick={() => setMembersOpen((o) => !o)}
+          >
+            メンバー{isTeacher && `（${students.length + 1}）`} {membersOpen ? '▲' : '▼'}
           </button>
+          {membersOpen && (
+            <aside id="membersPanel" className="members members-panel">
+              <div className="member-group">
+                <div className="member-list">
+                  <span className="person">
+                    <Avatar user={{ ...cls.teacher, role: ROLES.TEACHER }} />
+                    <span className="person-name">{cls.teacher.name}</span>
+                    <RoleBadge role={ROLES.TEACHER} />
+                    {cls.teacher.id === user.id && <span className="me-mark">（自分）</span>}
+                  </span>
+                </div>
+              </div>
+              {isTeacher ? (
+                <div className="member-group">
+                  <h6 className="section-label">生徒 <span className="count">{students.length}</span></h6>
+                  <div className="member-list">
+                    {students.length === 0 && <p className="small muted">まだ生徒はいません。参加コードを伝えてください。</p>}
+                    {students.map((m) => (
+                      <span key={m.id} className="person">
+                        <Avatar user={m} />
+                        <span className="person-name">{m.name}</span>
+                        <RoleBadge role={m.role} />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // メンバー一覧 API は先生専用（docs/04）。生徒には自分だけ表示する
+                <div className="member-group">
+                  <h6 className="section-label">生徒</h6>
+                  <div className="member-list">
+                    <span className="person">
+                      <Avatar user={user} />
+                      <span className="person-name">{user.name}</span>
+                      <RoleBadge role={user.role} />
+                      <span className="me-mark">（自分）</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </aside>
+          )}
         </div>
 
         <div className="detail-wrap">
-          <section data-tab-pane="lessons" className={tab === 'lessons' ? 'is-on' : ''}>
+          <section>
             {isTeacher && cls.join_code && (
               <div className="code-block">
                 <h6 className="section-label">参加コード</h6>
@@ -222,47 +279,6 @@ function ClassDetailBody() {
             )}
           </section>
 
-          <aside data-tab-pane="members" className={`members${tab === 'members' ? ' is-on' : ''}`}>
-            <h6 className="section-label">メンバー {isTeacher && <span className="count">{students.length + 1}</span>}</h6>
-            <div className="member-group">
-              <div className="member-list">
-                <span className="person">
-                  <Avatar user={{ ...cls.teacher, role: ROLES.TEACHER }} />
-                  <span className="person-name">{cls.teacher.name}</span>
-                  <RoleBadge role={ROLES.TEACHER} />
-                  {cls.teacher.id === user.id && <span className="me-mark">（自分）</span>}
-                </span>
-              </div>
-            </div>
-            {isTeacher ? (
-              <div className="member-group">
-                <h6 className="section-label">生徒 <span className="count">{students.length}</span></h6>
-                <div className="member-list">
-                  {students.length === 0 && <p className="small muted">まだ生徒はいません。参加コードを伝えてください。</p>}
-                  {students.map((m) => (
-                    <span key={m.id} className="person">
-                      <Avatar user={m} />
-                      <span className="person-name">{m.name}</span>
-                      <RoleBadge role={m.role} />
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              // メンバー一覧 API は先生専用（docs/04）。生徒には自分だけ表示する
-              <div className="member-group">
-                <h6 className="section-label">生徒</h6>
-                <div className="member-list">
-                  <span className="person">
-                    <Avatar user={user} />
-                    <span className="person-name">{user.name}</span>
-                    <RoleBadge role={user.role} />
-                    <span className="me-mark">（自分）</span>
-                  </span>
-                </div>
-              </div>
-            )}
-          </aside>
         </div>
       </main>
 
