@@ -15,6 +15,11 @@
  * @typedef {'understood'|'confused'|'again'} UnderstandingType
  * @typedef {'open'|'answered'} QuestionStatus
  * @typedef {'material'|'attachment'} FileKind
+ * @typedef {'video'|'coding'} LessonMode                                                       F-10（v4.5）
+ * @typedef {'java'} CodeLanguage                                                                F-10
+ * @typedef {'compile'|'run'} CodeRunKind                                                        F-10
+ * @typedef {'ok'|'compile_error'|'runtime_error'|'timeout'|'runner_unavailable'} CodeRunStatus  F-10
+ * @typedef {'idle'|'syntax_error'|'compile_error'|'runtime_error'|'ok'|'running'} CodeState     F-10
  */
 
 /**
@@ -170,6 +175,10 @@
  * @property {string} room_name
  * @property {number|null} spotlight_user_id
  * @property {number} away_timeout_min
+ * @property {string|null} understanding_reset_at 理解リアクションを最後にリセットした時刻。未リセットは null（pending #9 → B・v4.5）
+ * @property {LessonMode} mode                      現在のモード。既定 'video'（F-10・v4.5）
+ * @property {number|null} active_task_id           先生が指定した「今の課題」。coding 前は null（F-10・v4.5）
+ * @property {number|null} code_spotlight_user_id   コードスポットライト中の生徒。null で解除（F-10・v4.5）
  * @property {string[]} tags
  * @property {string|null} started_at
  * @property {string|null} ended_at
@@ -266,6 +275,7 @@
  * @property {boolean} auto 自動発動なら true
  * @property {number} responded_count
  * @property {number} pending_count
+ * @property {{ id: number, name: string }[]} pending 未応答者の id と名前（pending_count と同じ集合。授業結果で名前を出す・v4.5）
  */
 
 // GET /api/lessons/:id/attention/auto（先生・v4.3）… {interval_min}
@@ -305,6 +315,8 @@
  * @property {'answered'} status
  */
 
+// DELETE /api/questions/:id（生徒本人）… ボディ無し。挙手のみ（body null）・open・live 中だけ。204 → 全員に question:cancelled {id}（v4.5）
+
 // ---------------------------------------------------------------- 資料・添付
 
 /**
@@ -341,6 +353,146 @@
  * @property {string|null} body
  * @property {FileInfo} [file]
  * @property {string} created_at
+ */
+
+// ---------------------------------------------------------------- F-10 プログラミングモード（docs/04 §7・v4.5）
+
+/**
+ * PUT /api/lessons/:id/mode（先生）。レスポンスは LessonDetail
+ * @typedef {Object} SetLessonModeRequest
+ * @property {LessonMode} mode
+ */
+
+/**
+ * 課題。GET /api/lessons/:id/code/tasks の要素、POST / PATCH の `{task}`、code:task_added の `task`
+ * @typedef {Object} CodeTask
+ * @property {number} id
+ * @property {number} lesson_id
+ * @property {string} title
+ * @property {CodeLanguage} language
+ * @property {string} template   初期コード（空なら CODE_DEFAULT_TEMPLATE を入れて保存する）
+ * @property {number} sort_order
+ * @property {boolean} is_active lessons.active_task_id と一致するか
+ * @property {string} created_at
+ */
+
+/**
+ * POST /api/lessons/:id/code/tasks（先生）
+ * @typedef {Object} CreateCodeTaskRequest
+ * @property {string} title           CODE_LIMITS.TASK_TITLE_MAX 文字以内
+ * @property {string} [template]      省略・空なら既定の雛形
+ * @property {CodeLanguage} [language] 既定 'java'
+ */
+
+/**
+ * PATCH /api/code/tasks/:task_id（先生）
+ * @typedef {Object} UpdateCodeTaskRequest
+ * @property {string} [title]
+ * @property {string} [template]  既存の生徒コードには影響しない
+ */
+
+/**
+ * PUT /api/lessons/:id/code/active-task（先生）。レスポンスも {task_id}
+ * @typedef {Object} SetActiveTaskRequest
+ * @property {number} task_id
+ */
+
+// POST /api/code/tasks/:task_id/redistribute（先生）… ボディ無し。204。対象生徒に code:reset
+
+/**
+ * GET /api/code/tasks/:task_id/documents（先生）の要素。コードグリッド用
+ * @typedef {Object} CodeDocumentSummary
+ * @property {UserBrief} user
+ * @property {string} source_head          先頭 CODE_LIMITS.GRID_HEAD_LINES 行。未着手の生徒はテンプレート
+ * @property {CodeState} state             枠色。未着手は 'idle'
+ * @property {string|null} last_saved_at   最後の保存（code_snapshots.saved_at）。未保存は null
+ * @property {CodeRunStatus|null} last_run_status 直近のコンパイル／実行の結果。無ければ null
+ */
+
+/**
+ * コンパイル・実行 1 回分。code:run_result と同じ形
+ * @typedef {Object} CodeRun
+ * @property {number} run_id
+ * @property {number} task_id
+ * @property {number} user_id
+ * @property {CodeRunKind} kind
+ * @property {CodeRunStatus} status
+ * @property {string|null} stdout      CODE_LIMITS.OUTPUT_MAX_BYTES で切り詰め済み
+ * @property {string|null} stderr
+ * @property {number|null} exit_code
+ * @property {number|null} duration_ms
+ * @property {string} created_at
+ */
+
+/**
+ * GET /api/code/tasks/:task_id/documents/:user_id（先生・本人）
+ * @typedef {Object} CodeDocumentDetail
+ * @property {UserBrief} user
+ * @property {string} source
+ * @property {string} updated_at
+ * @property {string|null} last_saved_at
+ * @property {CodeRun[]} runs   直近 CODE_LIMITS.RECENT_RUNS 件（新しい順）
+ */
+
+/**
+ * POST /api/code/tasks/:task_id/save（生徒・先生）
+ * @typedef {Object} SaveCodeRequest
+ * @property {string} source                 CODE_LIMITS.SOURCE_MAX_BYTES 以内
+ * @property {boolean} [edited_by_teacher]   先生が生徒のコードを保存するとき true
+ * @property {number} [target_user_id]       先生のときだけ必須（保存先の生徒）。生徒が付けると 400
+ */
+
+/**
+ * コンパイルエラー 1 件
+ * @typedef {Object} CompileError
+ * @property {number} line
+ * @property {number|null} col
+ * @property {string} message
+ */
+
+/**
+ * POST /api/code/tasks/:task_id/save のレスポンス
+ * @typedef {Object} SaveCodeResponse
+ * @property {number} snapshot_id
+ * @property {{ status: CodeRunStatus, errors: CompileError[] }} compile  status は ok / compile_error / runner_unavailable
+ */
+
+/**
+ * POST /api/code/tasks/:task_id/run（生徒）
+ * @typedef {Object} RunCodeRequest
+ * @property {string} source
+ * @property {string} [stdin]  CODE_LIMITS.STDIN_MAX_BYTES 以内
+ */
+
+/**
+ * POST /api/code/tasks/:task_id/run のレスポンス（202）。結果は code:run_result で届く
+ * @typedef {Object} RunCodeResponse
+ * @property {number} run_id
+ * @property {number} queued_position  0 なら即実行
+ */
+
+/**
+ * PUT /api/lessons/:id/code/spotlight（先生）。レスポンスも {user_id}
+ * @typedef {Object} CodeSpotlightRequest
+ * @property {number|null} user_id null で解除
+ */
+
+/**
+ * GET /api/lessons/:id/code/summary（先生）の要素。授業結果画面用
+ * @typedef {Object} CodeTaskSummary
+ * @property {CodeTask} task
+ * @property {number} total              クラスの生徒数
+ * @property {number} compiled_ok_count  最後の保存で compile_ok の生徒数
+ * @property {{ saves: number, users: number }[]} saves_histogram  保存回数ごとの人数（saves 昇順。0 回も含む）
+ * @property {{ user: UserBrief, first_ok_at: string|null, last_state: CodeState, edited_by_teacher: boolean }[]} first_ok_at_by_user
+ */
+
+/**
+ * GET /api/lessons/:id/code/mine（生徒）の要素。授業後の自分のコード
+ * @typedef {Object} MyCodeDocument
+ * @property {CodeTask} task
+ * @property {string} source
+ * @property {string|null} last_saved_at
  */
 
 export {};
