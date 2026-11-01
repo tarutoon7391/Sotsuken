@@ -25,6 +25,8 @@ module.exports = {
   // F-10 プログラミングモードの実行サーバー（Piston）のベース URL（docs/04 §7.4）。
   // 開発は公開 API（https://emkc.org/api/v2/piston）、本番は VPS 上の Piston。未設定なら実行は RUNNER_UNAVAILABLE
   codeRunnerUrl: String(process.env.CODE_RUNNER_URL || '').replace(/\/+$/, ''),
+  // 授業ごとの同時実行本数の上書き（docs/infra/piston-setup.md。未設定なら CODE_LIMITS.CONCURRENT_RUNS＝4。1G の VPS では 2）
+  codeRunnerConcurrency: Number(process.env.CODE_RUNNER_CONCURRENCY) || 0,
   // 仮トップ（client/dist が無いときだけ配信）
   publicDir: path.resolve(__dirname, '../../public'),
   // React のビルド出力（本番）
