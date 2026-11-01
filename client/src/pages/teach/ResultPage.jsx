@@ -13,6 +13,8 @@ import useToast from '../../components/shared/useToast.jsx';
 import { formatBytes, formatDateTime, formatTime } from '../../components/shared/format.js';
 import { MaterialButton, fileKindLabel } from '../classes/ClassDetailPage.jsx';
 import MaterialPreview from '../../components/shared/MaterialPreview.jsx';
+import { STATE_LABELS as CODE_STATE_LABELS } from '../../components/teach/code/CodeGrid.jsx';
+import '../../components/teach/code/teach-code.css';
 import './result.css';
 
 export default function ResultPage() {
@@ -34,6 +36,7 @@ function ResultBody() {
   const [questions, setQuestions] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [checks, setChecks] = useState([]);
+  const [codeSummary, setCodeSummary] = useState([]); // F-10：課題ごとの集計（課題が無い授業は空）
   const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const [loadError, setLoadError] = useState('');
   const [toast, showToast] = useToast(3000);
@@ -52,6 +55,7 @@ function ResultBody() {
     get(`/lessons/${lessonId}/questions`).then((r) => setQuestions(r || [])).catch(warn);
     get(`/lessons/${lessonId}/files`, { kind: FILE_KINDS.MATERIAL }).then((r) => setMaterials(r || [])).catch(warn);
     get(`/lessons/${lessonId}/attention`).then((r) => setChecks(r || [])).catch(warn);
+    get(`/lessons/${lessonId}/code/summary`).then((r) => setCodeSummary(r || [])).catch(warn);
   }, [lessonId, warn]);
 
   // 挙手のみ（body なし）は質問一覧に含めない。未回答を先に
@@ -228,6 +232,62 @@ function ResultBody() {
             )}
             <Link className="btn btn-ghost att-link" to={`/lessons/${lessonId}/attendance`}>出席一覧を開く →</Link>
           </section>
+
+          {/* F-10：プログラミングモードを使った授業だけ（課題 0 件なら出さない） */}
+          {codeSummary.length > 0 && (
+            <section className="section">
+              <h6 className="section-label">コード（プログラミングモード）</h6>
+              <div className="code-summary">
+                {codeSummary.map((s) => {
+                  const maxUsers = Math.max(1, ...s.saves_histogram.map((h) => h.users));
+                  return (
+                    <div key={s.task.id} className="code-summary-task">
+                      <div className="code-summary-head">
+                        <strong>{s.task.title}</strong>
+                        <span className="code-summary-ok">
+                          コンパイル成功 <b>{s.compiled_ok_count}</b> / {s.total} 人
+                        </span>
+                      </div>
+                      <div className="code-summary-body">
+                        <div className="bars code-hist">
+                          <div className="tiny muted">保存回数ごとの人数</div>
+                          {s.saves_histogram.map((h) => (
+                            <div key={h.saves} className="bar-row">
+                              <span>{h.saves} 回</span>
+                              <div className="bar-track"><div className="bar-fill" style={{ width: `${(h.users / maxUsers) * 100}%` }} /></div>
+                              <span className="bar-num">{h.users}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <table className="code-summary-table">
+                          <thead>
+                            <tr>
+                              <th>生徒</th>
+                              <th>最初にコンパイルが通った時刻</th>
+                              <th>最終状態</th>
+                              <th>先生編集</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {s.first_ok_at_by_user.map((r) => (
+                              <tr key={r.user.id}>
+                                <td>
+                                  <span className="person-inline"><Avatar user={r.user} size={20} />{r.user.name}</span>
+                                </td>
+                                <td>{r.first_ok_at ? formatTime(r.first_ok_at) : <span className="muted">—</span>}</td>
+                                <td><span className={`code-cell-state is-${r.last_state}`}>{CODE_STATE_LABELS[r.last_state] || r.last_state}</span></td>
+                                <td>{r.edited_by_teacher ? 'あり' : ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="section">
             <h6 className="section-label">資料</h6>

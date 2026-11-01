@@ -96,20 +96,22 @@ export default function CodeStage({ lessonId, lesson, me, socket, connected, mob
   useEffect(() => {
     if (!selectedId) return;
     const w = works[selectedId];
-    if (!w || w.loaded) return;
+    if (!w || w.loaded || w.loading) return;
     let alive = true;
+    updateWork(selectedId, { loading: true });
     get(`/code/tasks/${selectedId}/documents/${me.id}`, undefined, { redirect: false })
       .then((doc) => {
         if (!alive || !doc) return;
         updateWork(selectedId, (cur) => ({
           loaded: true,
+          loading: false,
           // 既に打ち始めていたら上書きしない
           source: cur.dirty ? cur.source : doc.source,
           lastRun: doc.runs && doc.runs.length ? doc.runs[0] : cur.lastRun,
           resetCount: cur.dirty ? cur.resetCount : cur.resetCount + 1,
         }));
       })
-      .catch(() => alive && updateWork(selectedId, { loaded: true }));
+      .catch(() => alive && updateWork(selectedId, { loaded: true, loading: false }));
     return () => {
       alive = false;
     };
