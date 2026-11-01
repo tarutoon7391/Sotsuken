@@ -86,6 +86,56 @@ describe('interpretResult（Piston の結果）', () => {
   });
 });
 
+describe('executeOnPiston（公開 API の上限で 400 → 控えめな値で再送）', () => {
+  const config = require('../config');
+  const files = [{ name: 'Main.java', content: 'public class Main {}' }];
+  let prevUrl;
+  beforeEach(() => {
+    prevUrl = config.codeRunnerUrl;
+    config.codeRunnerUrl = 'http://piston.test/api/v2';
+  });
+  afterEach(() => {
+    config.codeRunnerUrl = prevUrl;
+    delete global.fetch;
+  });
+
+  test('1 回目が 400（run_timeout 超過）なら、timeout を縮めて 2 回目を送る', async () => {
+    const bodies = [];
+    global.fetch = jest.fn(async (url, init) => {
+      bodies.push(JSON.parse(init.body));
+      if (bodies.length === 1) {
+        return { ok: false, status: 400, text: async () => JSON.stringify({ message: 'run_timeout cannot exceed 3000ms' }) };
+      }
+      return { ok: true, json: async () => ({ compile: { code: 0, stdout: '', stderr: '' }, run: { code: 0, stdout: 'Hello\n', stderr: '' } }) };
+    });
+    const result = await runner.executeOnPiston(files, '');
+    expect(result.run.stdout).toBe('Hello\n');
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0].run_timeout).toBe(CODE_LIMITS.CPU_TIMEOUT_MS);
+    expect(bodies[1].run_timeout).toBe(3000);
+    expect(bodies[1].run_memory_limit).toBeUndefined();
+    // 4xx では死活状態を down にしない
+    expect(runner.getRunnerState().available).toBe(true);
+  });
+
+  test('2 回とも 400 なら理由付きの error を返し、interpretResult は runner_unavailable にする', async () => {
+    global.fetch = jest.fn(async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ message: 'version not found' }) }));
+    const result = await runner.executeOnPiston(files, '');
+    expect(result.error).toContain('version not found');
+    const out = runner.interpretResult(result, { compileOnly: false });
+    expect(out.status).toBe(CODE_RUN_STATUS.RUNNER_UNAVAILABLE);
+    expect(out.stderr).toContain('version not found');
+  });
+
+  test('ネットワークエラーは null（down 扱い）', async () => {
+    global.fetch = jest.fn(async () => {
+      throw new Error('ECONNREFUSED');
+    });
+    expect(await runner.executeOnPiston(files, '')).toBeNull();
+    expect(runner.getRunnerState().available).toBe(false);
+  });
+});
+
 describe('待ち行列（授業ごと・同時 CONCURRENT_RUNS）', () => {
   test('同時実行数を超えた分は待ち、順番が来ると position 0 で始まる', async () => {
     const lessonId = 9001;
