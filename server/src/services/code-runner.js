@@ -114,7 +114,7 @@ function parseCompileErrors(stderr) {
  */
 async function executeOnPiston(files, stdin) {
   if (!isConfigured()) return null;
-  const body = {
+  const full = {
     language: CODE_LANGUAGES.JAVA,
     version: '*',
     files,
@@ -124,6 +124,36 @@ async function executeOnPiston(files, stdin) {
     compile_memory_limit: CODE_LIMITS.MEMORY_MB * 1024 * 1024,
     run_memory_limit: CODE_LIMITS.MEMORY_MB * 1024 * 1024,
   };
+  // 公開 API（emkc.org）は run_timeout 3 秒・メモリ指定なしが上限。400 で弾かれたら控えめな値で 1 回だけ再送する
+  const conservative = {
+    language: full.language,
+    version: full.version,
+    files,
+    stdin: full.stdin,
+    compile_timeout: PUBLIC_API_COMPILE_TIMEOUT_MS,
+    run_timeout: PUBLIC_API_RUN_TIMEOUT_MS,
+  };
+
+  const first = await postExecute(full);
+  if (first.ok) return first.json;
+  if (first.status === 400) {
+    const second = await postExecute(conservative);
+    if (second.ok) return second.json;
+    return { error: second.message || first.message };
+  }
+  return first.message ? { error: first.message } : null;
+}
+
+/** 公開 Piston API の上限（docs/04 §7.4 の値より小さい。セルフホスト時は full の値がそのまま通る） */
+const PUBLIC_API_RUN_TIMEOUT_MS = 3000;
+const PUBLIC_API_COMPILE_TIMEOUT_MS = 10000;
+
+/**
+ * POST /execute を 1 回呼ぶ
+ * @returns {Promise<{ ok: true, json: object } | { ok: false, status: number|null, message: string }>}
+ *   ネットワーク・タイムアウト・5xx は死活状態を down にする。4xx（リクエスト内容の問題・レート超過）は down にしない
+ */
+async function postExecute(body) {
   try {
     const res = await fetch(`${config.codeRunnerUrl}/execute`, {
       method: 'POST',
@@ -131,17 +161,25 @@ async function executeOnPiston(files, stdin) {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(CODE_LIMITS.RUNNER_HTTP_TIMEOUT_MS),
     });
-    if (!res.ok) {
-      // 公開 API のレート超過（429）なども「今は使えない」として扱う
-      markDown();
-      return null;
+    if (res.ok) {
+      markUp();
+      return { ok: true, json: await res.json() };
     }
-    const json = await res.json();
-    markUp();
-    return json;
+    let message = `実行サーバーが HTTP ${res.status} を返しました`;
+    try {
+      const text = await res.text();
+      const parsed = text ? JSON.parse(text) : null;
+      if (parsed && parsed.message) message = `実行サーバーのエラー（HTTP ${res.status}）: ${parsed.message}`;
+      else if (text) message = `実行サーバーのエラー（HTTP ${res.status}）: ${text.slice(0, 200)}`;
+    } catch {
+      /* 本文が JSON でなければ既定の文言のまま */
+    }
+    if (res.status >= 500) markDown();
+    console.error('Piston /execute:', message);
+    return { ok: false, status: res.status, message };
   } catch (err) {
     markDown();
-    return null;
+    return { ok: false, status: null, message: '' };
   }
 }
 
@@ -152,6 +190,10 @@ async function executeOnPiston(files, stdin) {
 function interpretResult(result, { compileOnly }) {
   if (!result) {
     return { status: CODE_RUN_STATUS.RUNNER_UNAVAILABLE, stdout: null, stderr: RUNNER_DOWN_MESSAGE, exit_code: null };
+  }
+  if (result.error) {
+    // 実行サーバーがリクエストを拒否した（4xx）。本文の理由をそのまま出力パネルに出す
+    return { status: CODE_RUN_STATUS.RUNNER_UNAVAILABLE, stdout: null, stderr: truncateOutput(result.error), exit_code: null };
   }
   const compile = result.compile || null;
   const run = result.run || null;
@@ -421,6 +463,7 @@ module.exports = {
   checkHealth,
   getRunnerState,
   // テスト用・内部
+  executeOnPiston,
   parseCompileErrors,
   interpretResult,
   truncateOutput,
