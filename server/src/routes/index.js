@@ -19,7 +19,9 @@ router.get('/health', asyncHandler(async (req, res) => {
       db = false;
     }
   }
-  res.json({ ok: true, db });
+  // F-10：実行サーバー（Piston）の設定有無と死活状態（運用の確認用。configured が false なら CODE_RUNNER_URL が未設定）
+  const runner = require('../services/code-runner').getRunnerState();
+  res.json({ ok: true, db, code_runner: { configured: runner.configured, available: runner.available, checked_at: runner.checkedAt } });
 }));
 
 // --- W1：認証・クラス・授業・資料
