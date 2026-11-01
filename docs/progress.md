@@ -150,3 +150,11 @@
 - **未確認**：Piston 公開 API への実リクエスト（manager セッションでは外部送信が止められた）。`Compile.java` 先頭方式で run 段階が main を呼ばない前提は、トーンさんが curl か実機で確認する
 - 次：PR → トーンさんが実機確認（先生＋生徒 2 タブ）→ 段階 2（Yjs）・段階 3（Piston セルフホスト）の投入
 
+### 段階 1 の本番確認と実行サーバーの行き詰まり（2026-11-01 午後）
+- PR #16（段階 1）・#17（/api/health に `code_runner`）・#18（公開 API の上限で 400 → 控えめな値で再送、拒否理由を出力パネルへ）を main にマージ・デプロイ済み
+- 本番で保存・実行を試した結果：アプリ → Piston の呼び出し自体は動いているが、**emkc.org の公開 Piston API が 2026-02-15 からホワイトリスト制**で HTTP 401（「Public Piston API is now whitelist only」）。段階 1 の「生徒が書いて実行できる」はこの 1 点で未達。エディタ・保存の DB 書き込み・先生のコードグリッド・課題管理・モード切替は動作確認済み
+- LiveKit の 401 は Railway の攻撃対応でキーを止めているため（想定どおり・F-10 と無関係）
+- **決定（トーンさん）**：段階 3 を前倒しし、**さくらのVPS 石狩・1G プラン・Ubuntu 24.04** を借りて Piston をセルフホストする（国内 VPS は CVE-2026-99999 対応で新規停止が多く、11/1 時点で借りられるのが石狩だけ）。手順・制限値・未決事項（Railway → VPS の経路の守り方）は **docs/infra/piston-setup.md**
+- アプリ側：`.env` の `CODE_RUNNER_CONCURRENCY` で授業ごとの同時実行本数を上書きできるようにした（1G では 2）
+- 次：VPS 到着 → docs/infra/piston-setup.md §3〜5 → Railway の `CODE_RUNNER_URL` を VPS に向けて再デプロイ → 実行の実機確認 → 段階 2（Yjs）
+

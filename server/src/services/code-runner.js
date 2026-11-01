@@ -248,6 +248,11 @@ async function runSource(source, stdin) {
 
 const queues = new Map(); // lessonId → { running: number, waiting: item[] }
 
+/** 同時実行本数（.env の CODE_RUNNER_CONCURRENCY で上書き可。1G の VPS では 2 にする） */
+function maxConcurrent() {
+  return config.codeRunnerConcurrency > 0 ? config.codeRunnerConcurrency : CODE_LIMITS.CONCURRENT_RUNS;
+}
+
 function getQueue(lessonId) {
   let q = queues.get(lessonId);
   if (!q) {
@@ -270,7 +275,7 @@ function startItem(q, item) {
 }
 
 function drainQueue(q) {
-  while (q.running < CODE_LIMITS.CONCURRENT_RUNS && q.waiting.length) startItem(q, q.waiting.shift());
+  while (q.running < maxConcurrent() && q.waiting.length) startItem(q, q.waiting.shift());
   // 残っている人に新しい順番を知らせる（1 始まり）
   q.waiting.forEach((it, i) => it.onPosition && it.onPosition(i + 1));
 }
@@ -290,7 +295,7 @@ function enqueue(lessonId, task, onPosition) {
     item.reject = reject;
   });
   let position;
-  if (q.running < CODE_LIMITS.CONCURRENT_RUNS) {
+  if (q.running < maxConcurrent()) {
     position = 0;
     startItem(q, item);
   } else {
