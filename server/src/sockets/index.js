@@ -65,9 +65,11 @@ function setupSockets(httpServer, sessionMiddleware) {
   });
 
   io.on('connection', (socket) => {
-    const { lessonId, role } = socket.data;
+    const { lessonId, role, user } = socket.data;
     socket.join(roomNames.lesson(lessonId));
     socket.join(role === ROLES.TEACHER ? roomNames.teachers(lessonId) : roomNames.students(lessonId));
+    // 本人宛ルーム（F-10 の code:reset / code:queue / code:teacher_editing の宛先。docs/04 §7.2・v4.5）
+    socket.join(roomNames.user(lessonId, user.id));
 
     for (const h of handlers) h.register(io, socket);
   });

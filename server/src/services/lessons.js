@@ -117,7 +117,8 @@ async function listTags(classId) {
 async function getLessonDetail(lessonId) {
   const rows = await query(
     `SELECT l.id, l.class_id, l.title, l.status, l.room_name, l.spotlight_user_id,
-            l.away_timeout_min, l.started_at, l.ended_at,
+            l.away_timeout_min, l.understanding_reset_at, l.started_at, l.ended_at,
+            l.mode, l.active_task_id, l.code_spotlight_user_id,
             t.id AS teacher_id, t.name AS teacher_name, t.icon_url AS teacher_icon_url
        FROM lessons l
        JOIN classes c ON c.id = l.class_id
@@ -136,6 +137,12 @@ async function getLessonDetail(lessonId) {
     room_name: r.room_name,
     spotlight_user_id: r.spotlight_user_id,
     away_timeout_min: r.away_timeout_min,
+    // 理解リアクションの最終リセット時刻（pending #9 → B・v4.5）。未リセットは null
+    understanding_reset_at: r.understanding_reset_at ? new Date(r.understanding_reset_at).toISOString() : null,
+    // F-10 プログラミングモード（v4.5）
+    mode: r.mode,
+    active_task_id: r.active_task_id,
+    code_spotlight_user_id: r.code_spotlight_user_id,
     tags: tags[r.id] || [],
     started_at: r.started_at,
     ended_at: r.ended_at,
