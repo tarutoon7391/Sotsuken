@@ -29,6 +29,7 @@ import AttendancePage from './pages/teach/AttendancePage.jsx';
 import ResultPage from './pages/teach/ResultPage.jsx';
 import LearnPage from './pages/learn/LearnPage.jsx';
 import AwayPage from './pages/learn/AwayPage.jsx';
+import MyCodePage from './pages/learn/MyCodePage.jsx';
 import EndedPage from './pages/common/EndedPage.jsx';
 import ErrorPage from './pages/common/ErrorPage.jsx';
 import AdminUsersPage from './pages/admin/AdminUsersPage.jsx';
@@ -55,6 +56,8 @@ export default function App() {
       {/* 生徒（W4） */}
       <Route path="/lessons/:id/learn" element={<LearnPage />} />
       <Route path="/lessons/:id/away" element={<AwayPage />} />
+      {/* 15：生徒の自分のコード（F-10・授業後） */}
+      <Route path="/lessons/:id/code/mine" element={<MyCodePage />} />
 
       {/* 運用：ユーザー管理（管理者だけ。発表・資料の対象外） */}
       <Route path="/admin/users" element={<AdminUsersPage />} />

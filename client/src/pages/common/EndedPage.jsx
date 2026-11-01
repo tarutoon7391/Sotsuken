@@ -59,6 +59,8 @@ function EndedBody() {
           ) : (
             <div className="actions">
               <Link className="btn btn-primary" to={lesson ? `/classes/${lesson.class_id}` : '/classes'}>クラスに戻る</Link>
+              {/* F-10：プログラミングモードで書いたコードを見返す（課題が無ければ「コードなし」） */}
+              <Link className="btn btn-secondary" to={`/lessons/${id}/code/mine`}>自分のコードを見る</Link>
             </div>
           )}
         </div>

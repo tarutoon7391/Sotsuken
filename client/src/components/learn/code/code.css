@@ -1,0 +1,122 @@
+/* F-10 プログラミングモード：生徒画面の部品（CodeStage / CodeEditor / TaskTabs / RunPanel / OutputPanel）— 担当：W4
+   先生画面（W5）のコードグリッド・拡大パネルも .code-editor / .code-tabs / .code-output を共用する。
+   色は broadsheet.css の変数（--color-code-*）から取る。 */
+
+/* ---- 全体（映像エリアの代わりに置く） ---- */
+.code-stage { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-height: 0; min-width: 0; }
+.code-empty {
+  flex: 1; display: grid; place-items: center; min-height: 160px;
+  border: 1px dashed var(--color-neutral-300); border-radius: var(--radius-lg);
+  color: var(--color-neutral-600); font-size: 13px; text-align: center; padding: var(--space-4);
+}
+.code-banner { padding: 6px var(--space-2); border-radius: var(--radius-md); font-size: 12px; flex: none; }
+.code-banner.is-teacher { background: var(--color-accent-100); color: var(--color-accent-800); }
+.code-banner.is-spot { background: var(--color-accent-2-100); color: var(--color-accent-2-800); font-weight: 600; }
+
+/* ---- 課題タブ ---- */
+.code-tabs { display: flex; align-items: center; gap: 2px; min-height: 28px; flex: none; overflow-x: auto; }
+.code-tabs-sm { min-height: 24px; }
+.code-tabs-empty { font-size: 12px; color: var(--color-neutral-600); padding: 0 4px; }
+.code-tabs-right { margin-left: auto; display: inline-flex; gap: 4px; align-items: center; }
+.code-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--color-neutral-700); font-size: 13px; font-weight: 600; font-family: var(--font-heading);
+  cursor: pointer; white-space: nowrap;
+}
+.code-tab:hover { color: var(--color-accent-700); }
+.code-tab.is-selected { color: var(--color-accent-700); border-bottom-color: var(--color-accent); }
+.code-tab.is-active .code-tab-title { text-decoration: underline; text-decoration-color: var(--color-accent-300); text-underline-offset: 3px; }
+.code-tab-now { font-size: 10px; padding: 1px 5px; border-radius: 999px; background: var(--color-accent); color: var(--color-bg); font-weight: 600; }
+.code-tab-note { font-size: 10px; color: var(--color-code-error); }
+.code-tabs-sm .code-tab { font-size: 12px; padding: 2px 8px; }
+
+/* ---- エディタ ---- */
+.code-editor-wrap {
+  flex: 1; min-height: 160px; display: flex;
+  border: 1px solid var(--color-neutral-300); border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--color-code-bg);
+}
+.code-editor { flex: 1; min-width: 0; min-height: 0; height: 100%; }
+.code-editor .cm-editor { height: 100%; background: var(--color-code-bg); }
+.code-editor .cm-editor.cm-focused { outline: 2px solid color-mix(in srgb, var(--color-accent) 35%, transparent); outline-offset: -2px; }
+.code-editor .cm-gutters { background: var(--color-neutral-100); border-right: 1px solid var(--color-neutral-200); color: var(--color-neutral-500); }
+.code-editor .cm-activeLine { background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+.code-editor .cm-activeLineGutter { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.code-editor .cm-lintRange-error { background-image: none; text-decoration: underline wavy var(--color-code-error); text-decoration-skip-ink: none; }
+.code-editor .cm-lint-marker-error { color: var(--color-code-error); }
+.code-editor.is-compact .cm-gutters { font-size: 10px; }
+.code-editor.is-readonly .cm-editor { background: var(--color-neutral-100); }
+.code-editor.is-readonly .cm-cursor { display: none; }
+
+/* ---- 操作列 ---- */
+.code-run { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.code-run-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.code-run-spacer { flex: 1; }
+.code-run-btn { min-width: 88px; }
+.code-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700); min-width: 0; }
+.code-state-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--color-code-idle); flex: none; }
+.code-state.is-ok .code-state-dot { background: var(--color-code-ok); }
+.code-state.is-error .code-state-dot { background: var(--color-code-error); }
+.code-state.is-warn .code-state-dot { background: var(--color-code-warn); }
+.code-state.is-running .code-state-dot { background: var(--color-code-running); animation: codePulse 1s ease-in-out infinite; }
+.code-state.is-error { color: var(--color-code-error); }
+.code-queue { font-size: 12px; color: var(--color-code-running); font-weight: 600; }
+.code-stdin-toggle.is-on { color: var(--color-accent-700); }
+.code-stdin { display: flex; flex-direction: column; gap: 4px; }
+.code-stdin textarea {
+  width: 100%; box-sizing: border-box; resize: vertical; font-family: "Cascadia Code", "Consolas", "Menlo", monospace; font-size: 12px;
+  padding: 6px 8px; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md); background: var(--color-code-bg); color: var(--color-text);
+}
+@keyframes codePulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- 出力パネル ---- */
+.code-output {
+  display: flex; flex-direction: column; flex: none; max-height: 34%; min-height: 96px;
+  border: 1px solid var(--color-neutral-300); border-radius: var(--radius-lg); background: var(--color-neutral-100); overflow: hidden;
+}
+.code-output.is-compact { max-height: 28%; min-height: 80px; }
+.code-output-head { display: flex; align-items: center; gap: var(--space-2); padding: 2px var(--space-2) 0; border-bottom: 1px solid var(--color-neutral-200); flex: none; }
+.code-output-status { margin-left: auto; font-size: 12px; font-weight: 600; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.code-output-status.is-ok { color: var(--color-code-ok); }
+.code-output-status.is-error { color: var(--color-code-error); }
+.code-output-status.is-warn { color: var(--color-code-warn); }
+.code-output-status.is-idle { color: var(--color-neutral-600); }
+.code-output-meta { font-weight: 400; color: var(--color-neutral-600); }
+.code-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.code-dot.is-error { background: var(--color-code-error); }
+.code-output-errors { list-style: none; margin: 0; padding: 4px var(--space-2); display: flex; flex-direction: column; gap: 2px; font-size: 12px; border-bottom: 1px solid var(--color-neutral-200); flex: none; max-height: 40%; overflow: auto; }
+.code-output-errors li { display: flex; gap: 8px; align-items: baseline; }
+.code-output-errline { border: 0; background: transparent; padding: 0; color: var(--color-code-error); font-weight: 600; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.code-output-errline:hover { text-decoration: underline; }
+.code-output-body {
+  flex: 1; min-height: 0; margin: 0; padding: 6px var(--space-2); overflow: auto;
+  font-family: "Cascadia Code", "Consolas", "Menlo", monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+  color: var(--color-text);
+}
+
+/* ---- コードスポットライト（自分のエディタの上に読み取り専用で表示） ---- */
+.code-spotlight { display: flex; flex-direction: column; gap: 4px; flex: none; max-height: 45%; min-height: 120px; }
+.code-spotlight .code-editor { border: 2px solid var(--color-accent-2-300); border-radius: var(--radius-lg); overflow: hidden; min-height: 90px; }
+.code-spotlight-head { display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap; }
+.code-spotlight-badge { background: var(--color-accent-2); color: var(--color-bg); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+
+/* ---- 先生映像の小窓（coding 中は右上に小さく） ---- */
+.code-pip { position: absolute; top: 36px; right: 8px; width: min(220px, 32%); z-index: 3; box-shadow: var(--shadow-md); border-radius: var(--radius-lg); overflow: hidden; }
+.code-pip .lr-video { aspect-ratio: 16/9; flex: none; }
+.code-pip .lr-video-note { display: none; }
+.code-stage-host { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* ---- スマホ ---- */
+.code-stage.is-mobile { height: 52vh; flex: none; margin: 0 14px; }
+.code-stage.is-mobile .code-editor-wrap { min-height: 120px; }
+.code-stage.is-mobile .code-run-row .btn { padding: 6px 10px; }
+.code-stage.is-mobile .code-editor .cm-scroller { overflow-x: auto; }
+
+/* ---- 授業後：自分のコード ---- */
+.mycode-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.mycode-item { display: flex; flex-direction: column; gap: 6px; }
+.mycode-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.mycode-head h3 { margin: 0; font-size: 16px; }
+.mycode-head .tiny { margin-left: auto; }
+.mycode-item .code-editor { height: 280px; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-lg); overflow: hidden; }

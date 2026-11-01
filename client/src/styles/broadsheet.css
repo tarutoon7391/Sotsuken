@@ -49,6 +49,15 @@
      never take it. */
   --color-process-yellow: #edbb00;
 
+  /* F-10 プログラミングモード：コードの状態色（docs/07 §15。枠色・バッジ・出力パネルで使う。
+     赤は accent-2、グレーは neutral、青は accent から取り、緑・橙だけ新しく足す） */
+  --color-code-ok: #2e8b57;        /* 正常終了（緑） */
+  --color-code-error: #d82071;     /* 構文エラー・コンパイルエラー（赤＝accent-2-600） */
+  --color-code-warn: #d9741a;      /* 実行時エラー（橙） */
+  --color-code-idle: #bab6b6;      /* 未保存（グレー＝neutral-400） */
+  --color-code-running: #0088b0;   /* 実行中・実行待ち（青＝accent） */
+  --color-code-bg: #fbfaf9;        /* エディタの背景（紙より少し明るい） */
+
   --font-heading: "Source Serif 4", system-ui, sans-serif;
   --font-heading-weight: 600;
   --font-body: "Source Serif 4", system-ui, sans-serif;
