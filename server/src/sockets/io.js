@@ -32,4 +32,9 @@ function emitToStudents(lessonId, event, payload) {
   if (io) io.to(roomNames.students(lessonId)).emit(event, payload);
 }
 
-module.exports = { setIo, getIo, emitToLesson, emitToTeachers, emitToStudents };
+/** 授業内の特定のユーザーだけに送る（複数タブでも全部に届く。F-10 の code:reset / code:queue / code:teacher_editing 用・v4.5） */
+function emitToUser(lessonId, userId, event, payload) {
+  if (io) io.to(roomNames.user(lessonId, userId)).emit(event, payload);
+}
+
+module.exports = { setIo, getIo, emitToLesson, emitToTeachers, emitToStudents, emitToUser };

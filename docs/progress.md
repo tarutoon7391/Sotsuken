@@ -129,3 +129,24 @@
 - **F-10 プログラミングモード 段階 0 を実施**：docs/11（まとめ書き）を docs/01 F-10／03 v4.5／04 v4.5 §7／05 #14〜17／07 §15／08 に取り込み、shared に型・イベント名・エラーコード・制限値を追加（cjs 再生成）、`server/migrations/003_code_mode.sql` を作成。**migrate は未実行（トーンさんのみ）**。以後は docs/11 ではなく各設計書を正とする
 - 次ラウンド（ラウンド4）の投入候補：W1＝pending #9 ＋ F-10 段階1（tasks/documents/snapshots/summary/mine）／W2＝挙手取り下げ・attention pending ＋ F-10 段階1（save/run・待ち行列・Piston・Socket）／W3＝F-10 段階3（Piston セルフホスト）／W4＝挙手取り下げ UI ＋ F-10 生徒エディタ／W5＝未応答者の名前表示 ＋ F-10 先生コードグリッド。所有権の追加分は docs/11 §5（docs/10 への転記は次ラウンド開始時）
 
+## F-10 プログラミングモード 段階 1 を manager が直列実装（2026-11-01・トーンさん裁定）
+
+- 段階 0 の PR #15 を main にマージ（8e709ae）。`prestart` が migrate.js を流すので Railway のデプロイで migration 003 が自動適用された（デプロイログで「適用中: 003_code_mode.sql」を確認）
+- トーンさんの判断で、段階 1 は並列ワーカーではなく **manager セッションで直列に実装**（ブランチ `feature/f10-stage1`）。所有権の区切り（docs/11 §5）はそのまま守った。段階 2（Yjs）・段階 3（Piston セルフホスト）は並列ワーカーに回す案
+- 実装したもの（docs/04 §7 の契約どおり。契約の変更なし）
+  - サーバー（W1 相当）：`services/code-tasks.js`・`routes/code-tasks.js`（課題 CRUD・active-task・redistribute・documents・summary・mine）。`LessonDetail` に `mode` / `active_task_id` / `code_spotlight_user_id` と **pending #9 の `understanding_reset_at`** を追加
+  - サーバー（W2 相当）：`services/code-runner.js`（保存＝コンパイルのみ・実行・待ち行列・レート制限・Piston 連携・死活監視）、`services/code-mode.js`（モード切替・コードスポットライト）、`routes/code-run.js`、`sockets/handlers/code-syntax.js`、`io.emitToUser` と本人ルーム、`jobs/code-runner-health.js`。`.env` に `CODE_RUNNER_URL`
+  - 生徒画面（W4 相当）：`components/learn/code/*`（CodeEditor＝CodeMirror 6・TaskTabs・RunPanel・OutputPanel・CodeStage）、LessonLive の coding 分岐（先生映像は右上の小窓）、`/lessons/:id/code/mine`（MyCodePage）
+  - 先生画面（W5 相当）：`components/teach/code/*`（CodePanel・TaskManager・CodeGrid・CodeInspector）、TeachPage のモード切替トグル・映像／コードタブ・起動ダイアログ、ResultPage のコードのセクション
+  - コードスポットライト・再配布は段階 2 の予定だったが、API も UI も小さいので段階 1 に含めた。**先生の直接編集（Yjs）・先生カーソル・teacher_editing は未実装（段階 2）**。拡大パネルは読み取り専用
+- 実装で決めた未記載事項（契約の変更ではなく補完。docs/04 §7 への追記候補）
+  - 保存＝コンパイルのみの実現：Piston に `Compile.java`（何もしない main）を先頭、`Main.java` を 2 番目で渡す。compile 段階の exit code ≠ 0 または stderr の `Main.java:N: error:` で `compile_error`。桁は `^` の位置
+  - `run` の `run_id` は実行前に `code_runs` に仮の行（status `runner_unavailable`）を入れて確保し、結果で UPDATE する。サーバー再起動で残った仮の行は `runner_unavailable` のまま
+  - 課題の初回作成で active になったときは `code:task_added` に加えて `code:active_task` も送る（生徒・先生の画面が同じ経路で切り替わるように）
+  - `code:spotlight` の解除は `{user_id:null, task_id}`。スポットライトは `active_task_id` が無ければ 409
+  - 保存（コンパイル）も実行と同じ待ち行列を通す（同時接続数を抑えるため。position の通知は run だけ）
+  - クラス詳細・授業終了画面の「自分のコード」リンクは課題の有無を見ずに出す（ページ側で「コードを書いていません」）
+- テスト：`code-runner.test.js`（DB 不要・11 件）、`code-mode.test.js`（DB あり時のみ・Piston は fetch モック）。manager 環境に .env が無いので DB テストは skip。vite build OK（chunk サイズ警告あり）
+- **未確認**：Piston 公開 API への実リクエスト（manager セッションでは外部送信が止められた）。`Compile.java` 先頭方式で run 段階が main を呼ばない前提は、トーンさんが curl か実機で確認する
+- 次：PR → トーンさんが実機確認（先生＋生徒 2 タブ）→ 段階 2（Yjs）・段階 3（Piston セルフホスト）の投入
+

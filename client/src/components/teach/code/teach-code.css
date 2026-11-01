@@ -1,0 +1,75 @@
+/* F-10 プログラミングモード：先生画面の部品（CodePanel / TaskManager / CodeGrid / CodeInspector）— 担当：W5
+   色は broadsheet.css の変数（--color-code-*）から取る。生徒側の .code-* は components/learn/code/code.css */
+
+.code-panel { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-height: 0; }
+.code-banner.is-runner { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+
+/* ---- モード切替（ヘッダー） ---- */
+.mode-toggle { display: inline-flex; border: 1px solid var(--color-neutral-300); border-radius: 999px; overflow: hidden; }
+.mode-toggle button { border: 0; background: transparent; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--color-neutral-700); cursor: pointer; font-family: var(--font-heading); }
+.mode-toggle button.is-on { background: var(--color-accent); color: var(--color-bg); }
+.mode-toggle button:disabled { cursor: default; opacity: .6; }
+
+/* ---- 中央：映像／コードのタブ ---- */
+.grid-tabs { display: flex; gap: 2px; align-items: center; }
+.grid-tabs .tab { font-size: 13px; }
+
+/* ---- 課題管理 ---- */
+.code-taskmgr { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.code-taskmgr-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.code-task-dialog { width: min(640px, 92vw); }
+.code-task-dialog .field { display: flex; flex-direction: column; gap: 4px; }
+.code-task-dialog input[type="text"] { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md); font-size: 14px; }
+.code-task-template {
+  width: 100%; box-sizing: border-box; resize: vertical; padding: 8px 10px; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md);
+  font-family: "Cascadia Code", "Consolas", "Menlo", monospace; font-size: 12px; line-height: 1.5; background: var(--color-code-bg); color: var(--color-text);
+}
+
+/* ---- 凡例 ---- */
+.code-legend { flex-wrap: wrap; }
+.legend .sw-code { border: 2px solid var(--color-code-idle); background: transparent; }
+.legend .sw-code.is-syntax_error, .legend .sw-code.is-compile_error { border-color: var(--color-code-error); }
+.legend .sw-code.is-runtime_error { border-color: var(--color-code-warn); }
+.legend .sw-code.is-ok { border-color: var(--color-code-ok); }
+.legend .sw-code.is-running { border-color: var(--color-code-running); }
+
+/* ---- コードグリッド ---- */
+.code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-2); }
+.code-cell {
+  display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 6px 8px; cursor: pointer;
+  border: 2px solid var(--color-code-idle); border-radius: var(--radius-lg); background: var(--color-code-bg); color: var(--color-text);
+  font-family: var(--font-body); min-height: 150px; transition: box-shadow .15s;
+}
+.code-cell:hover { box-shadow: var(--shadow-md); }
+.code-cell.is-syntax_error, .code-cell.is-compile_error { border-color: var(--color-code-error); }
+.code-cell.is-runtime_error { border-color: var(--color-code-warn); }
+.code-cell.is-ok { border-color: var(--color-code-ok); }
+.code-cell.is-running { border-color: var(--color-code-running); }
+.code-cell.is-spot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-2) 35%, transparent); }
+.code-cell-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.code-cell-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.code-cell-spot { color: var(--color-accent-2); font-size: 12px; }
+.code-cell-state { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; color: var(--color-bg); background: var(--color-code-idle); }
+.code-cell-state.is-syntax_error, .code-cell-state.is-compile_error { background: var(--color-code-error); }
+.code-cell-state.is-runtime_error { background: var(--color-code-warn); }
+.code-cell-state.is-ok { background: var(--color-code-ok); }
+.code-cell-state.is-running { background: var(--color-code-running); }
+.code-cell-src {
+  flex: 1; margin: 0; overflow: hidden; font-family: "Cascadia Code", "Consolas", "Menlo", monospace; font-size: 9px; line-height: 1.35;
+  color: var(--color-neutral-800); white-space: pre; max-height: 110px;
+  mask-image: linear-gradient(to bottom, var(--color-text) 70%, transparent);
+}
+.code-cell-foot { font-size: 10px; color: var(--color-neutral-600); }
+
+/* ---- 拡大パネル ---- */
+.code-inspector { width: min(1100px, 94vw); height: min(80vh, 760px); display: flex; flex-direction: column; gap: var(--space-2); }
+.code-inspector-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.code-inspector-head .dialog-title { margin: 0; }
+.code-inspector-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: var(--space-3); }
+.code-inspector-editor { display: flex; min-height: 0; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-lg); overflow: hidden; }
+.code-inspector-side { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
+.code-inspector-side .code-output { max-height: none; flex: 1; }
+.code-runs { flex: none; }
+.code-runs ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.code-runs li { display: flex; gap: var(--space-2); align-items: baseline; font-size: 12px; }
+.code-inspector-note { margin: 0; }

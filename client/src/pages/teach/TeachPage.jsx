@@ -14,12 +14,15 @@ import {
   ERROR_CODES,
   FILE_KINDS,
   LIMITS,
+  LESSON_MODES,
   LESSON_STATUS,
   QUESTION_STATUS,
   ROLES,
 } from '@sotsuken/shared/constants';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '@sotsuken/shared/socket-events';
-import { del, get, patch, post, upload } from '../../api/client.js';
+import { del, get, patch, post, put, upload } from '../../api/client.js';
+import CodePanel from '../../components/teach/code/CodePanel.jsx';
+import { TaskDialog } from '../../components/teach/code/TaskManager.jsx';
 import { connectLesson, disconnectLesson } from '../../socket.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
@@ -94,6 +97,10 @@ function TeachBody() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const [busy, setBusy] = useState('');
+  // F-10 プログラミングモード：中央の「映像／コード」タブと、coding 起動時の課題 1 ダイアログ
+  const [gridTab, setGridTab] = useState('video');
+  const [modeDialog, setModeDialog] = useState(false);
+  const [modeError, setModeError] = useState('');
   const closeEnd = useCallback(() => setConfirmEnd(false), []);
   useEscape(confirmEnd ? closeEnd : null); // 終了確認ダイアログは Esc で閉じる
   const rightTabRef = useRef(rightTab);
@@ -226,6 +233,15 @@ function TeachBody() {
       if (file) setMaterials((list) => mergeById(list, [file]));
     });
     socket.on(SERVER_EVENTS.SPOTLIGHT_UPDATE, ({ user_id }) => setSpotlightUserId(user_id));
+    // F-10：モード・今の課題・コードスポットライトは LessonDetail に持つ（CodePanel は lesson から読む）
+    socket.on(SERVER_EVENTS.LESSON_MODE, ({ mode }) => {
+      setLesson((l) => (l ? { ...l, mode } : l));
+      if (mode === LESSON_MODES.CODING) setGridTab('coding');
+    });
+    socket.on(SERVER_EVENTS.CODE_ACTIVE_TASK, ({ task_id }) => setLesson((l) => (l ? { ...l, active_task_id: task_id } : l)));
+    socket.on(SERVER_EVENTS.CODE_SPOTLIGHT, (p) =>
+      setLesson((l) => (l ? { ...l, code_spotlight_user_id: p && p.user_id != null ? p.user_id : null } : l))
+    );
     socket.on(SERVER_EVENTS.CHAT_MESSAGE, (m) => {
       setMessages((list) => mergeById(list, [m]));
       bump('chat');
@@ -331,6 +347,46 @@ function TeachBody() {
   function resetUnderstanding() {
     const socket = connectLesson(lessonId);
     socket.emit(CLIENT_EVENTS.UNDERSTANDING_RESET, {});
+  }
+
+  // ---- F-10 プログラミングモード
+  /** video ⇔ coding。課題が無いと coding にできない（409）ので、そのときは課題 1 のダイアログを出す */
+  async function setMode(mode) {
+    if (!lesson || lesson.mode === mode) return;
+    setBusy('mode');
+    try {
+      const l = await put(`/lessons/${lessonId}/mode`, { mode }, { redirect: false });
+      setLesson(l);
+      setGridTab(mode === LESSON_MODES.CODING ? 'coding' : 'video');
+      showToast(mode === LESSON_MODES.CODING ? 'プログラミングモードを開始しました（生徒の画面がエディタになります）' : '通常モードに戻しました');
+    } catch (err) {
+      if (mode === LESSON_MODES.CODING && err.code === ERROR_CODES.CONFLICT && isLive) {
+        setModeError('');
+        setModeDialog(true); // 課題が 1 つも無い → 課題 1 を作ってから coding にする
+      } else {
+        showToast(err.message);
+      }
+    } finally {
+      setBusy('');
+    }
+  }
+
+  /** 起動ダイアログ：課題 1 を作成 → coding に切り替え */
+  async function startCodingWithTask(input) {
+    setBusy('mode');
+    setModeError('');
+    try {
+      await post(`/lessons/${lessonId}/code/tasks`, input, { redirect: false });
+      const l = await put(`/lessons/${lessonId}/mode`, { mode: LESSON_MODES.CODING }, { redirect: false });
+      setLesson(l);
+      setGridTab('coding');
+      setModeDialog(false);
+      showToast('プログラミングモードを開始しました（生徒の画面がエディタになります）');
+    } catch (err) {
+      setModeError(err.message || '開始できませんでした');
+    } finally {
+      setBusy('');
+    }
   }
 
   async function spotlight(userId) {
@@ -447,6 +503,16 @@ function TeachBody() {
           <span>{liveLabel(lesson.status)}</span>
           {isLive && <span className="elapsed">{elapsed}</span>}
         </span>
+        {isLive && (
+          <span className="mode-toggle" role="group" aria-label="モード切替" title="プログラミングモード：生徒の映像エリアがコードエディタになります">
+            <button type="button" className={lesson.mode !== LESSON_MODES.CODING ? 'is-on' : ''} onClick={() => setMode(LESSON_MODES.VIDEO)} disabled={busy === 'mode'}>
+              映像
+            </button>
+            <button type="button" className={lesson.mode === LESSON_MODES.CODING ? 'is-on' : ''} onClick={() => setMode(LESSON_MODES.CODING)} disabled={busy === 'mode'}>
+              {'</>'} プログラミング
+            </button>
+          </span>
+        )}
         <span className="person">
           <Avatar user={user} />
           <span className="person-name">{user.name}</span>
@@ -512,25 +578,38 @@ function TeachBody() {
             </div>
           )}
 
-          <div className="grid-head">
-            <h6 className="section-label" style={{ margin: 0 }}>
-              生徒 <span className="count">入室 {counts.present}人 / {students.length}人</span>
-            </h6>
-            <div className="legend">
-              <span><i className="sw sw-hand" />挙手中</span>
-              <span><i className="sw sw-away" />一時退出中</span>
+          {/* F-10：coding 中は「映像／コード」タブ。映像タブに戻せば従来のグリッド（生徒カメラは coding 中も届いている） */}
+          {lesson.mode === LESSON_MODES.CODING && (
+            <div className="grid-tabs tabs" role="tablist">
+              <button type="button" role="tab" className={`tab${gridTab === 'video' ? ' is-on' : ''}`} onClick={() => setGridTab('video')}>映像</button>
+              <button type="button" role="tab" className={`tab${gridTab === 'coding' ? ' is-on' : ''}`} onClick={() => setGridTab('coding')}>コード</button>
             </div>
-          </div>
-          <div className="grid-wrap">
-            <StudentGrid
-              room={room}
-              students={students}
-              spotlightUserId={spotlightUserId}
-              onSpotlight={isLive ? spotlight : undefined}
-              highlightUserIds={raisedUserIds}
-              renderCellFooter={cellFooter}
-            />
-          </div>
+          )}
+          {lesson.mode === LESSON_MODES.CODING && gridTab === 'coding' ? (
+            <CodePanel lessonId={lessonId} lesson={lesson} students={students} isLive={isLive} showToast={showToast} />
+          ) : (
+            <>
+              <div className="grid-head">
+                <h6 className="section-label" style={{ margin: 0 }}>
+                  生徒 <span className="count">入室 {counts.present}人 / {students.length}人</span>
+                </h6>
+                <div className="legend">
+                  <span><i className="sw sw-hand" />挙手中</span>
+                  <span><i className="sw sw-away" />一時退出中</span>
+                </div>
+              </div>
+              <div className="grid-wrap">
+                <StudentGrid
+                  room={room}
+                  students={students}
+                  spotlightUserId={spotlightUserId}
+                  onSpotlight={isLive ? spotlight : undefined}
+                  highlightUserIds={raisedUserIds}
+                  renderCellFooter={cellFooter}
+                />
+              </div>
+            </>
+          )}
         </section>
 
         {/* ===== 右：質問箱／チャット（生徒画面と同じ部品） ===== */}
@@ -587,6 +666,17 @@ function TeachBody() {
             </div>
           </div>
         </div>
+      )}
+      {modeDialog && (
+        <TaskDialog
+          title="プログラミングモードを開始"
+          note="課題 1 のタイトルとテンプレートを決めると、生徒の映像エリアがコードエディタに切り替わります。"
+          submitLabel="開始する"
+          busy={busy === 'mode'}
+          error={modeError}
+          onCancel={() => setModeDialog(false)}
+          onSubmit={startCodingWithTask}
+        />
       )}
       <MaterialPreview file={preview} onClose={() => setPreview(null)} />
       {toast}

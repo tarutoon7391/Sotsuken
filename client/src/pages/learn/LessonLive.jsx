@@ -12,7 +12,7 @@
 //   mobile:    boolean
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ATTENDANCE_STATUS, DEFAULTS, ERROR_CODES, FILE_KINDS, LESSON_STATUS, QUESTION_STATUS } from '@sotsuken/shared/constants';
+import { ATTENDANCE_STATUS, DEFAULTS, ERROR_CODES, FILE_KINDS, LESSON_MODES, LESSON_STATUS, QUESTION_STATUS } from '@sotsuken/shared/constants';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '@sotsuken/shared/socket-events';
 import { get, post, upload } from '../../api/client.js';
 import LessonHeader from '../../components/learn/LessonHeader.jsx';
@@ -20,6 +20,7 @@ import ConfirmDialog from '../../components/learn/ConfirmDialog.jsx';
 import VideoStage from '../../components/learn/VideoStage.jsx';
 import ReactionBar, { REACTIONS } from '../../components/learn/ReactionBar.jsx';
 import MaterialPanel from '../../components/learn/MaterialPanel.jsx';
+import CodeStage from '../../components/learn/code/CodeStage.jsx';
 import { ChatPanel, QuestionBox, RoomAudio, useLiveKitRoom } from '../../components/learn/parts.js';
 import AttentionModal from './AttentionModal.jsx';
 
@@ -347,6 +348,17 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       mobile={mobile}
     />
   );
+  // F-10 プログラミングモード中は映像エリアがエディタになり、先生映像は右上の小窓（VideoStage をそのまま小さく出す。
+  // 自分のカメラの送信（StudentCamera）は VideoStage の中にあるので、coding 中も先生に映像が届き続ける）
+  const coding = lesson.mode === LESSON_MODES.CODING;
+  const stage = coding ? (
+    <div className="code-stage-host">
+      <div className="code-pip">{video}</div>
+      <CodeStage lessonId={lessonId} lesson={lesson} me={me} socket={socket} connected={connected} mobile={mobile} showToast={showToast} />
+    </div>
+  ) : (
+    video
+  );
   const reactionBar = (
     <ReactionBar
       selected={reaction}
@@ -418,7 +430,7 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       <div className="lr-m">
         <LessonHeader className={className} title={lesson.title} status={headerStatus} me={me} action={leaveButton} mobile />
         {banners}
-        <div className="lr-m-video">{video}</div>
+        {coding ? stage : <div className="lr-m-video">{video}</div>}
         <div className="lr-cam-note">カメラONでも映像は先生にだけ届きます</div>
 
         <div className="lr-m-tabs" role="tablist">
@@ -468,9 +480,9 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       >
         <section className="lr-col">
           <div className="lr-col-head">
-            <h6>映像</h6>
+            <h6>{coding ? 'コード' : '映像'}</h6>
           </div>
-          {video}
+          {stage}
           {reactionBar}
         </section>
 

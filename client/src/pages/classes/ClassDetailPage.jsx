@@ -336,7 +336,13 @@ function LessonRow({ lesson, user, hasLive, filesOpen, onToggleFiles, onEdit }) 
   } else if (isDone && isTeacher) {
     action = <Link className="btn btn-ghost btn-sm" to={`/lessons/${lesson.id}/result`}>結果を見る</Link>;
   } else if (isDone) {
-    action = <span className="tag tag-neutral">終了</span>;
+    // 生徒：終了済みの授業は自分のコード（F-10。プログラミングモードを使っていない授業では「コードなし」と出る）
+    action = (
+      <>
+        <Link className="btn btn-ghost btn-sm" to={`/lessons/${lesson.id}/code/mine`}>自分のコード</Link>
+        <span className="tag tag-neutral">終了</span>
+      </>
+    );
   }
 
   return (

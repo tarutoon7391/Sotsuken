@@ -97,6 +97,16 @@ export default function LearnPage() {
     s.on(SERVER_EVENTS.SPOTLIGHT_UPDATE, (p) => {
       setLesson((l) => (l ? { ...l, spotlight_user_id: p && p.user_id != null ? p.user_id : null } : l));
     });
+    // F-10 プログラミングモード：授業単位の状態（モード・今の課題・コードスポットライト）は LessonDetail に持つ
+    s.on(SERVER_EVENTS.LESSON_MODE, (p) => {
+      if (p && p.mode) setLesson((l) => (l ? { ...l, mode: p.mode } : l));
+    });
+    s.on(SERVER_EVENTS.CODE_ACTIVE_TASK, (p) => {
+      if (p && p.task_id != null) setLesson((l) => (l ? { ...l, active_task_id: p.task_id } : l));
+    });
+    s.on(SERVER_EVENTS.CODE_SPOTLIGHT, (p) => {
+      setLesson((l) => (l ? { ...l, code_spotlight_user_id: p && p.user_id != null ? p.user_id : null } : l));
+    });
 
     setSocket(s);
     setConnected(s.connected);

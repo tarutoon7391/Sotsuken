@@ -38,6 +38,10 @@ router.use(require('./chat'));          // /lessons/:id/chat
 // --- W3：LiveKit
 router.use(require('./token'));         // /lessons/:id/token /lessons/:id/spotlight
 
+// --- F-10 プログラミングモード（v4.5）
+router.use(require('./code-tasks').router); // /lessons/:id/code/tasks|active-task|summary|mine /code/tasks/:task_id(/redistribute|/documents...)
+router.use(require('./code-run'));          // /lessons/:id/mode /lessons/:id/code/spotlight /code/tasks/:task_id/save|run
+
 // --- 運用：ユーザー管理（.env の ADMIN_LOGIN_IDS に載っているユーザーだけ）
 router.use('/admin', require('./admin')); // /admin/users /admin/users/:id(/password|/password/verify)
 

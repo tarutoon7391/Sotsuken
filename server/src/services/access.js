@@ -40,7 +40,8 @@ async function getClassAccess(user, classId) {
 async function getLessonAccess(user, lessonId) {
   const rows = await query(
     `SELECT id, class_id, title, room_name, status, spotlight_user_id,
-            away_timeout_min, understanding_reset_at, started_at, ended_at
+            away_timeout_min, understanding_reset_at, started_at, ended_at,
+            mode, active_task_id, code_spotlight_user_id
        FROM lessons WHERE id = ?`,
     [lessonId]
   );

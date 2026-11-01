@@ -22,6 +22,9 @@ module.exports = {
     .split(',').map((s) => s.trim()).filter(Boolean),
   // Office 資料を PDF に変換する LibreOffice のコマンド（v4.4。Docker では PATH にある soffice）
   sofficePath: process.env.SOFFICE_PATH || 'soffice',
+  // F-10 プログラミングモードの実行サーバー（Piston）のベース URL（docs/04 §7.4）。
+  // 開発は公開 API（https://emkc.org/api/v2/piston）、本番は VPS 上の Piston。未設定なら実行は RUNNER_UNAVAILABLE
+  codeRunnerUrl: String(process.env.CODE_RUNNER_URL || '').replace(/\/+$/, ''),
   // 仮トップ（client/dist が無いときだけ配信）
   publicDir: path.resolve(__dirname, '../../public'),
   // React のビルド出力（本番）
