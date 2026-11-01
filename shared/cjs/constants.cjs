@@ -54,8 +54,11 @@ const ERROR_CODES = Object.freeze({
   ALREADY_ABSENT: 'ALREADY_ABSENT',   // 409 復帰時に欠課確定済み
   CHECK_EXPIRED: 'CHECK_EXPIRED',     // 409 確認ボタンの締切超過
   CONFLICT: 'CONFLICT',               // 409 その他の競合（ログインID重複など）
+  NOT_CODING_MODE: 'NOT_CODING_MODE', // 409 プログラミングモード以外で save / run した（F-10・v4.5）
+  RATE_LIMITED: 'RATE_LIMITED',       // 429 実行回数の上限超過（F-10・v4.5）
   INTERNAL_ERROR: 'INTERNAL_ERROR',   // 500
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED', // 501 スタブ（フェーズ0のみ。本実装で消える）
+  RUNNER_UNAVAILABLE: 'RUNNER_UNAVAILABLE', // 503 実行サーバー（Piston）に接続できない（F-10・v4.5）
 });
 
 /** 既定値・上限 */
@@ -116,6 +119,81 @@ const roomNames = Object.freeze({
   teachers: (lessonId) => `lesson:${lessonId}:teacher`,
   /** 授業の生徒だけ */
   students: (lessonId) => `lesson:${lessonId}:student`,
+  /** 授業内の特定のユーザーだけ（code:reset / code:queue / code:teacher_editing の宛先。F-10・v4.5） */
+  user: (lessonId, userId) => `lesson:${lessonId}:user:${userId}`,
 });
 
-module.exports = { ROLES, LESSON_STATUS, ATTENDANCE_STATUS, UNDERSTANDING_TYPES, QUESTION_STATUS, FILE_KINDS, ERROR_CODES, DEFAULTS, LIMITS, LIVEKIT_IDENTITY_PREFIX, ATTENTION_AUTO_TICK_SEC, ALLOWED_UPLOAD_MIMES, roomNames };
+// ---------------------------------------------------------------- F-10 プログラミングモード（docs/04 §7・docs/03 v4.5）
+
+/** 授業のモード（lessons.mode） */
+const LESSON_MODES = Object.freeze({
+  VIDEO: 'video',   // 通常（映像）
+  CODING: 'coding', // プログラミングモード（生徒の映像エリアがエディタになる）
+});
+
+/** 課題の言語（code_tasks.language）。対応は java のみ */
+const CODE_LANGUAGES = Object.freeze({
+  JAVA: 'java',
+});
+
+/** コンパイル・実行の種別（code_runs.kind） */
+const CODE_RUN_KINDS = Object.freeze({
+  COMPILE: 'compile', // 保存（Ctrl+S）＝コンパイルのみ
+  RUN: 'run',         // ▶ 実行＝コンパイル＋実行
+});
+
+/** コンパイル・実行の結果（code_runs.status、code:run_result の status、SaveCodeResponse.compile.status） */
+const CODE_RUN_STATUS = Object.freeze({
+  OK: 'ok',
+  COMPILE_ERROR: 'compile_error',
+  RUNTIME_ERROR: 'runtime_error',
+  TIMEOUT: 'timeout',                       // CPU 制限で打ち切り
+  RUNNER_UNAVAILABLE: 'runner_unavailable', // 実行サーバーに繋がらない
+});
+
+/** 先生のコードグリッドの枠色に使う生徒の状態（code:status の state、CodeDocumentSummary.state） */
+const CODE_STATES = Object.freeze({
+  IDLE: 'idle',                   // 未保存・エラーなし（グレー）
+  SYNTAX_ERROR: 'syntax_error',   // 生徒クライアントの Lezer 解析でエラー（赤）
+  COMPILE_ERROR: 'compile_error', // 保存時のコンパイルエラー（赤＋行番号）
+  RUNTIME_ERROR: 'runtime_error', // 実行時エラー（橙）
+  OK: 'ok',                       // 正常終了（緑チェック）
+  RUNNING: 'running',             // 実行中・実行待ち
+});
+
+/** プログラミングモードの制限・既定値（docs/04 §7。値を直書きしない） */
+const CODE_LIMITS = Object.freeze({
+  TASK_TITLE_MAX: 100,                  // 課題タイトル（code_tasks.title）の文字数
+  SOURCE_MAX_BYTES: 256 * 1024,         // コード 1 本の上限（UTF-8 バイト数）
+  STDIN_MAX_BYTES: 16 * 1024,           // 実行時の標準入力の上限
+  OUTPUT_MAX_BYTES: 64 * 1024,          // stdout / stderr の切り詰め
+  CPU_TIMEOUT_MS: 10 * 1000,            // 実行サーバーの CPU 制限（compile / run それぞれ）
+  MEMORY_MB: 256,                       // 実行サーバーのメモリ制限
+  CONCURRENT_RUNS: 4,                   // 授業あたりの同時実行本数（超過は待ち行列）
+  RUNS_PER_MINUTE: 6,                   // ユーザー×課題あたり 1 分の実行回数（超過は 429 RATE_LIMITED）
+  RUNNER_HTTP_TIMEOUT_MS: 15 * 1000,    // Piston への HTTP タイムアウト（超えたら runner_unavailable）
+  RUNNER_HEALTH_INTERVAL_MS: 60 * 1000, // 実行サーバーの死活監視の間隔
+  PERSIST_INTERVAL_MS: 5 * 1000,        // Yjs の更新を code_documents に書き戻す間隔
+  SYNTAX_DEBOUNCE_MS: 500,              // code:syntax を送るデバウンス
+  GRID_HEAD_LINES: 20,                  // コードグリッドの縮小表示に使う先頭行数（source_head）
+  RECENT_RUNS: 5,                       // documents/:user_id に含める直近の runs 件数
+});
+
+/** 生徒に配るファイル名（1 本固定。クラス名 Main 必須） */
+const CODE_MAIN_FILE = 'Main.java';
+
+/** 課題テンプレートが空のときの既定の雛形 */
+const CODE_DEFAULT_TEMPLATE = [
+  'public class Main {',
+  '    public static void main(String[] args) {',
+  '        ',
+  '    }',
+  '}',
+  '',
+].join('\n');
+
+/** Yjs 同期の WebSocket パス（Socket.IO とは別。段階 2）。wss://<app> + codeYjsPath(taskId, userId) */
+const CODE_YJS_PATH_PREFIX = '/yjs';
+const codeYjsPath = (taskId, userId) => `${CODE_YJS_PATH_PREFIX}/${taskId}/${userId}`;
+
+module.exports = { ROLES, LESSON_STATUS, ATTENDANCE_STATUS, UNDERSTANDING_TYPES, QUESTION_STATUS, FILE_KINDS, ERROR_CODES, DEFAULTS, LIMITS, LIVEKIT_IDENTITY_PREFIX, ATTENTION_AUTO_TICK_SEC, ALLOWED_UPLOAD_MIMES, roomNames, LESSON_MODES, CODE_LANGUAGES, CODE_RUN_KINDS, CODE_RUN_STATUS, CODE_STATES, CODE_LIMITS, CODE_MAIN_FILE, CODE_DEFAULT_TEMPLATE, CODE_YJS_PATH_PREFIX, codeYjsPath };
