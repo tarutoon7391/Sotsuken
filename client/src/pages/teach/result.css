@@ -93,5 +93,11 @@
 .result-page .code-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .result-page .code-summary-table th { text-align: left; font-weight: 600; color: var(--color-neutral-700); padding: 4px 6px; border-bottom: 1px solid var(--color-divider); font-size: 12px; }
 .result-page .code-summary-table td { padding: 5px 6px; border-bottom: 1px solid var(--color-divider); vertical-align: middle; }
-.result-page .person-inline { display: inline-flex; align-items: center; gap: 6px; }
+/* 結果テーブル：名前・時刻を縦に折り返さない。幅が足りなければ横スクロール */
+.result-page .code-summary-table-wrap { width: 100%; min-width: 0; overflow-x: auto; }
+.result-page .code-summary-table th { white-space: nowrap; word-break: normal; }
+.result-page .code-summary-table td { word-break: normal; overflow-wrap: normal; }
+.result-page .code-summary-time { white-space: nowrap; }
+.result-page .person-inline-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-page .person-inline {display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 900px) { .result-page .code-summary-body { grid-template-columns: 1fr; } }

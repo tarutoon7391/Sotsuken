@@ -216,24 +216,9 @@ function ResultBody() {
               </ol>
             )}
           </section>
-        </div>
 
-        <aside className="col-side">
-          <section className="section">
-            <h6 className="section-label">出席</h6>
-            <ul className="att-list">
-              <li><span className="status"><span className="dot" />出席</span><strong>{present}</strong></li>
-              <li><span className="status"><span className="dot dot-accent-2" />欠課</span><strong>{absent}</strong></li>
-            </ul>
-            {isEnded && leftOnce > 0 && (
-              <p className="small muted att-note">
-                うち途中退出あり <strong>{leftOnce}</strong> 人（退出時間の累積が{lesson.away_timeout_min}分未満のため出席）
-              </p>
-            )}
-            <Link className="btn btn-ghost att-link" to={`/lessons/${lessonId}/attendance`}>出席一覧を開く →</Link>
-          </section>
-
-          {/* F-10：プログラミングモードを使った授業だけ（課題 0 件なら出さない） */}
+          {/* F-10：プログラミングモードを使った授業だけ（課題 0 件なら出さない）。
+              テーブルの横幅を確保するため、狭い右カラムではなく主カラムに置く */}
           {codeSummary.length > 0 && (
             <section className="section">
               <h6 className="section-label">コード（プログラミングモード）</h6>
@@ -259,28 +244,33 @@ function ResultBody() {
                             </div>
                           ))}
                         </div>
-                        <table className="code-summary-table">
-                          <thead>
-                            <tr>
-                              <th>生徒</th>
-                              <th>最初にコンパイルが通った時刻</th>
-                              <th>最終状態</th>
-                              <th>先生編集</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {s.first_ok_at_by_user.map((r) => (
-                              <tr key={r.user.id}>
-                                <td>
-                                  <span className="person-inline"><Avatar user={r.user} size={20} />{r.user.name}</span>
-                                </td>
-                                <td>{r.first_ok_at ? formatTime(r.first_ok_at) : <span className="muted">—</span>}</td>
-                                <td><span className={`code-cell-state is-${r.last_state}`}>{CODE_STATE_LABELS[r.last_state] || r.last_state}</span></td>
-                                <td>{r.edited_by_teacher ? 'あり' : ''}</td>
+                        <div className="code-summary-table-wrap">
+                          <table className="code-summary-table">
+                            <thead>
+                              <tr>
+                                <th>生徒</th>
+                                <th>最初にコンパイルが通った時刻</th>
+                                <th>最終状態</th>
+                                <th>先生編集</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {s.first_ok_at_by_user.map((r) => (
+                                <tr key={r.user.id}>
+                                  <td>
+                                    <span className="person-inline" title={r.user.name}>
+                                      <Avatar user={r.user} size={20} />
+                                      <span className="person-inline-name">{r.user.name}</span>
+                                    </span>
+                                  </td>
+                                  <td className="code-summary-time">{r.first_ok_at ? formatTime(r.first_ok_at) : <span className="muted">—</span>}</td>
+                                  <td><span className={`code-cell-state is-${r.last_state}`}>{CODE_STATE_LABELS[r.last_state] || r.last_state}</span></td>
+                                  <td>{r.edited_by_teacher ? 'あり' : ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                   );
@@ -288,6 +278,22 @@ function ResultBody() {
               </div>
             </section>
           )}
+        </div>
+
+        <aside className="col-side">
+          <section className="section">
+            <h6 className="section-label">出席</h6>
+            <ul className="att-list">
+              <li><span className="status"><span className="dot" />出席</span><strong>{present}</strong></li>
+              <li><span className="status"><span className="dot dot-accent-2" />欠課</span><strong>{absent}</strong></li>
+            </ul>
+            {isEnded && leftOnce > 0 && (
+              <p className="small muted att-note">
+                うち途中退出あり <strong>{leftOnce}</strong> 人（退出時間の累積が{lesson.away_timeout_min}分未満のため出席）
+              </p>
+            )}
+            <Link className="btn btn-ghost att-link" to={`/lessons/${lessonId}/attendance`}>出席一覧を開く →</Link>
+          </section>
 
           <section className="section">
             <h6 className="section-label">資料</h6>
