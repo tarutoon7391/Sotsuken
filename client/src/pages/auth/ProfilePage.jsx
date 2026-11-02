@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LIMITS } from '@sotsuken/shared/constants';
 import { post, put, upload } from '../../api/client.js';
 import RequireLogin, { useCurrentUser } from '../../components/shared/RequireLogin.jsx';
-import AppHeader from '../../components/shared/AppHeader.jsx';
 import Avatar from '../../components/shared/Avatar.jsx';
 import RoleBadge from '../../components/shared/RoleBadge.jsx';
 import { formatBytes } from '../../components/shared/format.js';
@@ -83,9 +82,20 @@ function ProfileBody() {
 
   return (
     <div className="app auth-app">
-      <AppHeader kicker={APP_NAME} title="プロフィール設定" user={user}>
-        <Link className="btn btn-secondary back-link" to="/classes" title="クラス一覧へ戻る">←<span className="back-text"> クラス一覧へ戻る</span></Link>
-      </AppHeader>
+      {/* 「戻る」リンクは他画面（クラス詳細）と同じくヘッダー左端に置く */}
+      <header className="app-header">
+        <Link className="hdr-back back-link" to="/classes" title="クラス一覧へ戻る">←<span className="back-text"> クラス一覧へ戻る</span></Link>
+        <div className="hdr-left">
+          <div className="hdr-kicker">{APP_NAME}</div>
+          <div className="hdr-title">プロフィール設定</div>
+        </div>
+        <span className="hdr-spacer" />
+        <Link className="person" to="/me" title="プロフィール設定">
+          <Avatar user={user} size={32} />
+          <span className="person-name">{user.name}</span>
+          <RoleBadge role={user.role} />
+        </Link>
+      </header>
 
       <main className="me-main">
         <form className="me-panel" onSubmit={handleSave} noValidate>
