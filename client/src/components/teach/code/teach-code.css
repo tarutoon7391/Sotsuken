@@ -62,10 +62,10 @@
 .code-cell-foot { font-size: 10px; color: var(--color-neutral-600); }
 
 /* ---- 拡大パネル ---- */
-.code-inspector { width: min(1100px, 94vw); height: min(80vh, 760px); display: flex; flex-direction: column; gap: var(--space-2); }
+.code-inspector { width: min(1400px, 90vw); height: 85vh; display: flex; flex-direction: column; gap: var(--space-2); }
 .code-inspector-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .code-inspector-head .dialog-title { margin: 0; }
-.code-inspector-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: var(--space-3); }
+.code-inspector-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr); gap: var(--space-3); }
 .code-inspector-editor { display: flex; min-height: 0; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-lg); overflow: hidden; }
 .code-inspector-side { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
 .code-inspector-side .code-output { max-height: none; flex: 1; }
