@@ -17,7 +17,7 @@
 /* ---- 課題管理 ---- */
 .code-taskmgr { display: flex; flex-direction: column; gap: 4px; flex: none; }
 .code-taskmgr-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.code-task-dialog { width: min(640px, 92vw); }
+.dialog.code-task-dialog { width: min(640px, 92vw); }
 .code-task-dialog .field { display: flex; flex-direction: column; gap: 4px; }
 .code-task-dialog input[type="text"] { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md); font-size: 14px; }
 .code-task-template {
@@ -62,7 +62,7 @@
 .code-cell-foot { font-size: 10px; color: var(--color-neutral-600); }
 
 /* ---- 拡大パネル ---- */
-.code-inspector { width: min(1400px, 90vw); height: 85vh; display: flex; flex-direction: column; gap: var(--space-2); }
+.dialog.code-inspector { width: min(1400px, 90vw); height: 85vh; display: flex; flex-direction: column; gap: var(--space-2); }
 .code-inspector-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .code-inspector-head .dialog-title { margin: 0; }
 .code-inspector-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr); gap: var(--space-3); }
