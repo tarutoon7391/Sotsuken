@@ -43,6 +43,7 @@ import {
 } from '../../livekit';
 import {
   AttendancePanel,
+  AttentionBadge,
   AttentionPanel,
   MaterialPanel,
   UnderstandingPanel,
@@ -107,8 +108,10 @@ function TeachBody() {
   useEscape(confirmEnd ? closeEnd : null); // 終了確認ダイアログは Esc で閉じる
   const rightTabRef = useRef(rightTab);
   const collapsedRef = useRef(collapsed);
+  const checkIdRef = useRef(null); // 今表示している確認の check_id（POST の応答と attention:check の到着順を吸収する）
   rightTabRef.current = rightTab;
   collapsedRef.current = collapsed;
+  checkIdRef.current = check ? check.check_id : null;
 
   const isLive = lesson && lesson.status === LESSON_STATUS.LIVE;
   const { room, status: lkStatus } = useLiveKitRoom(lessonId, { enabled: !!lesson });
@@ -216,6 +219,7 @@ function TeachBody() {
     });
     // 確認：手動・自動とも attention:check（全員宛）で始まり、直後の attention:update が応答状況の初期値になる
     socket.on(SERVER_EVENTS.ATTENTION_CHECK, ({ check_id, issued_at, deadline_at, auto }) => {
+      checkIdRef.current = check_id; // 再描画前に POST の応答が返っても、届いた反応状況を消さない
       setCheck({ check_id, issued_at, deadline_at, auto });
       setCheckResult(null);
     });
@@ -326,7 +330,12 @@ function TeachBody() {
     try {
       // 応答状況は attention:check → attention:update（サーバーが算出）で受け取る。ここでは締切だけ先に反映
       const res = await post(`/lessons/${lessonId}/attention`, { timeout_sec: DEFAULTS.ATTENTION_TIMEOUT_SEC });
-      setCheck((c) => (c && c.check_id === res.check_id ? c : { ...res, issued_at: new Date().toISOString() }));
+      // attention:check より先に応答が返ったときも、前回の反応状況（バッジ・人数）を残さず今回の回に切り替える
+      if (checkIdRef.current !== res.check_id) {
+        checkIdRef.current = res.check_id;
+        setCheck({ ...res, issued_at: new Date().toISOString() });
+        setCheckResult(null);
+      }
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -486,11 +495,13 @@ function TeachBody() {
   function cellFooter(s) {
     const a = attendance[s.id];
     const st = a && a.status;
+    // 直近の確認の反応状況（未反応／反応済み）。出席状態の表示と並べて出す
+    const badge = <AttentionBadge userId={s.id} result={checkResult} />;
     if (st === ATTENDANCE_STATUS.AWAY) {
-      return <span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span>;
+      return <>{badge}<span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span></>;
     }
-    if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <span className="cell-foot is-absent">欠課</span>;
-    return null;
+    if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <>{badge}<span className="cell-foot is-absent">欠課</span></>;
+    return badge;
   }
 
   return (

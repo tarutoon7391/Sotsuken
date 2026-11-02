@@ -43,6 +43,21 @@ export function AttendancePanel({ lessonId, counts }) {
 const AUTO_CHOICES = [0, 5, 10, 15];
 
 /**
+ * 生徒タイルの確認バッジ。直近の確認の結果（attention:update）で、未反応なら「未反応」、反応済みならチェックを出す。
+ * どちらにも入っていない生徒（確認の対象外）と、確認をまだ送っていないときは何も出さない
+ */
+export function AttentionBadge({ userId, result }) {
+  if (!result) return null;
+  if (result.pending.some((u) => u.id === userId)) {
+    return <span className="att-badge is-pending">未反応</span>;
+  }
+  if (result.responded.some((u) => u.id === userId)) {
+    return <span className="att-badge is-responded" aria-label="反応済み" title="反応済み">✓</span>;
+  }
+  return null;
+}
+
+/**
  * 確認ボタン
  * check: { check_id, deadline_at } | null ／ result: { responded: UserBrief[], pending: UserBrief[] } | null
  */
@@ -57,8 +72,15 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
     return () => clearInterval(t);
   }, [check]);
 
+  // 未反応の名前一覧の開閉。null は「既定」（確認中は閉じる・終了後は開く）。次の確認が来たら既定に戻す
+  const [pendingOpen, setPendingOpen] = useState(null);
+  const checkId = check ? check.check_id : null;
+  useEffect(() => setPendingOpen(null), [checkId]);
+
   const responded = result ? result.responded.length : 0;
-  const total = result ? result.responded.length + result.pending.length : 0;
+  const pendingCount = result ? result.pending.length : 0;
+  const total = responded + pendingCount;
+  const showPending = pendingOpen === null ? !!check && !running : pendingOpen;
   const remainSec = Math.max(0, Math.ceil((deadline - now) / 1000));
   // 全体の秒数は issued_at〜deadline_at（自動発動の分も同じ）
   const issued = check && check.issued_at ? new Date(check.issued_at).getTime() : 0;
@@ -92,22 +114,40 @@ export function AttentionPanel({ isLive, check, result, onIssue, autoInterval, o
         </div>
       )}
       {check && !running && (
-        <div>
-          <div className="small" style={{ marginBottom: 6 }}>
-            確認が終わりました。
-            {result && result.pending.length > 0 ? (
-              <><span className="strong accent-2-text">{result.pending.length}</span> 人が未応答です</>
-            ) : (
-              '全員が応答しました'
-            )}
-          </div>
-          {result && result.pending.length > 0 && (
-            <div className="noresp">
-              {result.pending.map((u) => (
-                <span key={u.id} className="chip"><Avatar user={u} size={18} />{u.name}</span>
-              ))}
-            </div>
+        <div className="small" style={{ marginBottom: 6 }}>
+          確認が終わりました。
+          {result && pendingCount > 0 ? (
+            <><span className="strong accent-2-text">{pendingCount}</span> 人が未応答です</>
+          ) : (
+            '全員が応答しました'
           )}
+        </div>
+      )}
+      {/* 反応状況（attention:update の responded / pending をそのまま数える）。「未反応」を押すと名前一覧を開閉 */}
+      {check && result && (
+        <div className="check-summary">
+          <span>反応済み <span className="strong">{responded}</span>人</span>
+          <span className="muted">/</span>
+          <button
+            type="button"
+            className="check-pending-btn"
+            aria-expanded={showPending}
+            onClick={() => setPendingOpen(!showPending)}
+            disabled={pendingCount === 0}
+          >
+            未反応 <span className="strong">{pendingCount}</span>人
+          </button>
+        </div>
+      )}
+      {check && result && showPending && pendingCount > 0 && (
+        <div className="noresp" aria-label="未反応の生徒">
+          {result.pending.map((u) => (
+            <span key={u.id} className="chip"><Avatar user={u} size={18} />{u.name}</span>
+          ))}
+        </div>
+      )}
+      {check && !running && (
+        <div>
           <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={onIssue} disabled={!isLive || busy}>
             🔔 もう一度送る
           </button>

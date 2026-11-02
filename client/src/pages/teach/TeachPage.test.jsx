@@ -53,6 +53,7 @@ vi.mock('../../components/shared/QuestionBox.jsx', () => ({ default: () => null 
 vi.mock('../../components/shared/MaterialPreview.jsx', () => ({ default: () => null }));
 vi.mock('./TeachPanels.jsx', () => ({
   AttendancePanel: () => null,
+  AttentionBadge: () => null,
   AttentionPanel: () => null,
   MaterialPanel: () => null,
   UnderstandingPanel: () => null,
