@@ -293,11 +293,12 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       await post(`/lessons/${lessonId}/attendance/away`);
       navigate(`/lessons/${lessonId}/away`);
     } catch (err) {
-      const msg =
-        err.code === ERROR_CODES.ALREADY_ABSENT
-          ? 'この授業ではすでに欠課になっています。'
-          : err.message || '一時退出できませんでした';
-      setLeave({ open: true, busy: false, error: msg });
+      // 欠課の生徒は away にならない（サーバーが 409 を返す）が、退出中画面には欠課向けの表示があるのでそこへ移動する
+      if (err.code === ERROR_CODES.ALREADY_ABSENT) {
+        navigate(`/lessons/${lessonId}/away`);
+        return;
+      }
+      setLeave({ open: true, busy: false, error: err.message || '一時退出できませんでした' });
     }
   }
 
@@ -447,7 +448,11 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       {leave.open && (
         <ConfirmDialog
           title="一時退出しますか？"
-          body={`この授業での退出時間の合計が${lesson.away_timeout_min ?? DEFAULTS.AWAY_TIMEOUT_MIN}分を超えると欠課扱いになります。`}
+          body={
+            attendance && attendance.status === ATTENDANCE_STATUS.ABSENT
+              ? 'この授業はすでに欠課になっているため、退出しても出席の記録は変わりません。'
+              : `この授業での退出時間の合計が${lesson.away_timeout_min ?? DEFAULTS.AWAY_TIMEOUT_MIN}分を超えると欠課扱いになります。`
+          }
           confirmLabel="退出する"
           busy={leave.busy}
           error={leave.error}
