@@ -83,6 +83,8 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
   // ---- タブ（未読バッジは見えていないタブにだけ付ける）
   const [pcTab, setPcTab] = useState('qa');
   const [mTab, setMTab] = useState('material');
+  // 質問箱・チャットのたたみ（見た目だけの開閉。たたんでいる間も受信と未読カウントは続く）
+  const [folded, setFolded] = useState(false);
   const [unread, setUnread] = useState({ qa: 0, chat: 0 });
   const visibleTab = mobile ? mTab : pcTab;
   const visibleTabRef = useRef(visibleTab);
@@ -387,6 +389,20 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       />
     </>
   );
+  // 開閉を1つのボタンで行う（たたむと矢印の向きが変わる）
+  const foldButton = (
+    <button
+      type="button"
+      className={`lr-fold${folded ? ' is-folded' : ''}`}
+      aria-expanded={!folded}
+      aria-label={folded ? '質問箱・チャットを開く' : '質問箱・チャットをたたむ'}
+      onClick={() => setFolded((f) => !f)}
+    >
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+        <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
   const badge = (tab) => (unread[tab] > 0 ? <span className="lr-badge">{unread[tab]}</span> : null);
   // 資料は material:added で増える（再読み込みボタンは置かない）。読み込み失敗時だけ再読み込みを出す
   const materialPanel = (
@@ -450,13 +466,14 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
               {label} {key !== 'material' && badge(key)}
             </button>
           ))}
+          {mTab !== 'material' && foldButton}
         </div>
 
         <div className="lr-m-body">
           <div className="lr-m-panel">
             {mTab === 'material' && materialPanel}
-            {mTab === 'qa' && <div className="lr-tab-body">{questionBox}</div>}
-            {mTab === 'chat' && <div className="lr-tab-body">{chatPanel}</div>}
+            {mTab === 'qa' && !folded && <div className="lr-tab-body">{questionBox}</div>}
+            {mTab === 'chat' && !folded && <div className="lr-tab-body">{chatPanel}</div>}
           </div>
         </div>
 
@@ -518,8 +535,9 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
                 {label} {badge(key)}
               </button>
             ))}
+            {foldButton}
           </div>
-          <div className="lr-tab-body">{pcTab === 'qa' ? questionBox : chatPanel}</div>
+          {!folded && <div className="lr-tab-body">{pcTab === 'qa' ? questionBox : chatPanel}</div>}
         </section>
       </main>
       {overlays}
