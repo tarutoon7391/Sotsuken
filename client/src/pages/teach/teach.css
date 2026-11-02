@@ -106,11 +106,6 @@
 /* 折りたたみ */
 .teach-app .col-right.is-collapsed { align-items: center; }
 .teach-app .col-right.is-collapsed .right-head .tabs, .teach-app .col-right.is-collapsed .right-body { display: none; }
-.teach-app .col-right .rail { display: none; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
-.teach-app .col-right.is-collapsed .rail { display: flex; }
-.teach-app .rail .rail-btn { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; border-radius: var(--radius-md); color: var(--color-neutral-700); cursor: pointer; }
-.teach-app .rail .rail-btn:hover { background: var(--color-neutral-200); color: var(--color-accent-700); }
-.teach-app .rail .rail-btn .badge { position: absolute; top: -2px; right: -4px; }
 
 /* パネルの折りたたみ（見出しを押して開閉） */
 .teach-app .panel-toggle { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
