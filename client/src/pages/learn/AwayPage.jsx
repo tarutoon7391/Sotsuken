@@ -209,7 +209,7 @@ export default function AwayPage() {
               <h6>一時退出中</h6>
               <h2>欠課になりました</h2>
               <p className="lr-lead">
-                退出時間の合計が{limitMin}分を超えたため、この授業は欠課になりました。
+                この授業は欠課になっています。
                 <br />
                 先生に出席の修正を依頼してください。
               </p>
