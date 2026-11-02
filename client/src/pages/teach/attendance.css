@@ -2,6 +2,9 @@
 .attendance-page { display: flex; flex-direction: column; min-height: 100vh; }
 .attendance-page .page-main { flex: 1; min-height: 0; padding: 0 var(--space-6) 80px; }
 .attendance-page .hdr-titles { display: flex; flex-direction: column; min-width: 0; }
+/* 戻る → タイトル群 の縦積み（戻るをヘッダー左上に置く） */
+.attendance-page .hdr-stack { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); min-width: 0; }
+.attendance-page .hdr-stack .hdr-titles { max-width: 100%; }
 .attendance-page .section { display: flex; flex-direction: column; min-width: 0; }
 .attendance-page .section + .section { margin-top: var(--space-8); }
 
