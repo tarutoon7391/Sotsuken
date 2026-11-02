@@ -638,16 +638,7 @@ function TeachBody() {
                 チャット {unread.chat > 0 && <span className="badge">{unread.chat}</span>}
               </button>
             </div>
-            <button type="button" className="btn btn-ghost btn-icon" aria-label="右カラムをたたむ" title="たたむ" onClick={() => setCollapsed(true)}>▶</button>
-          </div>
-          <div className="rail">
-            <button type="button" className="rail-btn" aria-label="右カラムを開く" title="開く" onClick={() => setCollapsed(false)}>◀</button>
-            <button type="button" className="rail-btn" aria-label="質問箱" onClick={() => openTab('qa')}>
-              ？{unread.qa > 0 && <span className="badge">{unread.qa}</span>}
-            </button>
-            <button type="button" className="rail-btn" aria-label="チャット" onClick={() => openTab('chat')}>
-              💬{unread.chat > 0 && <span className="badge">{unread.chat}</span>}
-            </button>
+            <button type="button" className="btn btn-ghost btn-icon" aria-label={collapsed ? '右カラムを開く' : '右カラムをたたむ'} title={collapsed ? '開く' : 'たたむ'} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{collapsed ? '◀' : '▶'}</button>
           </div>
           <div className="right-body">
             <div className="pane" hidden={rightTab !== 'qa'}>
