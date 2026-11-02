@@ -24,6 +24,7 @@
 | 変数 | 値 | 備考 |
 |---|---|---|
 | `CODE_RUNNER_URL` | `http://<VPS の IP>:2000/api/v2` | 末尾に `/execute` は付けない。変更後は Railway を再デプロイ（起動時にしか読まない） |
+| `CODE_RUNNER_KEY` | プロキシと同じ共有鍵 | 設定すると `/runtimes`・`/execute` の全リクエストに `X-Runner-Key` ヘッダーを付ける。未設定なら付けない。Railway の環境変数と VPS 側だけに置き、コード・ログ・クライアントに出さない |
 | `CODE_RUNNER_CONCURRENCY` | `2`（1G のとき）／ 未設定＝4（2G 以上） | 授業ごとの同時実行本数。`CODE_LIMITS.CONCURRENT_RUNS` の上書き |
 
 - アプリは `GET <URL>/runtimes` で死活確認（起動時＋1 分おき）、`POST <URL>/execute` で実行する
@@ -100,24 +101,23 @@ curl -s -X POST http://localhost:2000/api/v2/execute -H 'Content-Type: applicati
 
 ## 5. ファイアウォール（ポート 2000 を Railway からだけ通す）
 
-Piston には認証が無いので、**2000 番を全世界に開けない**。
+Piston には認証が無いので、**2000 番を全世界に開けない**。外から届くのは手前のリバースプロキシだけにする。
 
 ```bash
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow OpenSSH
-# Railway の送信元 IP は固定でない（Static Outbound IPs は有料プランの機能）。
-# 当面は VPS 側で Piston の前に Basic 認証付きの nginx を置くか、Tailscale / WireGuard で繋ぐのが安全。
-# 最低限の暫定策：2000 番を開けずに、まず SSH トンネルで Railway 以外から叩けないことを確認してから検討する。
+# Railway の送信元 IP は固定でない（Static Outbound IPs は有料プランの機能）ので、IP 制限ではなく共有鍵で守る。
+# 2000 番は ufw で開けない。プロキシが受けるポートだけを開ける。
 ufw enable
 ```
 
-**未決（トーンさん判断）**：Railway → VPS の経路の守り方。候補は
-1. nginx をリバースプロキシにして Basic 認証（`CODE_RUNNER_URL` に `http://user:pass@<IP>/api/v2` を入れる。アプリ側は fetch が URL の認証情報を扱えないので、`Authorization` ヘッダーを足す小改修が要る）
-2. Railway の Static Outbound IPs（Pro プラン）で IP 制限
-3. Tailscale で VPS と Railway を同じネットに入れる（Railway 側に tailscale サイドカーが要る）
+**Railway → VPS の経路は `X-Runner-Key` ヘッダーの共有鍵で守る。**
 
-発表までは **1** が現実的。実装は W2（`code-runner.js` に `CODE_RUNNER_AUTH`（`user:pass`）を読んで `Authorization: Basic` を付ける 5 行）＋ W3（nginx 設定）。
+- アプリは `CODE_RUNNER_KEY` が設定されていれば、`/runtimes`・`/execute` の全リクエストに `X-Runner-Key: <鍵>` を付ける（`server/src/services/code-runner.js`）
+- プロキシは鍵が一致しないリクエストを Piston に転送せず拒否する
+- 鍵は平文で流れるので、Railway → プロキシは HTTPS にする。`CODE_RUNNER_URL` は `https://` のプロキシの URL にする
+- 鍵を替えるときは、プロキシと Railway の `CODE_RUNNER_KEY` を同時に更新して Railway を再デプロイする（起動時にしか読まない）
 
 ## 6. LiveKit を同居させるとき（2G 以上にしてから）
 

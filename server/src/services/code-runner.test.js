@@ -136,6 +136,43 @@ describe('executeOnPiston（公開 API の上限で 400 → 控えめな値で�
   });
 });
 
+describe('X-Runner-Key（実行サーバーの共有鍵）', () => {
+  const config = require('../config');
+  const files = [{ name: 'Main.java', content: 'public class Main {}' }];
+  let prevUrl;
+  let prevKey;
+  beforeEach(() => {
+    prevUrl = config.codeRunnerUrl;
+    prevKey = config.codeRunnerKey;
+    config.codeRunnerUrl = 'http://piston.test/api/v2';
+    global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({}) }));
+  });
+  afterEach(() => {
+    config.codeRunnerUrl = prevUrl;
+    config.codeRunnerKey = prevKey;
+    delete global.fetch;
+  });
+
+  test('鍵があれば /runtimes と /execute の両方に付け、無ければどちらにも付けない', async () => {
+    config.codeRunnerKey = 'test-key';
+    await runner.checkHealth();
+    await runner.executeOnPiston(files, '');
+    const withKey = global.fetch.mock.calls.map(([, init]) => init.headers);
+    expect(withKey).toHaveLength(2);
+    expect(withKey[0]).toEqual({ 'X-Runner-Key': 'test-key' });
+    expect(withKey[1]).toEqual({ 'Content-Type': 'application/json', 'X-Runner-Key': 'test-key' });
+
+    global.fetch.mockClear();
+    config.codeRunnerKey = '';
+    await runner.checkHealth();
+    await runner.executeOnPiston(files, '');
+    const withoutKey = global.fetch.mock.calls.map(([, init]) => init.headers);
+    expect(withoutKey).toHaveLength(2);
+    expect(withoutKey[0]).toEqual({});
+    expect(withoutKey[1]).toEqual({ 'Content-Type': 'application/json' });
+  });
+});
+
 describe('待ち行列（授業ごと・同時 CONCURRENT_RUNS）', () => {
   test('同時実行数を超えた分は待ち、順番が来ると position 0 で始まる', async () => {
     const lessonId = 9001;
