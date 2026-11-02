@@ -213,6 +213,9 @@ function TeachBody() {
     socket.on(SERVER_EVENTS.QUESTION_ANSWERED, ({ id: qid }) => {
       setQuestions((list) => list.map((q) => (q.id === qid ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
     });
+    socket.on(SERVER_EVENTS.QUESTION_CANCELLED, ({ id: qid }) => {
+      setQuestions((list) => list.filter((q) => q.id !== qid));
+    });
     socket.on(SERVER_EVENTS.QUESTION_RAISED, ({ user: u }) => {
       showToast(`✋ ${u.name} さんが挙手しました`);
       loadQuestions(); // 挙手は質問（body なし）として記録されるので一覧を取り直す
@@ -418,6 +421,34 @@ function TeachBody() {
     }
   }
 
+  // 挙手を下ろす。先生の DELETE は docs/04 v4.5 では未許可のため、回答済み（PATCH）で代用する
+  // （DELETE が許可されたらここだけ del(`/questions/${qid}`) に差し替える。一覧からは question:cancelled で消える）
+  async function lowerHand(qid) {
+    try {
+      await patch(`/questions/${qid}`, { status: QUESTION_STATUS.ANSWERED });
+      setQuestions((list) => list.map((q) => (q.id === qid ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
+  async function lowerAllHands(ids) {
+    for (const qid of ids) {
+      // 1件ずつ順に（途中で失敗したらトーストを出して止める）
+      // eslint-disable-next-line no-await-in-loop
+      await lowerHand(qid);
+    }
+  }
+
+  async function copyJoinCode() {
+    try {
+      await navigator.clipboard.writeText(cls.join_code);
+      showToast('参加コードをコピーしました');
+    } catch {
+      showToast('コピーできませんでした。コードを選択してコピーしてください');
+    }
+  }
+
   async function uploadMaterial(file) {
     setMaterialError('');
     if (!ALLOWED_UPLOAD_MIMES.includes(file.type)) return setMaterialError('画像・PDF・Office 文書のみアップロードできます');
@@ -501,8 +532,13 @@ function TeachBody() {
       return <>{badge}<span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span></>;
     }
     if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <>{badge}<span className="cell-foot is-absent">欠課</span></>;
+    if (raisedUserIds.includes(s.id)) return <>{badge}<span className="cell-foot is-hand">✋ 挙手中</span></>;
     return badge;
   }
+
+  // 参加コードは XXXX-XXXX 表示（8文字のときだけ区切る）。コピーはハイフン付きでよい
+  const joinCode = cls && cls.join_code ? cls.join_code.replace(/-/g, '') : '';
+  const joinCodeLabel = joinCode.length === 8 ? `${joinCode.slice(0, 4)}-${joinCode.slice(4)}` : joinCode;
 
   return (
     <div className="app teach-app">
@@ -513,6 +549,13 @@ function TeachBody() {
           <div className="hdr-title">{lesson.title}</div>
         </div>
         <span className="hdr-spacer" />
+        {joinCodeLabel && (
+          <span className="join-code" title="生徒がクラスに参加するときのコード">
+            参加コード <strong>{joinCodeLabel}</strong>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={copyJoinCode}>コピー</button>
+          </span>
+        )}
+        {isLive && raisedUserIds.length > 0 && <span className="hand-count">✋ 挙手中 {raisedUserIds.length}人</span>}
         <span className="status">
           <span className={`dot${isLive ? ' dot-live' : ' dot-neutral'}`} />
           <span>{liveLabel(lesson.status)}</span>
@@ -642,7 +685,13 @@ function TeachBody() {
           </div>
           <div className="right-body">
             <div className="pane" hidden={rightTab !== 'qa'}>
-              <QuestionBox questions={questions} onMarkAnswered={markAnswered} isTeacher />
+              <QuestionBox
+                questions={questions}
+                onMarkAnswered={markAnswered}
+                onLowerHand={lowerHand}
+                onLowerAll={lowerAllHands}
+                isTeacher
+              />
             </div>
             <div className="pane" hidden={rightTab !== 'chat'}>
               <ChatPanel

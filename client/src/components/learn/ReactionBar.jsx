@@ -3,7 +3,7 @@
 //   selected:  'understood'|'confused'|'again'|null   選択中（understanding:reset で null に戻す）
 //   onReact:   (type) => void                         understanding:send
 //   hand:      boolean                                挙手中か
-//   onHand:    () => void                             挙手（question:raise）。挙手中は押せない
+//   onHand:    () => void                             挙手（question:raise）。挙手中に押すと取り下げ（DELETE /questions/:id）
 //   feedback:  string                                 ボタン下の一文
 //   mobile?:   boolean                                スマホの下部固定（3ボタン＋横長の挙手ボタン）
 import { useEffect, useState } from 'react';
@@ -41,13 +41,13 @@ export default function ReactionBar({ selected, onReact, hand, onHand, feedback,
   ));
 
   const handButton = (
-    // 取り下げは無い（ストレッチ）。挙手中は押せない
-    <button type="button" className={`lr-hand${hand ? ' is-on' : ''}`} aria-pressed={hand} disabled={hand} onClick={onHand}>
+    // 挙手中にもう一度押すと取り下げ（トグル）
+    <button type="button" className={`lr-hand${hand ? ' is-on' : ''}`} aria-pressed={hand} onClick={onHand}>
       <span className="lr-hand-main">
         <Icon name="hand" size={20} />
         {hand ? '挙手中' : '質問する'}
       </span>
-      <span className="lr-hand-help">{hand ? '先生に伝わっています' : '先生に手を挙げる'}</span>
+      <span className="lr-hand-help">{hand ? '押すと取り下げます' :'先生に手を挙げる'}</span>
     </button>
   );
 

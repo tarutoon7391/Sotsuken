@@ -134,6 +134,23 @@ async function main() {
   ok('d. 回答済み PATCH', r.status === 200, `status=${r.status}`);
   ok('d. question:answered が届く', (await ansP) !== undefined);
 
+  // d'. 挙手の取り下げ（v4.5）：本人 204・他人 403・本文あり 409・question:cancelled が届く
+  r = await S('GET', `/lessons/${lesson.id}/questions`);
+  const hand = r.data.find((x) => x.body === null);
+  ok("d'. 一覧に挙手（body null）がある", hand && hand.id, JSON.stringify(r.data));
+  r = await T('DELETE', `/questions/${hand.id}`);
+  ok("d'. 他人（先生）の取り下げは 403", r.status === 403, `status=${r.status}`);
+  r = await S('DELETE', `/questions/${q.id}`);
+  ok("d'. 質問本文ありは 409", r.status === 409, `status=${r.status}`);
+  const cancelT = waitFor(tSock, 'question:cancelled');
+  const cancelS = waitFor(sSock, 'question:cancelled');
+  r = await S('DELETE', `/questions/${hand.id}`);
+  ok("d'. 本人の取り下げは 204", r.status === 204, `status=${r.status}`);
+  const [cancelledT, cancelledS] = [await cancelT, await cancelS];
+  ok("d'. question:cancelled が先生・生徒に届く", cancelledT && cancelledT.id === hand.id && cancelledS && cancelledS.id === hand.id, `teacher=${JSON.stringify(cancelledT)} student=${JSON.stringify(cancelledS)}`);
+  r = await S('GET', `/lessons/${lesson.id}/questions`);
+  ok("d'. 取り下げた挙手が一覧から消える", !r.data.some((x) => x.id === hand.id), JSON.stringify(r.data));
+
   // e. 確認ボタン → 生徒ポップ → 応答 → 先生の応答状況
   const checkP = waitFor(sSock, 'attention:check');
   r = await T('POST', `/lessons/${lesson.id}/attention`, { timeout_sec: 60 });

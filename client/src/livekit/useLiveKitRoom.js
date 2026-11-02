@@ -8,6 +8,7 @@ import { ROLES } from '@sotsuken/shared/constants';
 import { post } from '../api/client';
 import { roleOf } from './identity';
 import { denyAll } from './permissions';
+import { publishLiveKitStatus } from './connection-status';
 
 /**
  * @typedef {'idle'|'connecting'|'connected'|'reconnecting'|'disconnected'|'unconfigured'|'error'} LiveKitStatus
@@ -102,6 +103,12 @@ export function useLiveKitRoom(lessonId, { enabled = true } = {}) {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
   const [identity, setIdentity] = useState(null);
+
+  // 部品（StudentCamera など）が「配信が未設定」を表示できるよう、状態を共有する
+  useEffect(() => {
+    publishLiveKitStatus(status);
+  }, [status]);
+  useEffect(() => () => publishLiveKitStatus('idle'), []);
 
   useEffect(() => {
     if (!enabled || !lessonId) {

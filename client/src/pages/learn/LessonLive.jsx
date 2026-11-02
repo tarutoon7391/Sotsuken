@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ATTENDANCE_STATUS, DEFAULTS, ERROR_CODES, FILE_KINDS, LESSON_MODES, LESSON_STATUS, QUESTION_STATUS } from '@sotsuken/shared/constants';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '@sotsuken/shared/socket-events';
-import { get, post, upload } from '../../api/client.js';
+import { del, get, post, upload } from '../../api/client.js';
 import LessonHeader from '../../components/learn/LessonHeader.jsx';
 import ConfirmDialog from '../../components/learn/ConfirmDialog.jsx';
 import VideoStage from '../../components/learn/VideoStage.jsx';
@@ -107,9 +107,11 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
   const [reaction, setReaction] = useState(null);
   const [raising, setRaising] = useState(false); // question:raise を送って ack 待ち
   // 挙手中かどうかは「自分の open の挙手（body=null）が質問一覧にあるか」で決める（先生が回答済みにすると解除）
-  const hand =
-    raising ||
-    questions.some((q) => q.body == null && q.user && q.user.id === me.id && q.status === QUESTION_STATUS.OPEN);
+  const myHand = questions.find(
+    (q) => q.body == null && q.user && q.user.id === me.id && q.status === QUESTION_STATUS.OPEN
+  );
+  const hand = raising || !!myHand;
+  const [cancelling, setCancelling] = useState(false); // DELETE の応答待ち
 
   const loadMaterials = useCallback(() => {
     setMaterialsState((s) => ({ ...s, loading: true, error: null }));
@@ -182,6 +184,10 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       [SERVER_EVENTS.QUESTION_ANSWERED]: ({ id }) => {
         setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, status: QUESTION_STATUS.ANSWERED } : q)));
       },
+      // 先生が「下ろす」「全員下ろす」をした、または自分で取り下げた挙手は一覧から消す（自分の挙手なら「挙手中」も解除される）
+      [SERVER_EVENTS.QUESTION_CANCELLED]: ({ id }) => {
+        setQuestions((prev) => prev.filter((q) => q.id !== id));
+      },
       [SERVER_EVENTS.UNDERSTANDING_RESET]: () => setReaction(null),
       // 受け取った端末時刻を残す（カウントダウンは issued_at〜deadline_at の長さをここから数える）
       [SERVER_EVENTS.ATTENTION_CHECK]: (payload) => setCheck({ ...payload, receivedAt: Date.now() }),
@@ -203,7 +209,27 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
     showFeedback(`「${r ? r.label : type}」を送りました`);
   }
 
-  // 挙手の取り下げは無い（ストレッチ）。挙手中は押せない
+  // 挙手中にもう一度押すと取り下げ（DELETE /questions/:id）。挙手中の再送信はしない
+  async function toggleHand() {
+    if (cancelling) return;
+    if (!hand) {
+      raiseHand();
+      return;
+    }
+    if (!myHand) return; // 挙手の送信中（ack 待ち）は取り下げ対象の id がまだ無い
+    setCancelling(true);
+    try {
+      await del(`/questions/${myHand.id}`, { redirect: false }); // 403／404 でログイン画面へ飛ばさない
+      setQuestions((prev) => prev.filter((q) => q.id !== myHand.id)); // question:cancelled が先に届いていても同じ結果
+      showFeedback('挙手を取り下げました');
+    } catch (err) {
+      showToast(err.message || '挙手を取り下げられませんでした', 'miss');
+      loadQuestions(); // 先生が先に回答済みにしていた場合などに、状態を実際に合わせる
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   function raiseHand() {
     if (!socket || hand) return;
     setRaising(true);
@@ -366,8 +392,8 @@ export default function LessonLive({ lessonId, lesson, className, me, socket, co
       selected={reaction}
       onReact={sendReaction}
       hand={hand}
-      onHand={raiseHand}
-      feedback={feedback || (hand ? '挙手中です。先生が対応すると解除されます' : '')}
+      onHand={toggleHand}
+      feedback={feedback || (hand ? '挙手中です。もう一度押すと取り下げます' : '')}
       mobile={mobile}
     />
   );

@@ -93,6 +93,19 @@ function ResultBody() {
   const ackTotal = checks.reduce((n, c) => n + c.responded_count + c.pending_count, 0);
   const ackRate = ackTotal ? Math.round((ackResponded / ackTotal) * 100) : null;
 
+  // 未応答が多い生徒 Top3：全確認の pending を生徒ごとに数える（同数は名前順）
+  const pendingCounts = new Map();
+  checks.forEach((c) => {
+    (c.pending || []).forEach((p) => {
+      const prev = pendingCounts.get(p.id);
+      pendingCounts.set(p.id, { name: p.name, n: (prev ? prev.n : 0) + 1 });
+    });
+  });
+  const topPending = [...pendingCounts.entries()]
+    .map(([uid, v]) => ({ id: uid, ...v }))
+    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ja'))
+    .slice(0, 3);
+
   async function markAnswered(qid) {
     try {
       await patch(`/questions/${qid}`, { status: QUESTION_STATUS.ANSWERED });
@@ -183,6 +196,45 @@ function ResultBody() {
                   </div>
                 ))}
               </div>
+            )}
+          </section>
+
+          <section className="section">
+            <h6 className="section-label">確認ボタンの未応答</h6>
+            {checks.length === 0 ? (
+              <p className="empty">この授業では確認ボタンを送っていません。</p>
+            ) : (
+              <>
+                {topPending.length > 0 && (
+                  <div className="pending-top">
+                    <div className="small muted">未応答が多い生徒 Top3</div>
+                    <ol className="pending-top-list">
+                      {topPending.map((p) => (
+                        <li key={p.id}>
+                          <span className="pending-name">{p.name}</span>
+                          <strong>{p.n}</strong> / {checks.length} 回
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                <ul className="pending-list">
+                  {checks.map((c, i) => (
+                    <li key={c.check_id}>
+                      <span className="pending-time">
+                        {i + 1}回目 ・ {formatTime(c.issued_at)}{c.auto ? '（自動）' : ''}
+                      </span>
+                      {(c.pending || []).length === 0 ? (
+                        <span className="small muted">全員が応答</span>
+                      ) : (
+                        <span className="pending-names">
+                          未応答 {c.pending.length}人：{c.pending.map((p) => p.name).join('、')}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
 
