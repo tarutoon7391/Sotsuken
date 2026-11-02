@@ -190,6 +190,14 @@
   color: var(--color-neutral-700); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .lr-tab.is-active { border-bottom-color: var(--color-accent); color: var(--color-accent-700); }
+.lr-fold {
+  margin-left: auto; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent;
+  color: var(--color-neutral-700); cursor: pointer;
+}
+.lr-fold:hover { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.lr-fold svg { transition: transform 0.15s; }
+.lr-fold.is-folded svg { transform: rotate(-90deg); }
 .lr-badge { background: var(--color-accent-2); color: var(--color-bg); font-size: 10px; border-radius: 999px; padding: 1px 6px; font-weight: 600; }
 /* 共通部品（ChatPanel / QuestionBox）は「高さを与えた flex column の親」に置く（W5 の取り決め） */
 .lr-tab-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
