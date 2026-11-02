@@ -56,6 +56,11 @@ function markDown() {
   runnerState.checkedAt = new Date();
 }
 
+/** 実行サーバーへ送るヘッダー。鍵があるときだけ X-Runner-Key を付ける（鍵はログ・レスポンスに出さない） */
+function runnerHeaders(headers = {}) {
+  return config.codeRunnerKey ? { ...headers, 'X-Runner-Key': config.codeRunnerKey } : headers;
+}
+
 /** 死活監視：GET /runtimes。起動時と CODE_LIMITS.RUNNER_HEALTH_INTERVAL_MS おき（jobs/code-runner-health.js） */
 async function checkHealth() {
   if (!isConfigured()) {
@@ -64,6 +69,7 @@ async function checkHealth() {
   }
   try {
     const res = await fetch(`${config.codeRunnerUrl}/runtimes`, {
+      headers: runnerHeaders(),
       signal: AbortSignal.timeout(CODE_LIMITS.RUNNER_HTTP_TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -157,7 +163,7 @@ async function postExecute(body) {
   try {
     const res = await fetch(`${config.codeRunnerUrl}/execute`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: runnerHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(CODE_LIMITS.RUNNER_HTTP_TIMEOUT_MS),
     });
