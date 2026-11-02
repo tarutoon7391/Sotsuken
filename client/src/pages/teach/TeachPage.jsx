@@ -98,7 +98,9 @@ function TeachBody() {
   const [preview, setPreview] = useState(null); // プレビュー中の資料（FileInfo）
   const [busy, setBusy] = useState('');
   // F-10 プログラミングモード：中央の「映像／コード」タブと、coding 起動時の課題 1 ダイアログ
-  const [gridTab, setGridTab] = useState('video');
+  // gridTab は coding 中に先生が「映像／コード」タブで一時的に切り替えた値だけを持つ。null のときは lesson.mode に従う
+  // （初期値を 'video' 固定にすると、coding 中の授業に戻ったとき選択状態と表示が食い違う：Issue #25）
+  const [gridTab, setGridTab] = useState(null);
   const [modeDialog, setModeDialog] = useState(false);
   const [modeError, setModeError] = useState('');
   const closeEnd = useCallback(() => setConfirmEnd(false), []);
@@ -236,7 +238,7 @@ function TeachBody() {
     // F-10：モード・今の課題・コードスポットライトは LessonDetail に持つ（CodePanel は lesson から読む）
     socket.on(SERVER_EVENTS.LESSON_MODE, ({ mode }) => {
       setLesson((l) => (l ? { ...l, mode } : l));
-      if (mode === LESSON_MODES.CODING) setGridTab('coding');
+      setGridTab(null); // モードが変わったら表示はモードに従う
     });
     socket.on(SERVER_EVENTS.CODE_ACTIVE_TASK, ({ task_id }) => setLesson((l) => (l ? { ...l, active_task_id: task_id } : l)));
     socket.on(SERVER_EVENTS.CODE_SPOTLIGHT, (p) =>
@@ -357,7 +359,7 @@ function TeachBody() {
     try {
       const l = await put(`/lessons/${lessonId}/mode`, { mode }, { redirect: false });
       setLesson(l);
-      setGridTab(mode === LESSON_MODES.CODING ? 'coding' : 'video');
+      setGridTab(null);
       showToast(mode === LESSON_MODES.CODING ? 'プログラミングモードを開始しました（生徒の画面がエディタになります）' : '通常モードに戻しました');
     } catch (err) {
       if (mode === LESSON_MODES.CODING && err.code === ERROR_CODES.CONFLICT && isLive) {
@@ -379,7 +381,7 @@ function TeachBody() {
       await post(`/lessons/${lessonId}/code/tasks`, input, { redirect: false });
       const l = await put(`/lessons/${lessonId}/mode`, { mode: LESSON_MODES.CODING }, { redirect: false });
       setLesson(l);
-      setGridTab('coding');
+      setGridTab(null);
       setModeDialog(false);
       showToast('プログラミングモードを開始しました（生徒の画面がエディタになります）');
     } catch (err) {
@@ -471,6 +473,8 @@ function TeachBody() {
 
   const elapsed = lesson.started_at ? formatDuration((now - new Date(lesson.started_at).getTime()) / 1000) : '';
   const reconnecting = socketDown || lkStatus === 'reconnecting';
+  // 中央に出すタブ。元になる値は lesson.mode（ヘッダーの選択状態と同じ）で、gridTab は一時的な上書きだけ
+  const shownGridTab = gridTab || (lesson.mode === LESSON_MODES.CODING ? 'coding' : 'video');
 
   /** 欠課までの残り秒数（閾値 − 累積 − 今回の経過） */
   function remainingSec(a) {
@@ -581,11 +585,11 @@ function TeachBody() {
           {/* F-10：coding 中は「映像／コード」タブ。映像タブに戻せば従来のグリッド（生徒カメラは coding 中も届いている） */}
           {lesson.mode === LESSON_MODES.CODING && (
             <div className="grid-tabs tabs" role="tablist">
-              <button type="button" role="tab" className={`tab${gridTab === 'video' ? ' is-on' : ''}`} onClick={() => setGridTab('video')}>映像</button>
-              <button type="button" role="tab" className={`tab${gridTab === 'coding' ? ' is-on' : ''}`} onClick={() => setGridTab('coding')}>コード</button>
+              <button type="button" role="tab" className={`tab${shownGridTab === 'video' ? ' is-on' : ''}`} onClick={() => setGridTab('video')}>映像</button>
+              <button type="button" role="tab" className={`tab${shownGridTab === 'coding' ? ' is-on' : ''}`} onClick={() => setGridTab('coding')}>コード</button>
             </div>
           )}
-          {lesson.mode === LESSON_MODES.CODING && gridTab === 'coding' ? (
+          {lesson.mode === LESSON_MODES.CODING && shownGridTab === 'coding' ? (
             <CodePanel lessonId={lessonId} lesson={lesson} students={students} isLive={isLive} showToast={showToast} />
           ) : (
             <>
