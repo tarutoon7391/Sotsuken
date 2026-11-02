@@ -112,6 +112,8 @@ function ResultBody() {
   return (
     <div className="page result-page">
       <header className="app-header">
+        {/* 戻るリンクは他画面（クラス詳細など）と同じくヘッダー左端に置く */}
+        <Link className="hdr-back" to={`/classes/${lesson.class_id}`}>← <span>クラス詳細へ戻る</span></Link>
         <div className="hdr-titles">
           <div className="hdr-kicker">{cls ? `${cls.name} ・ ` : ''}授業結果</div>
           <div className="hdr-title">{lesson.title}</div>
@@ -132,7 +134,6 @@ function ResultBody() {
           <span className="person-name">{user.name}</span>
           <RoleBadge role={user.role} />
         </span>
-        <Link className="btn btn-secondary" to={`/classes/${lesson.class_id}`}>クラス詳細へ戻る</Link>
       </header>
 
       <main className="page-main result-grid">
