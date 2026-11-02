@@ -91,10 +91,19 @@ function ClassDetailBody() {
   return (
     <div className="app classes-page">
       <header className="app-header">
-        <Link className="hdr-back" to="/classes">← <span>クラス一覧へ戻る</span></Link>
         <div className="hdr-left">
-          <div className="hdr-kicker">クラス</div>
-          <div className="hdr-title">{cls.name}</div>
+          <Link className="hdr-back" to="/classes">← <span>クラス一覧へ戻る</span></Link>
+          <h1 className="hdr-title">{cls.name}</h1>
+          {isTeacher && cls.join_code && (
+            <div className="code-row">
+              <div className="join-code">
+                <span className="join-code-label">参加コード</span>
+                <span className="join-code-value">{formatJoinCode(cls.join_code)}</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={copyCode}>コピー</button>
+              </div>
+              <span className="hint small muted">生徒はクラス一覧の「参加コードで参加」からこのコードを入力します</span>
+            </div>
+          )}
         </div>
         <span className="hdr-spacer" />
         {hasLive && <span className="status"><span className="dot dot-live" />授業中</span>}
@@ -162,17 +171,6 @@ function ClassDetailBody() {
 
         <div className="detail-wrap">
           <section>
-            {isTeacher && cls.join_code && (
-              <div className="code-block">
-                <h6 className="section-label">参加コード</h6>
-                <div className="join-code">
-                  <span className="join-code-value">{formatJoinCode(cls.join_code)}</span>
-                  <button type="button" className="btn btn-secondary" onClick={copyCode}>コピー</button>
-                </div>
-                <p className="hint small muted">生徒はクラス一覧の「参加コードで参加」からこのコードを入力します</p>
-              </div>
-            )}
-
             {hasLive && (
               <div className="card live-hero">
                 <div><span className="live-tag"><span className="dot dot-live" />授業中</span></div>
