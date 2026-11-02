@@ -113,17 +113,20 @@ function ResultBody() {
     <div className="page result-page">
       <header className="app-header">
         {/* 戻るリンクは他画面（クラス詳細など）と同じくヘッダー左端に置く */}
-        <Link className="hdr-back" to={`/classes/${lesson.class_id}`}>← <span>クラス詳細へ戻る</span></Link>
-        <div className="hdr-titles">
-          <div className="hdr-kicker">{cls ? `${cls.name} ・ ` : ''}授業結果</div>
-          <div className="hdr-title">{lesson.title}</div>
-          {lesson.started_at && (
-            <div className="hdr-meta">
-              {formatDateTime(lesson.started_at)}
-              {lesson.ended_at && ` – ${formatTime(lesson.ended_at)}`}
-              {durationMin !== null && ` ・ ${durationMin}分`}
-            </div>
-          )}
+        {/* 戻る → タイトル群 を縦積みにするラッパー（ヘッダーが横並びflexのため、専用クラスで限定） */}
+        <div className="hdr-stack">
+          <Link className="hdr-back" to={`/classes/${lesson.class_id}`}>← <span>クラス詳細へ戻る</span></Link>
+          <div className="hdr-titles">
+            <div className="hdr-kicker">{cls ? `${cls.name} ・ ` : ''}授業結果</div>
+            <div className="hdr-title">{lesson.title}</div>
+            {lesson.started_at && (
+              <div className="hdr-meta">
+                {formatDateTime(lesson.started_at)}
+                {lesson.ended_at && ` – ${formatTime(lesson.ended_at)}`}
+                {durationMin !== null && ` ・ ${durationMin}分`}
+              </div>
+            )}
+          </div>
         </div>
         <span className="hdr-spacer status">
           <span className="dot dot-neutral" />

@@ -2,6 +2,9 @@
 .result-page { display: flex; flex-direction: column; min-height: 100vh; }
 .result-page .page-main { flex: 1; min-height: 0; padding: 0 var(--space-6) 80px; }
 .result-page .hdr-titles { display: flex; flex-direction: column; min-width: 0; }
+/* ヘッダー左：戻る（左揃え）→ タイトル群 の縦積み。幅が足りないときはタイトルを省略表示にする */
+.result-page .hdr-stack { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); min-width: 0; }
+.result-page .hdr-stack .hdr-titles { max-width: 100%; }
 .result-page .section { display: flex; flex-direction: column; min-width: 0; }
 .result-page .section + .section { margin-top: var(--space-8); }
 .result-page .stat-value { font-size: 40px; }
