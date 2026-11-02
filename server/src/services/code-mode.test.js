@@ -203,6 +203,22 @@ describeDb('F-10 プログラミングモード（DB）', () => {
 
   describe('実行', () => {
     const flush = () => new Promise((r) => setTimeout(r, 50));
+    const RUN_RESULT_TIMEOUT_MS = 5000;
+
+    /** 指定の run_id の code:run_result が本人へ送られるまで待つ。配信は DB 更新の後なので固定時間では待たない */
+    async function waitForRunResult(userId, runId) {
+      const deadline = Date.now() + RUN_RESULT_TIMEOUT_MS;
+      const received = () =>
+        io.emitToUser.mock.calls.some(
+          ([, uid, event, payload]) => uid === userId && event === SERVER_EVENTS.CODE_RUN_RESULT && payload.run_id === runId
+        );
+      while (!received()) {
+        if (Date.now() >= deadline) {
+          throw new Error(`code:run_result（run_id=${runId}）が ${RUN_RESULT_TIMEOUT_MS}ms 以内に届きませんでした`);
+        }
+        await new Promise((r) => setTimeout(r, 10));
+      }
+    }
 
     test('Hello を run → 202 {run_id, queued_position:0} → code:queue 0 → code:run_result ok', async () => {
       await runner.checkHealth(); // fetch モックが ok を返すので available
@@ -210,7 +226,7 @@ describeDb('F-10 プログラミングモード（DB）', () => {
       const access = await taskAccessOf(s1, task1.id);
       const res = await runner.runCode(access, s1, { source: 'public class Main { public static void main(String[] a) { System.out.println("Hello"); } }' });
       expect(res).toEqual({ run_id: expect.any(Number), queued_position: 0 });
-      await flush();
+      await waitForRunResult(s1.id, res.run_id);
       expect(io.emitToUser).toHaveBeenCalledWith(lessonId, s1.id, SERVER_EVENTS.CODE_QUEUE, { position: 0 });
       expect(io.emitToUser).toHaveBeenCalledWith(
         lessonId,
@@ -225,7 +241,7 @@ describeDb('F-10 プログラミングモード（DB）', () => {
       );
       const body = JSON.parse(global.fetch.mock.calls[0][1].body);
       expect(body.files.map((f) => f.name)).toEqual(['Main.java']);
-    });
+    }, RUN_RESULT_TIMEOUT_MS * 2);
 
     test('1 分に 7 回 run → 7 回目が 429 RATE_LIMITED。先生は run できない（403）', async () => {
       const access = await taskAccessOf(s2, task1.id);
