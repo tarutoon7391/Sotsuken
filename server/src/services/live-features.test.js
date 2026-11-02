@@ -190,6 +190,19 @@ describeDb('確認ボタン・理解度・質問・チャット（DB）', () => 
       await expect(questions.cancelQuestion(hand.id, s1)).rejects.toMatchObject({ status: 404 });
     });
 
+    test('挙手の取り下げ：live 以外の授業は 409 で消えない', async () => {
+      const hand = await questions.postQuestion(accS1, s1, {});
+      await query('UPDATE lessons SET status = ? WHERE id = ?', ['ended', lessonId]);
+      try {
+        await expect(questions.cancelQuestion(hand.id, s1)).rejects.toMatchObject({ status: 409, code: 'CONFLICT' });
+      } finally {
+        await query('UPDATE lessons SET status = ? WHERE id = ?', ['live', lessonId]);
+      }
+      const rows = await query('SELECT 1 FROM questions WHERE id = ?', [hand.id]);
+      expect(rows).toHaveLength(1);
+      await questions.cancelQuestion(hand.id, s1);
+    });
+
     test('挙手の取り下げ：他人は 403、質問本文あり・answered 済みは 409 で、どちらも消えない', async () => {
       const hand = await questions.postQuestion(accS1, s1, {});
       await expect(questions.cancelQuestion(hand.id, s2)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
