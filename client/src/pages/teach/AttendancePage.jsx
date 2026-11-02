@@ -169,9 +169,17 @@ function AttendanceBody() {
   return (
     <div className="page attendance-page">
       <header className="app-header">
-        <div className="hdr-titles">
-          <div className="hdr-kicker">{cls ? `${cls.name} ・ ` : ''}出席一覧</div>
-          <div className="hdr-title">{lesson.title}</div>
+        {/* 戻るリンクは他画面と同じくヘッダー左上に置く（戻る → タイトル群 の縦積み） */}
+        <div className="hdr-stack">
+          {isEnded ? (
+            <Link className="hdr-back" to={`/lessons/${lessonId}/result`}>← <span>授業結果に戻る</span></Link>
+          ) : (
+            <Link className="hdr-back" to={`/lessons/${lessonId}/teach`}>← <span>先生画面に戻る</span></Link>
+          )}
+          <div className="hdr-titles">
+            <div className="hdr-kicker">{cls ? `${cls.name} ・ ` : ''}出席一覧</div>
+            <div className="hdr-title">{lesson.title}</div>
+          </div>
         </div>
         <div className="hdr-spacer summary" aria-label="出席の集計">
           <span className="status"><span className="dot" />出席 <strong>{counts.present}</strong></span>
@@ -187,11 +195,6 @@ function AttendanceBody() {
           <span className="person-name">{user.name}</span>
           <RoleBadge role={user.role} />
         </span>
-        {isEnded ? (
-          <Link className="btn btn-secondary" to={`/lessons/${lessonId}/result`}>← 授業結果に戻る</Link>
-        ) : (
-          <Link className="btn btn-secondary" to={`/lessons/${lessonId}/teach`}>← 先生画面に戻る</Link>
-        )}
       </header>
 
       <main className="page-main">
