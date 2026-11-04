@@ -52,6 +52,15 @@ import {
 import './teach.css';
 
 const EMPTY_UNDERSTANDING = { understood: 0, confused: 0, again: 0, total: 0 };
+// 表示だけの状態（サーバーの ATTENDANCE_STATUS には無い）。live 中に一度も入室していない欠課と区別する
+const NOT_ENTERED = 'not_entered';
+
+/** 出席欄の表示用ステータス。live 中・未入室（joined_at なし）の欠課だけ「未入室」に見せる */
+function displayAttendanceStatus(a, live) {
+  const status = (a && a.status) || ATTENDANCE_STATUS.ABSENT;
+  if (live && status === ATTENDANCE_STATUS.ABSENT && !(a && a.joined_at)) return NOT_ENTERED;
+  return status;
+}
 
 /** id で重複を除いてマージ */
 function mergeById(list, items) {
@@ -124,7 +133,7 @@ function TeachBody() {
       .then((rows) => {
         const map = {};
         (rows || []).forEach((r) => {
-          map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec, away_since: r.away_since };
+          map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec, away_since: r.away_since, joined_at: r.joined_at };
         });
         setAttendance(map);
       })
@@ -235,7 +244,9 @@ function TeachBody() {
         if (status === ATTENDANCE_STATUS.AWAY) {
           awaySince = prev && prev.status === ATTENDANCE_STATUS.AWAY && prev.away_since ? prev.away_since : new Date().toISOString();
         }
-        return { ...m, [user_id]: { status, away_total_sec, away_since: awaySince } };
+        // joined_at はイベントに無いので、入室（present）になった時点を手元で記録し、以後は引き継ぐ
+        const joinedAt = (prev && prev.joined_at) || (status === ATTENDANCE_STATUS.PRESENT ? new Date().toISOString() : null);
+        return { ...m, [user_id]: { status, away_total_sec, away_since: awaySince, joined_at: joinedAt } };
       });
     });
     socket.on(SERVER_EVENTS.MATERIAL_ADDED, ({ file }) => {
@@ -287,15 +298,16 @@ function TeachBody() {
   // ---------------------------------------------------------------- 派生値
   const students = useMemo(() => members.filter((m) => m.role !== ROLES.TEACHER), [members]);
   const counts = useMemo(() => {
-    const c = { present: 0, away: 0, absent: 0 };
+    const c = { present: 0, away: 0, absent: 0, notEntered: 0 };
     students.forEach((s) => {
-      const st = (attendance[s.id] && attendance[s.id].status) || ATTENDANCE_STATUS.ABSENT;
+      const st = displayAttendanceStatus(attendance[s.id], isLive);
       if (st === ATTENDANCE_STATUS.PRESENT) c.present += 1;
       else if (st === ATTENDANCE_STATUS.AWAY) c.away += 1;
+      else if (st === NOT_ENTERED) c.notEntered += 1;
       else c.absent += 1;
     });
     return c;
-  }, [students, attendance]);
+  }, [students, attendance, isLive]);
   const raisedUserIds = useMemo(
     () => questions.filter((q) => q.body == null && q.status === QUESTION_STATUS.OPEN && q.user).map((q) => q.user.id),
     [questions]
@@ -525,12 +537,13 @@ function TeachBody() {
   // セルの下部（W3 StudentGrid の renderCellFooter）。一時退出中のセルは teach.css の :has() で減光する
   function cellFooter(s) {
     const a = attendance[s.id];
-    const st = a && a.status;
+    const st = displayAttendanceStatus(a, isLive);
     // 直近の確認の反応状況（未反応／反応済み）。出席状態の表示と並べて出す
     const badge = <AttentionBadge userId={s.id} result={checkResult} />;
     if (st === ATTENDANCE_STATUS.AWAY) {
       return <>{badge}<span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span></>;
     }
+    if (st === NOT_ENTERED) return <>{badge}<span className="cell-foot is-not-entered">未入室</span></>;
     if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <>{badge}<span className="cell-foot is-absent">欠課</span></>;
     if (raisedUserIds.includes(s.id)) return <>{badge}<span className="cell-foot is-hand">✋ 挙手中</span></>;
     return badge;
@@ -654,6 +667,7 @@ function TeachBody() {
                 <div className="legend">
                   <span><i className="sw sw-hand" />挙手中</span>
                   <span><i className="sw sw-away" />一時退出中</span>
+                  <span><i className="sw sw-not-entered" />未入室</span>
                 </div>
               </div>
               <div className="grid-wrap">

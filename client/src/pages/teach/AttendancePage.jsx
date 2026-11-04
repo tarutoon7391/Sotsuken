@@ -19,17 +19,28 @@ const SOON_SEC = 5 * 60; // 欠課まで残り5分で強調（モックどおり
 const SOON_TOTAL_RATIO = 2 / 3; // 累積退出が閾値の 2/3 を超えたら強調
 const TIMEOUT_MIN_RANGE = [1, 180]; // away_timeout_min の範囲（docs/04 §6。LIMITS に無いのでここに置く）
 
+// 表示だけの状態（サーバーの ATTENDANCE_STATUS には無い）。live 中に一度も入室していない欠課だけ区別する
+const NOT_ENTERED = 'not_entered';
+
 export const STATUS_LABEL = {
   [ATTENDANCE_STATUS.PRESENT]: '出席',
   [ATTENDANCE_STATUS.AWAY]: '一時退出',
+  [NOT_ENTERED]: '未入室',
   [ATTENDANCE_STATUS.ABSENT]: '欠課',
 };
 export const STATUS_TAG = {
   [ATTENDANCE_STATUS.PRESENT]: 'tag-accent',
   [ATTENDANCE_STATUS.AWAY]: 'tag-neutral',
+  [NOT_ENTERED]: 'tag-not-entered',
   [ATTENDANCE_STATUS.ABSENT]: 'tag-accent-2',
 };
-const STATUS_ORDER = [ATTENDANCE_STATUS.AWAY, ATTENDANCE_STATUS.ABSENT, ATTENDANCE_STATUS.PRESENT]; // モックの並び
+const STATUS_ORDER = [ATTENDANCE_STATUS.AWAY, NOT_ENTERED, ATTENDANCE_STATUS.ABSENT, ATTENDANCE_STATUS.PRESENT]; // モックの並び
+
+/** 出席欄の表示用ステータス。live 中・未入室（joined_at なし）の欠課だけ「未入室」に見せる */
+function displayStatus(r, live) {
+  if (live && r.status === ATTENDANCE_STATUS.ABSENT && !r.joined_at) return NOT_ENTERED;
+  return r.status;
+}
 
 export default function AttendancePage() {
   return (
@@ -108,26 +119,28 @@ function AttendanceBody() {
       const away = r.status === ATTENDANCE_STATUS.AWAY;
       return {
         ...r,
+        dstatus: displayStatus(r, isLive),
         total: r.away_total_sec + (away && r.away_since ? Math.max(0, (now - new Date(r.away_since).getTime()) / 1000) : 0),
         remain: away ? Math.max(0, r.remaining_sec - elapsedSinceLoad) : r.remaining_sec,
       };
     });
-    const filtered = filter === 'all' ? list : list.filter((r) => r.status === filter);
+    const filtered = filter === 'all' ? list : list.filter((r) => r.dstatus === filter);
     const sorted = [...filtered];
     if (sort === 'name') sorted.sort((a, b) => a.user.name.localeCompare(b.user.name, 'ja'));
-    if (sort === 'status') sorted.sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
+    if (sort === 'status') sorted.sort((a, b) => STATUS_ORDER.indexOf(a.dstatus) - STATUS_ORDER.indexOf(b.dstatus));
     if (sort === 'entered') sorted.sort((a, b) => (a.joined_at || '9').localeCompare(b.joined_at || '9'));
     if (sort === 'total') sorted.sort((a, b) => b.total - a.total);
     return sorted;
-  }, [rows, filter, sort, now, elapsedSinceLoad]);
+  }, [rows, filter, sort, now, elapsedSinceLoad, isLive]);
 
   const counts = useMemo(() => {
-    const c = { present: 0, away: 0, absent: 0 };
+    const c = { present: 0, away: 0, absent: 0, [NOT_ENTERED]: 0 };
     (rows || []).forEach((r) => {
-      c[r.status] = (c[r.status] || 0) + 1;
+      const s = displayStatus(r, isLive);
+      c[s] = (c[s] || 0) + 1;
     });
     return c;
-  }, [rows]);
+  }, [rows, isLive]);
 
   async function saveTimeout(e) {
     e.preventDefault();
@@ -161,10 +174,14 @@ function AttendanceBody() {
   if (loadError && (!lesson || !rows)) return <div className="page-loading form-alert" role="alert">{loadError}</div>;
   if (!lesson || !rows) return <p className="page-loading">読み込み中…</p>;
 
-  // 終了後は出席／欠課の2値（一時退出は残らない）
+  // 終了後は出席／欠課の2値（一時退出は残らない）。修正フォームの選べる状態は実際の値だけ（未入室は選べない）
   const statusChoices = isEnded
     ? [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.ABSENT]
     : [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.AWAY, ATTENDANCE_STATUS.ABSENT];
+  // 絞り込みの選択肢は表示用の状態（live 中だけ「未入室」を足す）
+  const filterChoices = isLive
+    ? [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.AWAY, NOT_ENTERED, ATTENDANCE_STATUS.ABSENT]
+    : statusChoices;
 
   return (
     <div className="page attendance-page">
@@ -184,6 +201,7 @@ function AttendanceBody() {
         <div className="hdr-spacer summary" aria-label="出席の集計">
           <span className="status"><span className="dot" />出席 <strong>{counts.present}</strong></span>
           {!isEnded && <span className="status"><span className="dot dot-neutral" />一時退出 <strong>{counts.away}</strong></span>}
+          {isLive && <span className="status"><span className="dot dot-neutral" />未入室 <strong>{counts[NOT_ENTERED]}</strong></span>}
           <span className="status"><span className="dot dot-accent-2" />欠課 <strong>{counts.absent}</strong></span>
         </div>
         <span className="status" title="授業の状態">
@@ -232,7 +250,7 @@ function AttendanceBody() {
           <div className="list-head">
             <h6 className="section-label">出席一覧</h6>
             <div className="seg" role="radiogroup" aria-label="状態で絞り込み">
-              {['all', ...statusChoices].map((v) => (
+              {['all', ...filterChoices].map((v) => (
                 <label key={v} className="seg-opt">
                   <input type="radio" name="filter" value={v} checked={filter === v} onChange={() => setFilter(v)} />
                   {v === 'all' ? 'すべて' : STATUS_LABEL[v]}
@@ -277,7 +295,7 @@ function AttendanceBody() {
                     </td>
                     <td>
                       <span className="status-cell">
-                        <span className={`tag ${STATUS_TAG[r.status]}`}>{STATUS_LABEL[r.status]}</span>
+                        <span className={`tag ${STATUS_TAG[r.dstatus]}`}>{STATUS_LABEL[r.dstatus]}</span>
                         {r.status === ATTENDANCE_STATUS.AWAY && (
                           <span className={`remain${soon ? ' is-soon' : ''}`}>欠課まで {formatDuration(r.remain)}</span>
                         )}

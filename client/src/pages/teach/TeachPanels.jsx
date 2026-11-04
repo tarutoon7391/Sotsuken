@@ -34,6 +34,7 @@ export function AttendancePanel({ lessonId, counts }) {
       <div className="att-row">
         <div className="stat"><span className="stat-value">{counts.present}</span><span className="stat-sub">出席</span></div>
         <div className="stat is-away"><span className="stat-value">{counts.away}</span><span className="stat-sub">一時退出</span></div>
+        <div className="stat is-not-entered"><span className="stat-value">{counts.notEntered}</span><span className="stat-sub">未入室</span></div>
         <div className="stat is-absent"><span className="stat-value">{counts.absent}</span><span className="stat-sub">欠課</span></div>
       </div>
     </Panel>
