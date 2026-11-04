@@ -37,6 +37,7 @@ button { font: inherit; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--color-accent); }
 .dot-live { animation: pulse 1.6s ease-in-out infinite; }
 .dot-neutral { background: var(--color-neutral-500); }
+.dot-neutral-soft { background: var(--color-neutral-300); }
 .dot-accent-2 { background: var(--color-accent-2); }
 @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
 
