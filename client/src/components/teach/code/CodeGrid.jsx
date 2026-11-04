@@ -9,13 +9,19 @@ import Avatar from '../../shared/Avatar.jsx';
 import { formatTime } from '../../shared/format.js';
 
 export const STATE_LABELS = {
-  [CODE_STATES.IDLE]: '未保存',
+  [CODE_STATES.IDLE]: '未保存・未実行',
   [CODE_STATES.SYNTAX_ERROR]: '構文エラー',
   [CODE_STATES.COMPILE_ERROR]: 'コンパイルエラー',
   [CODE_STATES.RUNTIME_ERROR]: '実行時エラー',
   [CODE_STATES.OK]: '正常終了',
   [CODE_STATES.RUNNING]: '実行中',
 };
+
+/** セルのバッジ表示名。IDLE は保存の有無で「未保存」「保存済み」に分けて、下部の保存時刻と矛盾しないようにする */
+function cellStateLabel(state, hasSaved) {
+  if (state === CODE_STATES.IDLE) return hasSaved ? '保存済み' : '未保存';
+  return STATE_LABELS[state];
+}
 
 /** 凡例（グリッドの上に出す） */
 export function CodeLegend() {
@@ -38,6 +44,8 @@ export default function CodeGrid({ students, docs, onOpen, spotlightUserId = nul
       {students.map((s) => {
         const d = docs[s.id];
         const state = (d && d.state) || CODE_STATES.IDLE;
+        const hasSaved = !!(d && d.last_saved_at);
+        const label = cellStateLabel(state, hasSaved);
         const isSpot = spotlightUserId === s.id;
         return (
           <button
@@ -45,14 +53,14 @@ export default function CodeGrid({ students, docs, onOpen, spotlightUserId = nul
             type="button"
             className={`code-cell is-${state}${isSpot ? ' is-spot' : ''}`}
             onClick={() => onOpen(s)}
-            title={`${s.name}：${STATE_LABELS[state]}${d && d.line ? `（${d.line} 行目）` : ''}`}
+            title={`${s.name}：${label}${d && d.line ? `（${d.line} 行目）` : ''}`}
           >
             <div className="code-cell-head">
               <Avatar user={s} size={18} />
               <span className="code-cell-name">{s.name}</span>
               {isSpot && <span className="code-cell-spot">★</span>}
               <span className={`code-cell-state is-${state}`}>
-                {state === CODE_STATES.OK ? '✓' : STATE_LABELS[state]}
+                {state === CODE_STATES.OK ? '✓' : label}
                 {d && d.line ? ` ${d.line}行` : ''}
               </span>
             </div>
