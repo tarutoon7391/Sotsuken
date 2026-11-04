@@ -124,7 +124,8 @@ function TeachBody() {
       .then((rows) => {
         const map = {};
         (rows || []).forEach((r) => {
-          map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec, away_since: r.away_since };
+          // joined: 一度でも入室したか（授業中の欠課と「未入室」を見た目だけ分けるため。docs/04 の joined_at をそのまま使う）
+          map[r.user.id] = { status: r.status, away_total_sec: r.away_total_sec, away_since: r.away_since, joined: !!r.joined_at };
         });
         setAttendance(map);
       })
@@ -235,7 +236,9 @@ function TeachBody() {
         if (status === ATTENDANCE_STATUS.AWAY) {
           awaySince = prev && prev.status === ATTENDANCE_STATUS.AWAY && prev.away_since ? prev.away_since : new Date().toISOString();
         }
-        return { ...m, [user_id]: { status, away_total_sec, away_since: awaySince } };
+        // 欠課以外の状態が届いた＝入室済み。欠課が届いたときは直前までの入室状況を引き継ぐ
+        const joined = status === ATTENDANCE_STATUS.ABSENT ? !!(prev && prev.joined) : true;
+        return { ...m, [user_id]: { status, away_total_sec, away_since: awaySince, joined } };
       });
     });
     socket.on(SERVER_EVENTS.MATERIAL_ADDED, ({ file }) => {
@@ -287,15 +290,18 @@ function TeachBody() {
   // ---------------------------------------------------------------- 派生値
   const students = useMemo(() => members.filter((m) => m.role !== ROLES.TEACHER), [members]);
   const counts = useMemo(() => {
-    const c = { present: 0, away: 0, absent: 0 };
+    const c = { present: 0, away: 0, absent: 0, notJoined: 0 };
     students.forEach((s) => {
-      const st = (attendance[s.id] && attendance[s.id].status) || ATTENDANCE_STATUS.ABSENT;
+      const a = attendance[s.id];
+      const st = (a && a.status) || ATTENDANCE_STATUS.ABSENT;
       if (st === ATTENDANCE_STATUS.PRESENT) c.present += 1;
       else if (st === ATTENDANCE_STATUS.AWAY) c.away += 1;
+      // 授業中はまだ一度も入室していない生徒を「欠課」と分けて「未入室」に数える（終了後は今までどおり欠課）
+      else if (isLive && !(a && a.joined)) c.notJoined += 1;
       else c.absent += 1;
     });
     return c;
-  }, [students, attendance]);
+  }, [students, attendance, isLive]);
   const raisedUserIds = useMemo(
     () => questions.filter((q) => q.body == null && q.status === QUESTION_STATUS.OPEN && q.user).map((q) => q.user.id),
     [questions]
@@ -531,7 +537,11 @@ function TeachBody() {
     if (st === ATTENDANCE_STATUS.AWAY) {
       return <>{badge}<span className="cell-foot is-away">一時退出中・あと {formatDuration(remainingSec(a))}</span></>;
     }
-    if (st === ATTENDANCE_STATUS.ABSENT && isLive) return <>{badge}<span className="cell-foot is-absent">欠課</span></>;
+    if (st === ATTENDANCE_STATUS.ABSENT && isLive) {
+      return a.joined
+        ? <>{badge}<span className="cell-foot is-absent">欠課</span></>
+        : <>{badge}<span className="cell-foot is-unjoined">未入室</span></>;
+    }
     if (raisedUserIds.includes(s.id)) return <>{badge}<span className="cell-foot is-hand">✋ 挙手中</span></>;
     return badge;
   }
