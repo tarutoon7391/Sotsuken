@@ -75,19 +75,21 @@ export default function StudentGrid({
               className="lk-grid__video"
               placeholder={<Avatar user={s} size={40} />}
             />
+            {onSpotlight && (
+              <button
+                type="button"
+                className="lk-grid__spot-btn"
+                onClick={() => onSpotlight(isSpot ? null : s.id)}
+                title={isSpot ? 'スポットライトを解除' : `${s.name} をスポットライト`}
+                aria-label={isSpot ? 'スポットライトを解除' : `${s.name} をスポットライト`}
+              >
+                {isSpot ? '★ 解除' : '★'}
+              </button>
+            )}
             <div className="lk-grid__footer">
               {/* 名前はテキストとして描画（React がエスケープする） */}
-              <span className="lk-grid__name">{s.name}</span>
-              {onSpotlight && (
-                <button
-                  type="button"
-                  className="lk-button lk-button--small"
-                  onClick={() => onSpotlight(isSpot ? null : s.id)}
-                >
-                  {isSpot ? '解除' : 'スポットライト'}
-                </button>
-              )}
-              {renderCellFooter && renderCellFooter(s)}
+              <span className="lk-grid__name" title={s.name}>{s.name}</span>
+              <div className="lk-grid__status">{renderCellFooter && renderCellFooter(s)}</div>
             </div>
           </li>
         );
