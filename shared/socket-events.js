@@ -21,6 +21,8 @@ export const CLIENT_EVENTS = Object.freeze({
   ATTENTION_RESPOND: 'attention:respond',
   /** 生徒クライアントの構文解析結果。{ task_id, has_error, line? }。生徒。変化時のみ・500ms デバウンス（F-10・v4.5） */
   CODE_SYNTAX: 'code:syntax',
+  /** 書きかけ（未保存）のコード。{ task_id, source }。生徒。変更のたびに CODE_LIMITS.DRAFT_DEBOUNCE_MS でデバウンスして送る（F-10・v4.6） */
+  CODE_DRAFT: 'code:draft',
 });
 
 /** サーバー → クライアント */
@@ -65,6 +67,8 @@ export const SERVER_EVENTS = Object.freeze({
   CODE_RESET: 'code:reset',
   /** { task_id, user_id, state, line? }。先生。コードグリッドの枠色更新（state は CODE_STATES） */
   CODE_STATUS: 'code:status',
+  /** { task_id, user_id, source }。先生。生徒の書きかけ（未保存）のコード。コードグリッド・拡大パネルをリアルタイム更新（v4.6） */
+  CODE_DRAFT: 'code:draft',
   /** { run_id, task_id, user_id, kind, status, stdout, stderr, exit_code, duration_ms }（CodeRun）。本人＋先生 */
   CODE_RUN_RESULT: 'code:run_result',
   /** { position }。本人。待ち行列の順番（0 で実行開始） */

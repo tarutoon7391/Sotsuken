@@ -126,6 +126,15 @@ export default function CodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, compact]);
 
+  // 読み取り専用のときは value の変化をそのまま反映する（先生の拡大パネルで生徒の書きかけをリアルタイムに映す）。
+  // 作り直さずに中身だけ差し替えるので、スクロール位置はなるべく保たれる
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !readOnly || value == null) return;
+    const current = view.state.doc.toString();
+    if (value !== current) view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
+  }, [value, readOnly]);
+
   // 保存時のコンパイルエラーを行に印として出す（次に打ち直すと構文チェックの結果に置き換わる）
   useEffect(() => {
     const view = viewRef.current;

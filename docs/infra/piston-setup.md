@@ -28,7 +28,7 @@
 | `CODE_RUNNER_CONCURRENCY` | `2`（1G のとき）／ 未設定＝4（2G 以上） | 授業ごとの同時実行本数。`CODE_LIMITS.CONCURRENT_RUNS` の上書き |
 
 - アプリは `GET <URL>/runtimes` で死活確認（起動時＋1 分おき）、`POST <URL>/execute` で実行する
-- 保存（コンパイルのみ）は `Compile.java`（何もしない main）を先頭、`Main.java` を 2 番目で送る。セルフホストなら docs/04 §7.4 の値（CPU 10 秒・256MB）がそのまま通る。400 が返ると控えめな値（run 3 秒・メモリ指定なし）で 1 回だけ再送する
+- 保存（コンパイルのみ）は `Compile.java`（Main.java を javax.tools で javac するだけ・v4.6）を先頭、`Main.java` を 2 番目で送る。Piston の Java は compile 段階が無いので、run 段階の終了コードと stderr がコンパイル結果になる。セルフホストなら docs/04 §7.4 の値（CPU 10 秒・256MB）がそのまま通る。400 が返ると控えめな値（run 3 秒・メモリ指定なし）で 1 回だけ再送する
 - 確認は `https://manabiba.up.railway.app/api/health` → `code_runner: { configured: true, available: true }`
 
 ## 3. VPS の初期設定（Ubuntu 24.04・root でログイン後）

@@ -173,6 +173,7 @@ export const CODE_LIMITS = Object.freeze({
   RUNNER_HEALTH_INTERVAL_MS: 60 * 1000, // 実行サーバーの死活監視の間隔
   PERSIST_INTERVAL_MS: 5 * 1000,        // Yjs の更新を code_documents に書き戻す間隔
   SYNTAX_DEBOUNCE_MS: 500,              // code:syntax を送るデバウンス
+  DRAFT_DEBOUNCE_MS: 300,               // code:draft（書きかけのコード）を送るデバウンス
   GRID_HEAD_LINES: 20,                  // コードグリッドの縮小表示に使う先頭行数（source_head）
   RECENT_RUNS: 5,                       // documents/:user_id に含める直近の runs 件数
 });

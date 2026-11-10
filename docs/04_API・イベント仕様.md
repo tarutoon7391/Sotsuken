@@ -3,6 +3,7 @@
 > **この文書が分担間の「契約」。** ここに従えば各担当は独立して開発できる。
 > 変更したい場合は PM に相談 → 合意後にこの文書を更新してから実装する。
 > v4.1（2026-10-05）：クラス詳細・チャット履歴・理解度の取得 API、`lesson:started` / `understanding:reset` イベントを追加。出席の記録タイミング・復帰時の閾値判定・授業終了時の確定を明記。
+> v4.6（2026-11-10・トーンさん要望）：F-10 に `code:draft`（生徒の書きかけのコードを先生へリアルタイム転送）を追加。構文エラー中は保存・実行の結果に関係なく先生のグリッドを `syntax_error` のままにする。保存（コンパイルのみ）のラッパーを「Main.java を javac するだけ」に変更（Piston の Java は compile 段階が無く、旧ラッパーでは Main.java が一度もコンパイルされずに常に成功になっていた）。
 > v4.5（2026-10-31・トーンさん裁定）：**F-10 プログラミングモード**の契約を §7 に追加（モード切替・課題・保存／実行・コードスポットライト・Yjs 同期、エラーコード `RATE_LIMITED`／`RUNNER_UNAVAILABLE`／`NOT_CODING_MODE`）。10-29 班員テストの要望で `DELETE /api/questions/:id`（挙手の取り下げ）＋`question:cancelled`、`GET /lessons/:id/attention` の各要素に `pending:[{id,name}]` を追加。pending #9 → B（`LessonDetail.understanding_reset_at`）、#10 → A（members は先生のみのまま）。
 > v4.4（2026-10-08）：Office 資料（Word・Excel・PowerPoint）をアップロード時に PDF へ変換し、`FileInfo.preview_url` で資料パネルに表示する（別タブを開かずに見られるようにする）。
 > v4.3（2026-10-08・W1〜W5 監査の裁定）：`material:added` を追加。`attention:check` を全員宛にして `issued_at`・`auto` を追加。確認ボタンの一覧・自動設定の取得 API を追加。`question:new` に `status`。入力の上限を `LIMITS` として §6 にまとめた。購読制御の文言を実装に合わせた。
@@ -265,7 +266,8 @@
 | `code:task_added` | `{task}`（`CodeTask`） | 全員 | 課題追加（生徒側にタブが生える） |
 | `code:active_task` | `{task_id}` | 全員 | 今の課題の切替（生徒のエディタはそのタブへ） |
 | `code:reset` | `{task_id}` | 対象生徒 | テンプレート再配布。エディタ内容をテンプレートで置き換える（`GET tasks` で取り直す） |
-| `code:status` | `{task_id, user_id, state, line?}` | 先生 | コードグリッドの枠色更新。`state` は `idle`／`syntax_error`／`compile_error`／`runtime_error`／`ok`／`running`（`CODE_STATES`）。構文エラーは生徒クライアントが検出して `code:syntax` で送り、サーバーが先生に転送する。コンパイル・実行の結果はサーバーが `code:run_result` と同時に送る |
+| `code:status` | `{task_id, user_id, state, line?}` | 先生 | コードグリッドの枠色更新。`state` は `idle`／`syntax_error`／`compile_error`／`runtime_error`／`ok`／`running`（`CODE_STATES`）。構文エラーは生徒クライアントが検出して `code:syntax` で送り、サーバーが先生に転送する。コンパイル・実行の結果はサーバーが `code:run_result` と同時に送る。**構文エラー中（直近の `code:syntax` が `has_error:true`）は、保存・実行の結果が何であっても `syntax_error` のまま送る**（v4.6）。構文エラーが直ったら直近の保存・実行の結果の状態（無ければ `idle`）を送る |
+| `code:draft` | `{task_id, user_id, source}` | 先生 | 生徒の書きかけ（未保存）のコード。先生のコードグリッドの縮小表示と拡大パネルをリアルタイムに更新する（v4.6） |
 | `code:run_result` | `{run_id, task_id, user_id, kind, status, stdout, stderr, exit_code, duration_ms}`（`CodeRun`） | 本人＋先生 | コンパイル（`kind:"compile"`。save から）／実行（`kind:"run"`）の結果。`stdout`・`stderr` は `CODE_LIMITS.OUTPUT_MAX_BYTES`（64KB）で切り詰め済み |
 | `code:queue` | `{position}` | 本人 | 待ち行列の順番更新（0 で実行開始。「実行待ち N 人」表示に使う） |
 | `code:spotlight` | `{user_id\|null, task_id}` | 全員 | コードスポットライト。生徒は `GET documents/:user_id` では他人を読めないので、**サーバーが `source` も載せる**：`{user_id, task_id, user:{id,name}, source}`。null で解除 |
@@ -275,7 +277,8 @@
 
 | イベント | ペイロード | ロール | 説明 |
 |---|---|---|---|
-| `code:syntax` | `{task_id, has_error, line?}` | 生徒 | 生徒クライアントの Lezer 解析結果。**変化したときだけ**送る（`CODE_LIMITS.SYNTAX_DEBOUNCE_MS`＝500ms のデバウンス）。サーバーは先生に `code:status`（`syntax_error` または `idle`）として転送する |
+| `code:syntax` | `{task_id, has_error, line?}` | 生徒 | 生徒クライアントの Lezer 解析結果。**変化したときだけ**送る（`CODE_LIMITS.SYNTAX_DEBOUNCE_MS`＝500ms のデバウンス）。サーバーは先生に `code:status`（`syntax_error`、または直近の保存・実行の結果の状態）として転送し、状態をメモリに持つ（`services/code-live.js`） |
+| `code:draft` | `{task_id, source}` | 生徒 | 書きかけ（未保存）のコード。打つのが止まって `CODE_LIMITS.DRAFT_DEBOUNCE_MS`（300ms）後に送る。`source` は `SOURCE_MAX_BYTES` 以内・`coding` 中の自分の授業の課題のみ。サーバーは DB に書かずメモリに最新 1 件を持ち（再起動で消えてよい）、先生に `code:draft` で転送する。`GET documents`（先生）の `source_head`・`GET documents/:user_id`（先生）の `source` は書きかけがあればそれを返し、構文エラー中なら `state` は `syntax_error`。テンプレート再配布で消える（v4.6） |
 
 ### 7.3 Yjs 同期（Socket.IO とは別の WebSocket・段階 2）
 
@@ -289,7 +292,7 @@
 ### 7.4 実行サーバー連携（サーバー内部・W2 / W3）
 
 - `.env` の `CODE_RUNNER_URL`。開発：`https://emkc.org/api/v2/piston`（公開 API・秒 5 リクエスト制限）、本番：VPS 上の Piston（docs/11 §6）。**生徒のコードをアプリサーバー上で実行しない**
-- 保存＝コンパイルのみ：Piston は compile+run 一体なので、保存時は `Main.java` に加えて実行を即終了させるラッパーを渡し、**stderr に `error:` を含むか・compile 段階の exit code** で `compile_error` を判定する（実装詳細は W2。仕様としては「保存＝コンパイル結果のみ返す」）
+- 保存＝コンパイルのみ：Piston は compile+run 一体なので、保存時は先頭に「`Main.java` を javac（`javax.tools`）でコンパイルするだけのラッパー `Compile.java`」、2 番目に `Main.java` を渡す。Piston の Java は compile 段階を持たず先頭ファイルを単一ファイル実行するので、**ラッパーの終了コード ≠ 0 か stderr の `Main.java:N: error:`** で `compile_error` を判定する（v4.6。旧ラッパーは何もしない main で、Main.java がコンパイルされず常に成功になっていた）。実行時も run 段階の stderr に javac のエラーがあれば `runtime_error` ではなく `compile_error`（実装詳細は W2。仕様としては「保存＝コンパイル結果のみ返す」）
 - 制限：CPU `CODE_LIMITS.CPU_TIMEOUT_MS`（10 秒）、メモリ `CODE_LIMITS.MEMORY_MB`（256MB）、出力 64KB、ネットワーク遮断（Piston 側）
 - 待ち行列：アプリ内メモリ（授業ごと）。同時 `CODE_LIMITS.CONCURRENT_RUNS`（4）、FIFO。再起動で消えてよい（待っていた run は `runner_unavailable` にしない。クライアントが再送する）
 - レート制限：ユーザー×課題で 1 分 6 回。超過は 429 `RATE_LIMITED`
