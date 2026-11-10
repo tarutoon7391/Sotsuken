@@ -1,6 +1,7 @@
 // 生徒のプログラミングモード本体（課題タブ・エディタ・保存／実行・出力・スポットライト）— 担当：W4（F-10・docs/07 §15.1）
 // LessonLive が lesson.mode === 'coding' のとき映像エリアの代わりに表示する。
 // 段階 1：コードはこの画面のローカル state だけ（save / run に source を送る）。段階 2 で Yjs に差し替える。
+// 書きかけのコードは code:draft で先生に送り、先生のコードグリッドにリアルタイムで映す。
 // props:
 //   lessonId:  number
 //   lesson:    LessonDetail（active_task_id は code:active_task で LearnPage が更新する）
@@ -10,7 +11,7 @@
 //   mobile:    boolean
 //   showToast: (text, kind?) => void
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CODE_RUN_KINDS, CODE_RUN_STATUS, ERROR_CODES } from '@sotsuken/shared/constants';
+import { CODE_LIMITS, CODE_RUN_KINDS, CODE_RUN_STATUS, ERROR_CODES } from '@sotsuken/shared/constants';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '@sotsuken/shared/socket-events';
 import { get, post } from '../../../api/client.js';
 import CodeEditor from './CodeEditor.jsx';
@@ -190,9 +191,20 @@ export default function CodeStage({ lessonId, lesson, me, socket, connected, mob
   const work = selectedId ? works[selectedId] : null;
   const task = tasks.find((t) => t.id === selectedId) || null;
 
+  // 書きかけのコードを先生へ（打つのが止まって DRAFT_DEBOUNCE_MS 後に 1 回）
+  const draftTimer = useRef(null);
+  useEffect(() => () => clearTimeout(draftTimer.current), []);
   const onChange = useCallback(
-    (source) => updateWork(selectedId, { source, dirty: true, error: '' }),
-    [selectedId, updateWork]
+    (source) => {
+      updateWork(selectedId, { source, dirty: true, error: '' });
+      if (!selectedId) return;
+      const taskId = selectedId;
+      clearTimeout(draftTimer.current);
+      draftTimer.current = setTimeout(() => {
+        if (socket) socket.emit(CLIENT_EVENTS.CODE_DRAFT, { task_id: taskId, source });
+      }, CODE_LIMITS.DRAFT_DEBOUNCE_MS);
+    },
+    [selectedId, socket, updateWork]
   );
 
   // 構文エラーは変化したときだけサーバーへ（code:syntax）
@@ -216,7 +228,8 @@ export default function CodeStage({ lessonId, lesson, me, socket, connected, mob
     try {
       const res = await post(`/code/tasks/${taskId}/save`, { source: work.source }, { redirect: false });
       updateWork(taskId, { saving: false, dirty: false, compileErrors: res.compile.errors || [] });
-      if (res.compile.status === CODE_RUN_STATUS.OK) showToast('保存しました（コンパイル成功）', 'ok');
+      if (work.syntax.hasError) showToast(`保存しました。構文エラーがあります${work.syntax.line ? `（${work.syntax.line} 行目）` : ''}`, 'miss');
+      else if (res.compile.status === CODE_RUN_STATUS.OK) showToast('保存しました（コンパイル成功）', 'ok');
       else if (res.compile.status === CODE_RUN_STATUS.COMPILE_ERROR) showToast(`保存しました。コンパイルエラーが ${res.compile.errors.length} 件`, 'miss');
       else showToast('保存しました（実行サーバーに接続できないためコンパイルは未確認）', 'miss');
     } catch (err) {

@@ -19,6 +19,7 @@ const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { getLessonAccess } = require('./access');
 const { emitToLesson, emitToUser } = require('../sockets/io');
+const codeLive = require('./code-live');
 
 const NOT_LIVE_MESSAGE = '授業は開催中ではありません';
 
@@ -251,6 +252,7 @@ async function redistribute(access) {
     'UPDATE code_documents SET source = ?, ydoc_state = NULL, updated_at = UTC_TIMESTAMP() WHERE task_id = ?',
     [task.template, task.id]
   );
+  codeLive.clearTask(task.id); // 書きかけ・構文エラーも配り直したテンプレートに合わせて消す
   const students = await listClassStudents(classRow.id);
   for (const s of students) {
     emitToUser(lesson.id, s.user_id, SERVER_EVENTS.CODE_RESET, { task_id: task.id });
@@ -290,6 +292,7 @@ async function saveDocument(taskId, userId, source, { compileOk, editedByTeacher
 /**
  * GET /code/tasks/:task_id/documents（先生）→ CodeDocumentSummary[]。コードグリッドの初期表示用
  * まだ書いていない生徒はテンプレートを source_head に、state は idle
+ * 書きかけ（code:draft）があればそれを source_head に、構文エラー中（code:syntax）なら state は syntax_error（code-live.js）
  */
 async function listDocuments(access) {
   const { task, classRow } = access;
@@ -314,13 +317,17 @@ async function listDocuments(access) {
   return students.map((s) => {
     const doc = docByUser.get(s.user_id);
     const lastRunStatus = runByUser.get(s.user_id) || null;
-    return {
+    const draft = codeLive.getDraft(task.id, s.user_id);
+    const syntax = codeLive.getSyntax(task.id, s.user_id);
+    const item = {
       user: toUserBrief(s),
-      source_head: headLines(doc ? doc.source : task.template),
-      state: stateOfRunStatus(lastRunStatus),
+      source_head: headLines(draft != null ? draft : doc ? doc.source : task.template),
+      state: syntax.hasError ? CODE_STATES.SYNTAX_ERROR : stateOfRunStatus(lastRunStatus),
       last_saved_at: iso(savedByUser.get(s.user_id)),
       last_run_status: lastRunStatus,
     };
+    if (syntax.hasError && syntax.line) item.line = syntax.line;
+    return item;
   });
 }
 
@@ -350,9 +357,11 @@ async function getDocument(access, user, userId) {
       ORDER BY id DESC LIMIT ${Number(CODE_LIMITS.RECENT_RUNS)}`,
     [task.id, userId]
   );
+  // 先生には書きかけ（未保存）のコードを見せる（本人は保存済みのコードから復元する）
+  const draft = isTeacher ? codeLive.getDraft(task.id, userId) : null;
   return {
     user: toUserBrief(users[0]),
-    source: doc ? doc.source : task.template,
+    source: draft != null ? draft : doc ? doc.source : task.template,
     updated_at: iso(doc ? doc.updated_at : task.created_at),
     last_saved_at: iso(saves[0] && saves[0].last_saved_at),
     runs: runs.map(toRun),

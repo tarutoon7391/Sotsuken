@@ -4,6 +4,7 @@
 //   task:        CodeTask
 //   student:     UserBrief
 //   latestRun:   CodeRun|null        親が code:run_result で受けた直近の結果（開いている間の更新用）
+//   liveSource:  string|null         親が code:draft で受けた書きかけのコード（あればリアルタイムでこちらを表示）
 //   isSpotlight: boolean
 //   isLive:      boolean
 //   onSpotlight: (userId|null) => void
@@ -16,7 +17,7 @@ import { formatTime } from '../../shared/format.js';
 import CodeEditor from '../../learn/code/CodeEditor.jsx';
 import OutputPanel, { runLabel } from '../../learn/code/OutputPanel.jsx';
 
-export default function CodeInspector({ task, student, latestRun, isSpotlight, isLive, onSpotlight, onClose }) {
+export default function CodeInspector({ task, student, latestRun, liveSource = null, isSpotlight, isLive, onSpotlight, onClose }) {
   const [doc, setDoc] = useState(null);
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0); // 取り直しのたびにエディタを作り直す
@@ -49,6 +50,7 @@ export default function CodeInspector({ task, student, latestRun, isSpotlight, i
             {student.name} <span className="tiny muted">／ {task.title}</span>
           </div>
           <span className="tiny muted">{doc && doc.last_saved_at ? `最終保存 ${formatTime(doc.last_saved_at)}` : '未保存'}</span>
+          <span className="tiny muted">・入力中のコードをリアルタイム表示</span>
           <span className="hdr-spacer" />
           {isSpotlight ? (
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSpotlight(null)}>★ 全員への表示を解除</button>
@@ -62,7 +64,11 @@ export default function CodeInspector({ task, student, latestRun, isSpotlight, i
         {error && <p className="form-alert" role="alert">{error}</p>}
         <div className="code-inspector-body">
           <div className="code-inspector-editor">
-            {doc ? <CodeEditor key={`${student.id}-${version}`} value={doc.source} compileErrors={compileErrors} readOnly /> : <p className="page-loading">読み込み中…</p>}
+            {doc ? (
+              <CodeEditor key={`${student.id}-${version}`} value={liveSource ?? doc.source} compileErrors={compileErrors} readOnly />
+            ) : (
+              <p className="page-loading">読み込み中…</p>
+            )}
           </div>
           <div className="code-inspector-side">
             <OutputPanel run={run} compileErrors={compileErrors} compact />

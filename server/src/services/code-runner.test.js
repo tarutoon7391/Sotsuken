@@ -9,7 +9,10 @@ jest.mock('../sockets/io', () => ({
   setIo: () => {},
 }));
 
-const { CODE_LIMITS, CODE_RUN_STATUS } = require('@sotsuken/shared/constants');
+const { CODE_LIMITS, CODE_RUN_STATUS, CODE_STATES } = require('@sotsuken/shared/constants');
+const { SERVER_EVENTS } = require('@sotsuken/shared/socket-events');
+const io = require('../sockets/io');
+const codeLive = require('./code-live');
 const runner = require('./code-runner');
 
 describe('parseCompileErrors（javac の stderr）', () => {
@@ -75,6 +78,23 @@ describe('interpretResult（Piston の結果）', () => {
     expect(
       runner.interpretResult({ ...base, run: { code: null, signal: 'SIGKILL', stdout: '', stderr: '' } }, { compileOnly: false }).status
     ).toBe(CODE_RUN_STATUS.TIMEOUT);
+  });
+
+  test('保存：compile 段階が無い実行サーバーでは Compile.java（javac）の失敗を compile_error にする', () => {
+    // Piston の Java は compile 段階を返さず、run 段階に Compile.java の結果が入る
+    const stderr = ["Main.java:3: error: ';' expected", '        System.out.println("Hello")', '                                   ^', '1 error'].join('\n');
+    const out = runner.interpretResult({ run: { code: 1, stdout: '', stderr } }, { compileOnly: true });
+    expect(out.status).toBe(CODE_RUN_STATUS.COMPILE_ERROR);
+    expect(runner.parseCompileErrors(out.stderr)).toEqual([{ line: 3, col: 36, message: "';' expected" }]);
+  });
+
+  test('保存：compile 段階が無くても javac が通れば ok', () => {
+    expect(runner.interpretResult({ run: { code: 0, stdout: '', stderr: '' } }, { compileOnly: true }).status).toBe(CODE_RUN_STATUS.OK);
+  });
+
+  test('実行：単一ファイル実行のコンパイルエラー（run 段階の stderr）は runtime_error ではなく compile_error', () => {
+    const stderr = "Main.java:3: error: ';' expected\n        x\n         ^\n1 error\nerror: compilation failed";
+    expect(runner.interpretResult({ run: { code: 1, stdout: '', stderr } }, { compileOnly: false }).status).toBe(CODE_RUN_STATUS.COMPILE_ERROR);
   });
 
   test('stdout は OUTPUT_MAX_BYTES で切り詰める', () => {
@@ -242,5 +262,32 @@ describe('レート制限（ユーザー×課題で 1 分 RUNS_PER_MINUTE 回）
     expect(runner.takeRateSlot(2, 10, t0 + 100)).toBe(true);
     // 60 秒後
     expect(runner.takeRateSlot(1, 10, t0 + 60 * 1000 + 1)).toBe(true);
+  });
+});
+
+describe('broadcastRun（先生のグリッドの枠色）', () => {
+  const run = { run_id: 1, task_id: 10, user_id: 20, kind: 'compile', status: CODE_RUN_STATUS.OK };
+  const lastStatus = () => io.emitToTeachers.mock.calls.filter((c) => c[1] === SERVER_EVENTS.CODE_STATUS).pop()[2];
+  beforeEach(() => {
+    io.emitToTeachers.mockClear();
+    codeLive.clearAll();
+  });
+
+  test('構文エラーが無ければ保存の結果どおり（ok → 正常）', () => {
+    runner.broadcastRun(1, run, []);
+    expect(lastStatus()).toEqual({ task_id: 10, user_id: 20, state: CODE_STATES.OK });
+  });
+
+  test('構文エラー中に保存してコンパイルが ok でも「構文エラー」のまま', () => {
+    codeLive.setSyntax(10, 20, true, 4);
+    runner.broadcastRun(1, run, []);
+    expect(lastStatus()).toEqual({ task_id: 10, user_id: 20, state: CODE_STATES.SYNTAX_ERROR, line: 4 });
+  });
+
+  test('構文エラーが直ったあとは結果どおりに戻る', () => {
+    codeLive.setSyntax(10, 20, true, 4);
+    codeLive.setSyntax(10, 20, false, null);
+    runner.broadcastRun(1, run, []);
+    expect(lastStatus().state).toBe(CODE_STATES.OK);
   });
 });

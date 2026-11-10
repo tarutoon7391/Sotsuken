@@ -8,7 +8,7 @@
 //   showToast:  (text) => void
 //   onSpotlightChange?: (userId|null) => void   PUT の結果を先に TeachPage に反映したいとき
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CODE_RUN_KINDS, CODE_RUN_STATUS, CODE_STATES } from '@sotsuken/shared/constants';
+import { CODE_LIMITS, CODE_RUN_KINDS, CODE_RUN_STATUS, CODE_STATES } from '@sotsuken/shared/constants';
 import { SERVER_EVENTS } from '@sotsuken/shared/socket-events';
 import { get, patch, post, put } from '../../../api/client.js';
 import { connectLesson } from '../../../socket.js';
@@ -18,19 +18,9 @@ import CodeInspector from './CodeInspector.jsx';
 import '../../learn/code/code.css';
 import './teach-code.css';
 
-/** code:run_result の status → グリッドの枠色（サーバーの code:status と同じ対応） */
-function stateOfRun(run) {
-  switch (run.status) {
-    case CODE_RUN_STATUS.OK:
-      return CODE_STATES.OK;
-    case CODE_RUN_STATUS.COMPILE_ERROR:
-      return CODE_STATES.COMPILE_ERROR;
-    case CODE_RUN_STATUS.RUNTIME_ERROR:
-    case CODE_RUN_STATUS.TIMEOUT:
-      return CODE_STATES.RUNTIME_ERROR;
-    default:
-      return CODE_STATES.IDLE;
-  }
+/** コードの先頭 N 行（サーバーの source_head と同じ） */
+function headLines(source, n = CODE_LIMITS.GRID_HEAD_LINES) {
+  return String(source || '').split('\n').slice(0, n).join('\n');
 }
 
 export default function CodePanel({ lessonId, lesson, students, isLive, showToast, onSpotlightChange }) {
@@ -39,6 +29,7 @@ export default function CodePanel({ lessonId, lesson, students, isLive, showToas
   const [docsByTask, setDocsByTask] = useState({}); // taskId → { [userId]: CodeDocumentSummary & { line? } }
   const [latestRun, setLatestRun] = useState({}); // `${taskId}:${userId}` → CodeRun
   const [inspect, setInspect] = useState(null); // UserBrief
+  const [drafts, setDrafts] = useState({}); // `${taskId}:${userId}` → 書きかけのコード（code:draft）
   const [runnerDown, setRunnerDown] = useState(false);
   const activeId = lesson.active_task_id;
   const spotlightUserId = lesson.code_spotlight_user_id;
@@ -100,12 +91,17 @@ export default function CodePanel({ lessonId, lesson, students, isLive, showToas
     const onStatus = ({ task_id: taskId, user_id: userId, state, line }) => {
       patchDoc(taskId, userId, () => ({ state, line: line || null }));
     };
+    const onDraft = ({ task_id: taskId, user_id: userId, source }) => {
+      if (typeof source !== 'string') return;
+      setDrafts((m) => ({ ...m, [`${taskId}:${userId}`]: source }));
+      patchDoc(taskId, userId, () => ({ source_head: headLines(source) }));
+    };
     const onRunResult = (run) => {
       if (!run) return;
       setLatestRun((m) => ({ ...m, [`${run.task_id}:${run.user_id}`]: run }));
       setRunnerDown(run.status === CODE_RUN_STATUS.RUNNER_UNAVAILABLE);
+      // 枠色（state）はこの直後に届く code:status で決める（構文エラー中はサーバーが「構文エラー」のまま送る）
       patchDoc(run.task_id, run.user_id, (cur) => ({
-        state: stateOfRun(run),
         last_run_status: run.status,
         last_saved_at: run.kind === CODE_RUN_KINDS.COMPILE ? run.created_at : cur.last_saved_at,
       }));
@@ -118,11 +114,13 @@ export default function CodePanel({ lessonId, lesson, students, isLive, showToas
     };
     socket.on(SERVER_EVENTS.CODE_TASK_ADDED, onTaskAdded);
     socket.on(SERVER_EVENTS.CODE_STATUS, onStatus);
+    socket.on(SERVER_EVENTS.CODE_DRAFT, onDraft);
     socket.on(SERVER_EVENTS.CODE_RUN_RESULT, onRunResult);
     socket.on('connect', onReconnect);
     return () => {
       socket.off(SERVER_EVENTS.CODE_TASK_ADDED, onTaskAdded);
       socket.off(SERVER_EVENTS.CODE_STATUS, onStatus);
+      socket.off(SERVER_EVENTS.CODE_DRAFT, onDraft);
       socket.off(SERVER_EVENTS.CODE_RUN_RESULT, onRunResult);
       socket.off('connect', onReconnect);
     };
@@ -150,6 +148,7 @@ export default function CodePanel({ lessonId, lesson, students, isLive, showToas
   }
   async function redistribute(taskId) {
     await post(`/code/tasks/${taskId}/redistribute`, undefined, { redirect: false });
+    setDrafts((m) => Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith(`${taskId}:`))));
     loadDocs(taskId);
     showToast('テンプレートを全員に配り直しました');
   }
@@ -204,6 +203,7 @@ export default function CodePanel({ lessonId, lesson, students, isLive, showToas
           task={task}
           student={inspect}
           latestRun={latestRun[`${task.id}:${inspect.id}`] || null}
+          liveSource={drafts[`${task.id}:${inspect.id}`] ?? null}
           isSpotlight={spotlightUserId === inspect.id}
           isLive={isLive}
           onSpotlight={spotlight}

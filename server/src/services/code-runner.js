@@ -1,7 +1,7 @@
 // F-10 プログラミングモード：保存（コンパイル）・実行・待ち行列・レート制限・Piston 連携（docs/04 §7.1・§7.4）— 担当：W2
 // 生徒のコードは**このサーバーでは絶対に実行しない**。必ず CODE_RUNNER_URL（Piston）に転送する。
-// - 保存＝コンパイルのみ：Main.java の前に「何もしない Compile.java」を置いて Piston に渡す。
-//   Piston は先頭ファイルのクラスを実行するので main は走らず、compile 段階の結果だけが返る
+// - 保存＝コンパイルのみ：Main.java の前に「Main.java を javac するだけの Compile.java」を置いて Piston に渡す。
+//   Piston は先頭ファイルを実行するので Main の main は走らず、Compile の終了コードと stderr がコンパイル結果になる
 // - 実行＝コンパイル＋実行（stdin あり）。待ち行列（授業ごと・同時 CONCURRENT_RUNS）に入れて 202 を返し、結果は code:run_result で配信
 // - 待ち行列・レート制限・死活状態はメモリ持ち（再起動で消えてよい）
 const {
@@ -21,14 +21,37 @@ const { query } = require('../db/pool');
 const { ApiError } = require('../middleware/error');
 const { emitToTeachers, emitToUser } = require('../sockets/io');
 const codeTasks = require('./code-tasks');
+const codeLive = require('./code-live');
 
 const NOT_LIVE_MESSAGE = '授業は開催中ではありません';
 const NOT_CODING_MESSAGE = 'プログラミングモード中ではありません';
 const RUNNER_DOWN_MESSAGE = '実行サーバーに接続できません';
 
-/** 保存（コンパイルのみ）のときに先頭に置くラッパー。main を即終了させる */
+/**
+ * 保存（コンパイルのみ）のときに先頭に置くラッパー。Main.java を javac（javax.tools）でコンパイルするだけで実行はしない。
+ * Piston の Java は compile 段階を持たず `java <先頭ファイル>`（単一ファイル実行）で動くため、
+ * 以前の「何もしない main」だと Main.java が一度もコンパイルされず、どんなコードでも「成功」になっていた。
+ * javac のエラーは stderr に `Main.java:N: error: ...` の形で出て、終了コードは 0 以外になる。
+ */
 const COMPILE_WRAPPER_FILE = 'Compile.java';
-const COMPILE_WRAPPER_SOURCE = 'public class Compile { public static void main(String[] args) { } }\n';
+const COMPILE_WRAPPER_SOURCE = [
+  'import javax.tools.JavaCompiler;',
+  'import javax.tools.ToolProvider;',
+  'import java.nio.file.Files;',
+  'public class Compile {',
+  '  public static void main(String[] args) throws Exception {',
+  '    JavaCompiler javac = ToolProvider.getSystemJavaCompiler();',
+  '    if (javac == null) { System.err.println("javac が見つかりません"); System.exit(0); }',
+  '    String out = Files.createTempDirectory("compile").toString();',
+  '    int code = javac.run(null, null, null, "-encoding", "UTF-8", "-proc:none", "-d", out, "Main.java");',
+  '    System.exit(code);',
+  '  }',
+  '}',
+  '',
+].join('\n');
+
+/** javac 形式のコンパイルエラー行があるか */
+const JAVAC_ERROR_RE = /(^|\n)\S*\.java:\d+: error:/;
 
 // ---------------------------------------------------------------- 実行サーバー（Piston）
 
@@ -203,8 +226,7 @@ function interpretResult(result, { compileOnly }) {
   }
   const compile = result.compile || null;
   const run = result.run || null;
-  const compileFailed =
-    compile && (Number(compile.code) !== 0 || /(^|\n)\S*\.java:\d+: error:/.test(String(compile.stderr || '')));
+  const compileFailed = compile && (Number(compile.code) !== 0 || JAVAC_ERROR_RE.test(String(compile.stderr || '')));
   if (compileFailed) {
     return {
       status: CODE_RUN_STATUS.COMPILE_ERROR,
@@ -214,6 +236,17 @@ function interpretResult(result, { compileOnly }) {
     };
   }
   if (compileOnly) {
+    // compile 段階が無い実行サーバー（Piston の Java）では、Compile.java の run 段階の結果がコンパイル結果
+    if (run) {
+      const runStderr = String(run.stderr || '');
+      const exitCode = run.code == null ? null : Number(run.code);
+      if (run.signal === 'SIGKILL') {
+        return { status: CODE_RUN_STATUS.COMPILE_ERROR, stdout: null, stderr: 'コンパイルが時間内に終わりませんでした', exit_code: exitCode };
+      }
+      if (exitCode !== 0 || JAVAC_ERROR_RE.test(runStderr)) {
+        return { status: CODE_RUN_STATUS.COMPILE_ERROR, stdout: null, stderr: truncateOutput(runStderr), exit_code: exitCode };
+      }
+    }
     return { status: CODE_RUN_STATUS.OK, stdout: null, stderr: truncateOutput(compile ? compile.stderr || '' : ''), exit_code: 0 };
   }
   if (!run) {
@@ -224,6 +257,10 @@ function interpretResult(result, { compileOnly }) {
   const exitCode = run.code == null ? null : Number(run.code);
   if (run.signal === 'SIGKILL') {
     return { status: CODE_RUN_STATUS.TIMEOUT, stdout, stderr, exit_code: exitCode };
+  }
+  // 単一ファイル実行（java Main.java）はコンパイルエラーも run 段階の stderr に出る → 実行時エラーではなくコンパイルエラー
+  if (exitCode !== 0 && JAVAC_ERROR_RE.test(String(run.stderr || ''))) {
+    return { status: CODE_RUN_STATUS.COMPILE_ERROR, stdout, stderr, exit_code: exitCode };
   }
   if (exitCode !== 0) {
     return { status: CODE_RUN_STATUS.RUNTIME_ERROR, stdout, stderr, exit_code: exitCode };
@@ -374,8 +411,13 @@ async function updateRun(runId, out) {
 function broadcastRun(lessonId, run, errors) {
   emitToUser(lessonId, run.user_id, SERVER_EVENTS.CODE_RUN_RESULT, run);
   emitToTeachers(lessonId, SERVER_EVENTS.CODE_RUN_RESULT, run);
+  // 生徒のエディタで構文エラーが出ている間は、保存・実行の結果に関係なく「構文エラー」のままにする
+  const syntax = codeLive.getSyntax(run.task_id, run.user_id);
   const status = { task_id: run.task_id, user_id: run.user_id, state: codeTasks.stateOfRunStatus(run.status) };
-  if (errors && errors.length) status.line = errors[0].line;
+  if (syntax.hasError) {
+    status.state = CODE_STATES.SYNTAX_ERROR;
+    if (syntax.line) status.line = syntax.line;
+  } else if (errors && errors.length) status.line = errors[0].line;
   emitToTeachers(lessonId, SERVER_EVENTS.CODE_STATUS, status);
 }
 
@@ -477,6 +519,7 @@ module.exports = {
   executeOnPiston,
   parseCompileErrors,
   interpretResult,
+  broadcastRun,
   truncateOutput,
   enqueue,
   getQueueState,
