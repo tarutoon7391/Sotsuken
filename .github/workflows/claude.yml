@@ -3,10 +3,12 @@
 # 理由：Claude Code Action は Console の promo credit の対象外、Agent SDK は対象。
 #
 # 起動条件
-#   ・Issue が opened / labeled で、ラベル request-site が付いている（修正要望サイトが作る Issue）
-#   ・Issue へのコメントに @claude が含まれ、コメント主が OWNER / MEMBER / COLLABORATOR（やり直し・追加指示用）
+#   ・Issue が opened で、ラベル request-site が付いている（修正要望サイトはラベル付きで Issue を作る）
+#   ・Issue へのコメントに @claude が含まれ、コメント主が OWNER / MEMBER / COLLABORATOR（やり直し・追加指示用。手書きの Issue もこれで動かす）
 #   ・PR のコメントでは起動しない
-# 同じ Issue の実行は 1 本だけ（新しい実行が来たら古いものを止める）
+#   ・labeled では起動しない。ラベル付きで Issue を作ると opened + ラベル数ぶんの labeled が同時に飛び、
+#     cancel-in-progress だと request-site 以外の labeled（if で skip される）が本命の実行を取り消してしまうため（Issue #53・#55 で発生）
+# 同じ Issue の実行は 1 本だけ。実行中に @claude コメントが来ても取り消さず、終わってから順番に実行する
 #
 # 必要な Secrets
 #   ・ANTHROPIC_API_KEY       … Anthropic Console の API キー（必須）
@@ -16,13 +18,13 @@ name: Claude Issue Agent
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
   issue_comment:
     types: [created]
 
 concurrency:
   group: issue-agent-${{ github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -33,8 +35,7 @@ jobs:
   agent:
     name: Issue を自動修正
     if: |
-      (github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'request-site')) ||
-      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'request-site') ||
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'request-site')) ||
       (github.event_name == 'issue_comment' && !github.event.issue.pull_request && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 30
